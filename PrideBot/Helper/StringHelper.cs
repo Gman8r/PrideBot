@@ -25,9 +25,13 @@ namespace PrideBot
 
             name = (uppercaseWords ? name[0].ToString().ToUpper() : name[0].ToString().ToLower()) + name.Substring(1);
             var result = "";
-            foreach (var chr in name)
+            for (int i = 0; i < name.Length; i++)
             {
-                if (chr >= 'A' && chr <= 'Z')
+                var chr = name[i];
+
+                if (i > 0 && char.IsDigit(chr) && char.IsLetter(name[i - 1]))
+                    result += " " + chr;
+                else if (chr >= 'A' && chr <= 'Z')
                     result += " " + (uppercaseWords ? chr.ToString() : chr.ToString().ToLower());
                 else
                     result += chr.ToString();

@@ -2,6 +2,7 @@
 prefixes:
     - '~'
 status: 🏳‍🌈
+eventcolor: 0xB00B69
 paths:
     toplevel: C:\Users\Brian\Dropbox\PrideBot
 ids:

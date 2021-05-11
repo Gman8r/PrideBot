@@ -32,19 +32,5 @@ namespace PrideBot.Modules
         {
             this.modelRepository = modelRepository;
         }
-
-        [Command("test")]
-        public async Task Embed()
-        {
-            using var connection = DatabaseHelper.GetDatabaseConnection();
-            await connection.OpenAsync();
-            var character = await modelRepository.GetCharacter(connection, "AYA");
-            var msg = "";
-            //foreach (var character in characters)
-            //{
-                msg += $"\n{character.CharacterId}\t{character.Name}\t{character.Category}\t{character.Family}";
-            //}
-            await Context.Channel.SendOverflowMessagesAsync(msg, "\n");
-        }
     }
 }

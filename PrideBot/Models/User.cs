@@ -4,9 +4,15 @@ using System.Text;
 
 namespace PrideBot.Models
 {
-    class User
+    public class User
     {
+        [PrimaryKey]
         public string UserId { get; set; }
-        public string ShipId { get; set; }
+        public string CharacterId1 { get; set; }
+        public string CharacterId2 { get; set; }
+        [DontPushToDatabase]
+        public DateTime RegisteredAt { get; set; }
+        [DontPushToDatabase]
+        public int PointsEarned { get; set; }
     }
 }
