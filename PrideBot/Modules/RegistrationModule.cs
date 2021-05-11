@@ -27,10 +27,12 @@ namespace PrideBot.Modules
     public class RegistrationModule : PrideModuleBase
     {
         readonly ModelRepository repo;
+        readonly IConfigurationRoot config;
 
-        public RegistrationModule(ModelRepository modelRepository)
+        public RegistrationModule(ModelRepository modelRepository, IConfigurationRoot config)
         {
             this.repo = modelRepository;
+            this.config = config;
         }
 
         [Command("register")]
@@ -47,8 +49,9 @@ namespace PrideBot.Modules
             ValidateShip(shipValue.Item1, shipValue.Item2);
             shipValue = OrderShip(shipValue);
 
+            string descr;
+            string title;
             var user = await repo.GetUser(connection, Context.User.Id.ToString());
-
             if (user == null)
             {
                 user = new User()
@@ -59,17 +62,23 @@ namespace PrideBot.Modules
                 };
 
                 await repo.AddUser(connection, user);
-                await Context.Message.ReplyAsync($"Registered with ship {shipValue.Item1.Name} X {shipValue.Item2.Name}");
+                title = "Registered!";
+                descr = $"Registered! You are supporting **{shipValue.Item1.Name} X {shipValue.Item2.Name}**";
             }
             else
             {
                 user.CharacterId1 = shipValue.Item1.CharacterId;
                 user.CharacterId2 = shipValue.Item2.CharacterId;
                 await repo.UpdateUser(connection, user);
-                await Context.Message.ReplyAsync($"Updated ship to {shipValue.Item1.Name} X {shipValue.Item2.Name}");
+                title = "Ship Updated!";
+                descr = $"You are now supporting **{shipValue.Item1.Name} X {shipValue.Item2.Name}**";
             }
 
-
+            var url = Context.User.GetAvatarUrlOrDefault().Split('?')[0];
+            var embed = EmbedHelper.GetEventEmbed(Context, config, user.UserId)
+                .WithTitle(title)
+                .WithDescription(descr);
+            await Context.Message.ReplyAsync(embed: embed.Build());
         }
 
         public void ValidateShip(Character char1, Character char2)

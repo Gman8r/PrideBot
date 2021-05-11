@@ -22,5 +22,7 @@ namespace PrideBot
         public static ulong OwnerId;
 
         public static bool IsOwner(this IUser user) => user.Id == OwnerId;
+
+        public static string GetAvatarUrlOrDefault(this IUser user) => user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl();
     }
 }

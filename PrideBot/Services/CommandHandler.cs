@@ -91,10 +91,11 @@ namespace PrideBot
                 }
                 else if (!string.IsNullOrEmpty(result.ErrorReason))
                 {
-                    if (result.Error == CommandError.Exception)
-                        await context.Channel.SendResultMessageAsync(result.ErrorReason, toOwner: context.User.IsOwner(config), allowedMentions: AllowedMentions.None, sendEmote: false);
-                    else
-                        await context.Channel.SendErrorMessageAsync(result.ErrorReason, toOwner: context.User.IsOwner(config), allowedMentions: AllowedMentions.None);
+                    await context.Channel.SendMessageAsync(embed: EmbedHelper.GetEventErrorEmbed(context as SocketCommandContext, "Error", result.ErrorReason).Build());
+                    //if (result.Error == CommandError.Exception)
+                    //    await context.Channel.SendResultMessageAsync(result.ErrorReason, toOwner: context.User.IsOwner(config), allowedMentions: AllowedMentions.None, sendEmote: false);
+                    //else
+                    //    await context.Channel.SendErrorMessageAsync(result.ErrorReason, toOwner: context.User.IsOwner(config), allowedMentions: AllowedMentions.None);
                 }
             }
             catch (Exception e)
