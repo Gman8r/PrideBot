@@ -7,6 +7,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PrideBot.Repository;
 
 namespace PrideBot
 {
@@ -80,11 +81,11 @@ namespace PrideBot
             .AddSingleton<StartupService>()         // Add startupservice to the collection
             .AddSingleton<LoggingService>()         // Add loggingservice to the collection
             .AddSingleton<Random>()                 // Add random to the collection
+            .AddSingleton<ModelRepository>()
             .AddSingleton(Configuration);             // Add the configuration to the collection
 
             Console.WriteLine();
 
-            // PrideBot-specific services
             if (!Configuration.ParseBoolField("stealthmode"))
             {
                 services.AddSingleton<PlayStatusService>();

@@ -15,6 +15,9 @@ using System.IO;
 using System.IO.Compression;
 using Microsoft.Extensions.Configuration;
 using System.Net;
+using Microsoft.Data.SqlClient;
+using PrideBot.Models;
+using PrideBot.Repository;
 
 namespace PrideBot.Modules
 {
@@ -23,6 +26,25 @@ namespace PrideBot.Modules
     [RequireContext(ContextType.DM)]
     public class OwnerModule : PrideModuleBase
     {
+        readonly ModelRepository modelRepository;
 
+        public OwnerModule(ModelRepository modelRepository)
+        {
+            this.modelRepository = modelRepository;
+        }
+
+        [Command("test")]
+        public async Task Embed()
+        {
+            using var connection = DatabaseHelper.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var character = await modelRepository.GetCharacter(connection, "AYA");
+            var msg = "";
+            //foreach (var character in characters)
+            //{
+                msg += $"\n{character.CharacterId}\t{character.Name}\t{character.Category}\t{character.Family}";
+            //}
+            await Context.Channel.SendOverflowMessagesAsync(msg, "\n");
+        }
     }
 }

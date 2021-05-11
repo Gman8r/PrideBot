@@ -1,23 +1,11 @@
 ﻿stealthmode: False
-schedulereports: True
 prefixes:
     - '~'
-statusminutes: 15
+status: 🏳‍🌈
 paths:
     toplevel: C:\Users\Brian\Dropbox\PrideBot
-verification:
-    warninghours: 12
-    kickhours: 24
-    kickbypasshours: 48
 ids:
     owner: 199875078790316032
     gyn: 248446374679543810
     sage: 797225471942066206
     youkai: 358435805779197955
-    muted: 813673168190308383
-    nsfwaccess: 813673136851255313
-    modchat: 808049429528444928
-    logchat: 808049479999553556
-    introchat: 809556555258396682
-    pluralkitrole: 815357127941947473
-    pluralkitrequestrole: 815357152074924033

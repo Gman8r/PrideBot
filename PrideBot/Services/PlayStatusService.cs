@@ -28,8 +28,14 @@ namespace PrideBot
 
         private Task Start()
         {
-            ChangeStatusLoop().GetAwaiter();
+            //ChangeStatusLoop().GetAwaiter();
+            client.Ready += ChangeStatusAsync;
             return Task.CompletedTask;
+        }
+
+        private async Task ChangeStatusAsync()
+        {
+            await client.SetGameAsync(config["status"]);
         }
 
         public async Task NextStatusAsync()

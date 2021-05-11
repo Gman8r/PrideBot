@@ -2,12 +2,9 @@
 schedulereports: True
 prefixes:
     - 'p!'
-statusminutes: 15
+status: 🏳‍🌈
 paths:
     toplevel: C:\Users\Brian\Dropbox\PrideBot
-    modpolls: modpoll\activepolls.json
-    rolemessages: reactionroles\activemessages.json
-    verificationusers: verification\userdata.json
 verification:
     warninghours: 12
     kickhours: 24
