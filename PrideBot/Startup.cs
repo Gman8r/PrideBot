@@ -8,6 +8,7 @@ using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PrideBot.Repository;
+using PrideBot.Sheets;
 
 namespace PrideBot
 {
@@ -89,6 +90,7 @@ namespace PrideBot
             if (!Configuration.ParseBoolField("stealthmode"))
             {
                 services.AddSingleton<PlayStatusService>();
+                services.AddSingleton<GoogleSheetsService>();
                 //.AddSingleton<PlayStatusService>();
             }
         }
