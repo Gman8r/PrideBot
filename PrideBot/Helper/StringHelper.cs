@@ -18,6 +18,9 @@ namespace PrideBot
             return result;
         }
 
+        public static string CapitalizeFirst(this string str)
+            => str.Substring(0, 1).ToUpper() + str.Substring(1);
+
         public static string CamelCaseSpaces(string name, bool uppercaseWords = false)
         {
             if (string.IsNullOrWhiteSpace(name))

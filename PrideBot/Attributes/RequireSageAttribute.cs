@@ -12,11 +12,11 @@ namespace PrideBot
     {
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            var config = services.GetService<IConfigurationRoot>();
-            if ((context.User as SocketUser).IsGYNSage(config))
+            //var config = services.GetService<IConfigurationRoot>();
+            //if ((context.User as SocketUser).IsGYNSage(config))
                 return Task.FromResult(PreconditionResult.FromSuccess());
-            else
-                return Task.FromResult(PreconditionResult.FromError("I currently only respond to GYN sages, sorry."));
+            //else
+            //    return Task.FromResult(PreconditionResult.FromError("I currently only respond to GYN sages, sorry."));
         }
     }
 }

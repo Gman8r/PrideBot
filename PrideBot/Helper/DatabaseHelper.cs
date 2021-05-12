@@ -53,15 +53,18 @@ namespace PrideBot
             var fields = new Dictionary<string, object>();
             foreach (var property in typeof(T).GetProperties())
             {
+                var key = CamelCaseNameToSql(property.Name);
+                var value = property.GetValue(obj);
                 if (!property.CustomAttributes.Any(a => a.AttributeType == typeof(DontPushToDatabaseAttribute)))
-                    fields[CamelCaseNameToSql(property.Name)] = property.GetValue(obj);
+                    fields[key] = value;
+
             }
 
             var query = $"insert into dbo.{tableName} ({string.Join(",", fields.Keys)})" +
-                $" values ({string.Join(",", fields.Keys.Select(a => "@" + a))})";
+                $" values ({string.Join(",", fields.Select(a => (a.Value != null ? ("@" + a.Key) : "null")))})";
             var command = new SqlCommand(query, conn);
 
-            foreach (var field in fields)
+            foreach (var field in fields.Where(a => a.Value != null))
             {
                 command.Parameters.AddWithValue("@" + field.Key, field.Value);
             }
@@ -72,19 +75,22 @@ namespace PrideBot
         public static SqlCommand GetUpdateCommand<T>(SqlConnection conn, T obj, string tableName)
         {
             var fields = new Dictionary<string, object>();
-            KeyValuePair<string, object> primaryKey = new KeyValuePair<string, object>(null, null);
+            var primaryKeys = new Dictionary<string, object>();
             foreach (var property in typeof(T).GetProperties())
             {
+                var key = CamelCaseNameToSql(property.Name);
+                var value = property.GetValue(obj);
                 if (property.CustomAttributes.Any(a => a.AttributeType == typeof(PrimaryKeyAttribute)))
-                    primaryKey = new KeyValuePair<string, object>(CamelCaseNameToSql(property.Name), property.GetValue(obj));
+                    primaryKeys[key] = value;
                 else if (!property.CustomAttributes.Any(a => a.AttributeType == typeof(DontPushToDatabaseAttribute)))
-                    fields[CamelCaseNameToSql(property.Name)] = property.GetValue(obj);
+                    fields[key] = value;
             }
 
-            var query = $"update dbo.{tableName} set {string.Join(" , ", fields.Select(a => $"{a.Key} = @{a.Key}"))} where {primaryKey.Key} = {primaryKey.Value}";
+            var query = $"update dbo.{tableName} set {string.Join(" , ", fields.Select(a => $"{a.Key} = {(a.Value != null ? ("@" + a.Key) : "null")}"))}" +
+                $" where {string.Join(" and ", primaryKeys.Select(a => $"{a.Key} = {a.Value}"))}";
             var command = new SqlCommand(query, conn);
-
-            foreach (var field in fields)
+            
+            foreach (var field in fields.Where(a => a.Value != null))
             {
                 command.Parameters.AddWithValue("@" + field.Key, field.Value);
             }

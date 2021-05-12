@@ -4,9 +4,12 @@ prefixes:
 status: 🏳‍🌈
 eventcolor: 0xB00B69
 paths:
-    toplevel: C:\Users\Brian\Dropbox\PrideBot
+    wwwhostpath: http://intile.ddns.net:88/pbotassets/
+    wwwhostpathlocal: \\media\wwwroot\pbotassets\
 ids:
     owner: 199875078790316032
     gyn: 248446374679543810
     sage: 797225471942066206
     youkai: 358435805779197955
+    filedumpguild: 248446374679543810
+    filedumpchannel: 841596968182743050
