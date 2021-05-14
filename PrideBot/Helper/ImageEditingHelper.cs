@@ -17,30 +17,6 @@ namespace PrideBot
         public const int MinAnimationDelay = 2;
         public const int DefaultAnimationDelay = 10;
 
-        public static async Task<MemoryFile> GenerateShipAvatarAsync(string char1Key, string char2Key)
-        {
-            using var image = new MagickImage(MagickColors.Transparent, 128, 128);
-            var file1 = $"Assets/CharacterSprites/{char1Key}.png";
-            var file2 = $"Assets/CharacterSprites/{char2Key}.png";
-
-            using var heartImage = new MagickImage(await File.ReadAllBytesAsync($"Assets/CharacterSprites/heart.png"));
-            if (!File.Exists(file1) || !File.Exists(file2))
-                return await heartImage.WriteToMemoryFileAsync("heart");
-            using var char1Image = new MagickImage(await File.ReadAllBytesAsync(file1));
-            using var char2Image = new MagickImage(await File.ReadAllBytesAsync(file2));
-
-            char1Image.InterpolativeResize(64, 64, PixelInterpolateMethod.Nearest);
-            char2Image.InterpolativeResize(64, 64, PixelInterpolateMethod.Nearest);
-            char2Image.Flop();
-            heartImage.InterpolativeResize(64, 64, PixelInterpolateMethod.Nearest);
-
-            image.Composite(char1Image, Gravity.Northwest, 2, 50, CompositeOperator.Over);
-            image.Composite(char2Image, Gravity.Northwest, 62, 50, CompositeOperator.Over);
-            image.Composite(heartImage, Gravity.Northwest, 32, 0, CompositeOperator.Over);
-
-            return await image.WriteToMemoryFileAsync("shipicon");
-        }
-
         public static async Task<MemoryStream> SaveFirstFrameOfGifAsync(MemoryStream inputStream, float mult)
         {
             using var collection = new MagickImageCollection(inputStream);
@@ -79,6 +55,13 @@ namespace PrideBot
                 await image.WriteAsync(stream, MagickFormat.Gif);
                 return stream.ToArray();
             }
+        }
+
+        public static async Task WriteToFileAsync(this IMagickImage<byte> image, string path)
+        {
+            var fs = File.Create(path);
+            await image.WriteAsync(fs, MagickFormat.Png);
+            fs.Close();
         }
 
         public static async Task<MemoryFile> WriteToMemoryFileAsync(this IMagickImage<byte> image, string name)

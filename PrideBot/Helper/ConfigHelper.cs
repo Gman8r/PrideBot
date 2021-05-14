@@ -42,6 +42,12 @@ namespace PrideBot
         public static string GetRelativeFilePath(this IConfigurationRoot config, string path)
             => Path.Combine(GetTopLevelDirectory(config), path);
 
+        public static string GetRelativeHostPathWeb(this IConfigurationRoot config, string path)
+            => config["paths:wwwhostpath"] + path;
+
+        public static string GetRelativeHostPathLocal(this IConfigurationRoot config, string path)
+            => Path.Combine(config["paths:wwwhostpathlocal"], path);
+
         public static string GetGuildDirectory(this IConfigurationRoot config, IGuild guild)
             => GetRelativeFilePath(config, config["paths:guilds"] + "/" + guild.Id);
 

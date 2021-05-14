@@ -36,7 +36,8 @@ namespace PrideBot.Modules
             this.sheetsService = sheetsService;
         }
 
-        [Command("sheet update")]
+        [Command("table update")]
+        [Alias("sheet update")]
         public async Task UploadSheet(string url, string range, string tableName)
         {
             var idPattern = "\\/d\\/(.*?)\\/(|$)";
@@ -127,7 +128,7 @@ namespace PrideBot.Modules
                         continue;
                     if (!fieldMatch.ToString().Equals(reader[i].ToString()))
                         changes[fieldNames[i]] = !string.IsNullOrEmpty(matchingRow[i].ToString())
-                            ? Convert.ChangeType(matchingRow[i], fieldDict[fieldNames[i]])
+                            ? Convert.ChangeType(i < matchingRow.Count ? matchingRow[i] : "", fieldDict[fieldNames[i]])
                             : "";
                 }
 

@@ -41,8 +41,13 @@ namespace PrideBot
                 var matchingName = SqlNameToCamelCase(fieldName);
                 var property = properties.FirstOrDefault(a => a.Name.Equals(matchingName, StringComparison.OrdinalIgnoreCase));
                 if (property == null)
-                    throw new Exception($"No field found with name {matchingName} derived from {fieldName}.");
-                var value = record.IsDBNull(i) ? null : record[i];
+                    continue;
+                //throw new Exception($"No field found with name {matchingName} derived from {fieldName}.");
+                object value;
+                if (property.PropertyType == typeof(bool))
+                    value = (record[i] ?? "N").Equals("Y");
+                else
+                    value = record.IsDBNull(i) ? null : record[i];
                 property.SetValue(result, value);
             }
             return result;
@@ -53,8 +58,16 @@ namespace PrideBot
             var fields = new Dictionary<string, object>();
             foreach (var property in typeof(T).GetProperties())
             {
+                if (typeof(T).BaseType != null)
+                {
+                    // Ignore superclass when pushing
+                    if (typeof(T).BaseType.GetProperties().Contains(property))
+                        continue;
+                }
                 var key = CamelCaseNameToSql(property.Name);
                 var value = property.GetValue(obj);
+                if (value != null && value.GetType() == typeof(bool))
+                    value = (bool)value ? "Y" : "N";
                 if (!property.CustomAttributes.Any(a => a.AttributeType == typeof(DontPushToDatabaseAttribute)))
                     fields[key] = value;
 
@@ -78,21 +91,33 @@ namespace PrideBot
             var primaryKeys = new Dictionary<string, object>();
             foreach (var property in typeof(T).GetProperties())
             {
+                if (typeof(T).BaseType != null)
+                {
+                    // Ignore superclass when pushing
+                    if (typeof(T).BaseType.GetProperties().Contains(property))
+                        continue;
+                }
                 var key = CamelCaseNameToSql(property.Name);
                 var value = property.GetValue(obj);
+                if (value != null && value.GetType() == typeof(bool))
+                    value = (bool)value ? "Y" : "N";
                 if (property.CustomAttributes.Any(a => a.AttributeType == typeof(PrimaryKeyAttribute)))
                     primaryKeys[key] = value;
-                else if (!property.CustomAttributes.Any(a => a.AttributeType == typeof(DontPushToDatabaseAttribute)))
+                if (!property.CustomAttributes.Any(a => a.AttributeType == typeof(DontPushToDatabaseAttribute)))
                     fields[key] = value;
             }
 
-            var query = $"update dbo.{tableName} set {string.Join(" , ", fields.Select(a => $"{a.Key} = {(a.Value != null ? ("@" + a.Key) : "null")}"))}" +
-                $" where {string.Join(" and ", primaryKeys.Select(a => $"{a.Key} = {a.Value}"))}";
+            var query = $"update dbo.{tableName} set {string.Join(" , ", fields.Select(a => $"{a.Key} = {(a.Value != null ? ($"@{a.Key}F") : "null")}"))}" +
+                $" where {string.Join(" and ", primaryKeys.Select(a => $"{a.Key} = {(a.Value != null ? ($"@{a.Key}K") : "null")}"))}";
             var command = new SqlCommand(query, conn);
-            
+
             foreach (var field in fields.Where(a => a.Value != null))
             {
-                command.Parameters.AddWithValue("@" + field.Key, field.Value);
+                command.Parameters.AddWithValue($"@{field.Key}F", field.Value);
+            }
+            foreach (var key in primaryKeys.Where(a => a.Value != null))
+            {
+                command.Parameters.AddWithValue($"@{key.Key}K", key.Value);
             }
 
             return command;

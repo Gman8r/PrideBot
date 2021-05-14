@@ -10,6 +10,7 @@ namespace PrideBot.Models
         [PrimaryKey]
         public string CharacterId { get; set; }
         public string Name { get; set; }
+        public string FirstName { get; set; }
         public string Category { get; set; }
         public string Family { get; set; }
     }

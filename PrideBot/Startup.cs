@@ -7,6 +7,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PrideBot.Registration;
 using PrideBot.Repository;
 using PrideBot.Sheets;
 
@@ -91,6 +92,7 @@ namespace PrideBot
             {
                 services.AddSingleton<PlayStatusService>();
                 services.AddSingleton<GoogleSheetsService>();
+                services.AddSingleton<ShipImageGenerator>();
                 //.AddSingleton<PlayStatusService>();
             }
         }

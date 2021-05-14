@@ -12,11 +12,15 @@ using Discord.Net;
 using Discord.Rest;
 using System.IO;
 using System.Text.RegularExpressions;
+using PrideBot.Models;
 
 namespace PrideBot
 {
     public static class EmoteHelper
     {
+
+        public static IEmote GetShipTierEmoji(UserShipTier tier) => tier == UserShipTier.Primary ? new Emoji("💗")
+            : (tier == UserShipTier.Secondary ? new Emoji("💖") : new Emoji("♥"));
         public static string GetEmojiImage(string path, string target)
         {
             target = target.Trim();

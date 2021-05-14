@@ -8,8 +8,8 @@ namespace PrideBot.Models
     {
         [PrimaryKey]
         public string UserId { get; set; }
-        public string CharacterId1 { get; set; }
-        public string CharacterId2 { get; set; }
+        public bool ShipsSelected { get; set; }
+
         [DontPushToDatabase]
         public DateTime RegisteredAt { get; set; }
         [DontPushToDatabase]
