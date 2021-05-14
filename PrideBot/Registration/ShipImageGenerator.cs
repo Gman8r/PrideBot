@@ -36,6 +36,7 @@ namespace PrideBot.Registration
             MagickImage ship2Image = null;
             MagickImage ship3Image = null;
             using var primaryShipImage = await GenerateShipImageAsync(userShips.PrimaryShip, highlightTier == 0);
+            primaryShipImage.InterpolativeResize(128, 128, PixelInterpolateMethod.Nearest);
             //if (ships[1].IsEmpty() && ships[2].IsEmpty())
             //{
             //    return primaryShipImage;
@@ -43,18 +44,19 @@ namespace PrideBot.Registration
             //}
             //else
             {
-                image.Composite(primaryShipImage, Gravity.Northwest, 64, 0, CompositeOperator.Over);
+                image.Composite(primaryShipImage, Gravity.Northwest, 80, 0, CompositeOperator.Over);
                 if (userShips.HasSecondaryShip)
                 {
                     ship2Image = await GenerateShipImageAsync(userShips.SecondaryShip, highlightTier == 1);
-                    image.Composite(ship2Image, Gravity.Northwest, 16, 64, CompositeOperator.Over);
+                    image.Composite(ship2Image, Gravity.Northwest, 8, 116, CompositeOperator.Over);
                 }
                 if (userShips.HasTertiaryShip)
                 {
                     ship3Image = await GenerateShipImageAsync(userShips.TertiaryShip, highlightTier == 2);
-                    image.Composite(ship3Image, Gravity.Northwest, 112, 64, CompositeOperator.Over);
+                    image.Composite(ship3Image, Gravity.Northwest, 216, 116, CompositeOperator.Over);
                 }
             }
+            
             ship2Image?.Dispose();
             ship3Image?.Dispose();
 

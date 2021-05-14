@@ -24,7 +24,7 @@ namespace PrideBot.Registration
         UserShipCollection dbUserShips;
         IEnumerable<Character> dbCharacters;
 
-        public RegistrationSession(IDMChannel channel, IUser user, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, ModelRepository repo, DiscordSocketClient client) : base(channel, user, config, client)
+        public RegistrationSession(IDMChannel channel, IUser user, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, ModelRepository repo, DiscordSocketClient client, IMessage originmessage) : base(channel, user, config, client, originmessage)
         {
             this.shipImageGenerator = shipImageGenerator;
             this.repo = repo;
@@ -60,7 +60,7 @@ namespace PrideBot.Registration
 
             var embed = (await GetEmbed(dbUser, dbUserShips))
                 .WithTitle($"Yayyyy!")
-                .WithDescription("u did it!\nYou can do it again and change stuff with the same command, but it's kinda lengthy, better editing system planned for later." +
+                .WithDescription("u did it!\nYou can do it again and change stuff with the same command." +
                 "\nI'm gonna let you change the background too but I don't have any other ones rn, help wanted!" +
                 $"\nUse `{config.GetDefaultPrefix()}ships` to show off your pairings in the server.");
             await channel.SendMessageAsync(embed: embed.Build());
@@ -115,7 +115,7 @@ namespace PrideBot.Registration
                 var result = await ParseAndValidateShipAsync(connection, response.MessageResponse.Content, tier, dbUserShips);
                 shipValid = result.IsSuccess;
                 if (!shipValid)
-                    embed.Description = $"{result.ErrorMessage}\n\nPlease try again. Use the format: `Character One X Character Two`. Either first or full names are fine, and order doesn't matter. All dialogue is placeholder.";
+                    embed.Description = $"**Error:** {result.ErrorMessage}\n\nPlease try again. Use the format: `Character One X Character Two`. Either first or full names are fine, and order doesn't matter. All dialogue is placeholder.";
                 else
                 {
                     // Add or update a user ship to the db and pull from it again to have full data
@@ -185,7 +185,7 @@ namespace PrideBot.Registration
             if (categories.Contains("AMBIGUOUS"))
             {
                 var compatibleFields = new string[] { "AMBIGUOUS", "ADULT", "CHILD" };
-                if (!compatibleFields.Contains(char1.Family ) || !compatibleFields.Contains(char2.Family))
+                if (!compatibleFields.Contains(char1.Category ) || !compatibleFields.Contains(char2.Category))
                     return ValueResult<Ship>.Error("That ship is not valid for this event.");
             }
             else if (!char1.Category.Equals(char2.Category))
@@ -232,6 +232,7 @@ namespace PrideBot.Registration
                 .ToUpper()
                 .Split()
                 .Where(a => a.Any())
+                .Select(a => a.Replace("'", ""))
                 .ToArray();
             return characters
                 .FirstOrDefault(a => !words.Except(a.Name.Replace("'", "").ToUpper().Split()).Any());   // All words in input name appear in character name

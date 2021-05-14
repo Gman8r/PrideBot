@@ -22,6 +22,7 @@ namespace PrideBot
         protected readonly IDMChannel channel;
         protected readonly IUser user;
         protected readonly IConfigurationRoot config;
+        protected readonly IMessage originMessage;
 
         protected Prompt currentPrompt;
 
@@ -46,11 +47,12 @@ namespace PrideBot
             }
         }
 
-        public DMSession(IDMChannel channel, IUser user, IConfigurationRoot config, DiscordSocketClient client)
+        public DMSession(IDMChannel channel, IUser user, IConfigurationRoot config, DiscordSocketClient client, IMessage originMessage = null)
         {
             this.channel = channel;
             this.user = user;
             this.config = config;
+            this.originMessage = originMessage;
 
             client.MessageReceived += MesageReceived;
             client.ReactionAdded += ReactionAdded;
@@ -60,6 +62,7 @@ namespace PrideBot
         private async Task ReactionAdded(Cacheable<IUserMessage, ulong> msg, ISocketMessageChannel channel, SocketReaction reaction)
         {
             if (currentPrompt == null
+                || reaction.Channel.Id != channel.Id
                 || currentPrompt.IsEntered
                 || !currentPrompt.AcceptsEmote
                 || msg.Id != currentPrompt.BotMessage.Id
@@ -73,6 +76,7 @@ namespace PrideBot
         private Task MesageReceived(SocketMessage message)
         {
             if (currentPrompt == null
+                || message.Channel.Id != channel.Id
                 || currentPrompt.IsEntered
                 || message.Author.Id != user.Id
                 || !currentPrompt.AcceptsText)  return Task.CompletedTask;
@@ -84,7 +88,9 @@ namespace PrideBot
 
         public async Task PerformSessionAsync()
         {
-            if (activeSessions.Any(a => a.user.Id == a.user.Id))
+            if (originMessage != null)
+                originMessage.AddReactionAsync(new Emoji("✅")).GetAwaiter();
+            if (activeSessions.Any(a => a.user.Id == user.Id))
             {
                 await channel.SendMessageAsync("Hold up! We're already in the middle of a session! Let's finish up here before we do anything else, 'kaayyy?");
                 return;
@@ -129,6 +135,7 @@ namespace PrideBot
                 //else
                 //    text += $"\n\nSelect {canCancel} to cancel.";
             }
+
             var message = await channel.SendMessageAsync(text, embed: embed.Build());
             currentPrompt = new Prompt(message, acceptsText, emoteChoices);
             AddReactions(message, emoteChoices).GetAwaiter();
