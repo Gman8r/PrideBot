@@ -29,7 +29,7 @@ namespace PrideBot.Repository
             var shipIdParam = new SqlParameter();
             shipIdParam.ParameterName = "@SHIP_ID";
             shipIdParam.Direction = ParameterDirection.Output;
-            shipIdParam.Size = 25;
+            shipIdParam.Size = 50;
             command.Parameters.Add(shipIdParam);
             await command.ExecuteNonQueryAsync();
             return shipIdParam.Value.ToString();

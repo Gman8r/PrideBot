@@ -20,9 +20,9 @@ namespace PrideBot
 
         protected readonly DiscordSocketClient client;
         protected readonly IDMChannel channel;
-        protected readonly IUser user;
+        protected readonly SocketUser user;
         protected readonly IConfigurationRoot config;
-        protected readonly IMessage originMessage;
+        protected readonly SocketMessage originMessage;
 
         protected Prompt currentPrompt;
 
@@ -47,7 +47,7 @@ namespace PrideBot
             }
         }
 
-        public DMSession(IDMChannel channel, IUser user, IConfigurationRoot config, DiscordSocketClient client, IMessage originMessage = null)
+        public DMSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, DiscordSocketClient client, SocketMessage originMessage = null)
         {
             this.channel = channel;
             this.user = user;
@@ -119,6 +119,13 @@ namespace PrideBot
         protected async Task<Prompt> SendAndAwaitResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false)
         {
             emoteChoices ??= new List<IEmote>();
+            if (emoteChoices.Count >= 2)
+            {
+                if (embed != null)
+                    embed.Description += "\n\n" + DialogueDict.Get("SESSION_EMOTE_FILLING");
+                else
+                    text += "\n\n" + DialogueDict.Get("SESSION_EMOTE_FILLING");
+            }
             if (canSkip)
             {
                 emoteChoices.Insert(0, SkipEmote);

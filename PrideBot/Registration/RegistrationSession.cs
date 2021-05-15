@@ -18,13 +18,13 @@ namespace PrideBot.Registration
 
         readonly ShipImageGenerator shipImageGenerator;
         readonly ModelRepository repo;
+        Dictionary<string, string> dialogue;
 
         bool userHasRegistered;
         User dbUser;
         UserShipCollection dbUserShips;
-        IEnumerable<Character> dbCharacters;
 
-        public RegistrationSession(IDMChannel channel, IUser user, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, ModelRepository repo, DiscordSocketClient client, IMessage originmessage) : base(channel, user, config, client, originmessage)
+        public RegistrationSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, ModelRepository repo, DiscordSocketClient client, SocketMessage originmessage) : base(channel, user, config, client, originmessage)
         {
             this.shipImageGenerator = shipImageGenerator;
             this.repo = repo;
@@ -34,35 +34,43 @@ namespace PrideBot.Registration
 
         protected override async Task PerformSessionInternalAsync()
         {
+
             using var connection = DatabaseHelper.GetDatabaseConnection();
             await connection.OpenAsync();
 
             dbUser = await repo.GetUserAsync(connection, user.Id.ToString());
             dbUserShips = new UserShipCollection();
-            dbCharacters = await repo.GetAllCharactersAsync(connection);
             if (dbUser == null)
             {
-                dbUser = new User() { UserId = user.Id.ToString() };
                 await repo.AddUserAsync(connection, dbUser);
+                dbUser = await repo.GetUserAsync(connection, user.Id.ToString());
             }
-            else
+            else                
             {
                 dbUserShips = await repo.GetUserShipsAsync(connection, dbUser);
             }
             userHasRegistered = dbUser.ShipsSelected;
 
+
+            var embed = GetEmbed()
+                .WithTitle(userHasRegistered ? "Edit Your Registration!" : "Registration Time!")
+                .WithDescription(userHasRegistered
+                ? DialogueDict.Get("REGISTRATION_EDIT", user.Honorific(client, "Queen", "King", "Monarch"))
+                : DialogueDict.Get("REGISTRATION_WELCOME", config.GetDefaultPrefix()));
+
+            await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: new List<IEmote>() { new Emoji("✅")});
+
+            embed = GetEmbed()
+                .WithDescription("");
             for (int i = 0; i < 3; i++)
             {
-                var ship = await SetUpShip(connection, (UserShipTier)i);
-                if (ship != null)
-                    dbUserShips.Set((UserShipTier)i, ship);
+                embed.Description = await SetUpShip(connection, (UserShipTier)i, embed);
             }
 
-            var embed = (await GetEmbed(dbUser, dbUserShips))
-                .WithTitle($"Yayyyy!")
-                .WithDescription("u did it!\nYou can do it again and change stuff with the same command." +
-                "\nI'm gonna let you change the background too but I don't have any other ones rn, help wanted!" +
-                $"\nUse `{config.GetDefaultPrefix()}ships` to show off your pairings in the server.");
+            var key = "REGISTRATION_" + (userHasRegistered ? "EDITED" : "COMPLETE") + (GameHelper.EventStarted ? "" : "_PREREG");
+            embed = (await GetEmbed(dbUser, dbUserShips))
+                .WithTitle("Setup Complete!")
+                .WithDescription(DialogueDict.Get(key, config.GetDefaultPrefix()));
             await channel.SendMessageAsync(embed: embed.Build());
             if (!userHasRegistered)
             {
@@ -72,54 +80,70 @@ namespace PrideBot.Registration
             
         }
 
-        async Task<UserShip> SetUpShip(SqlConnection connection, UserShipTier tier)
+        async Task<string> SetUpShip(SqlConnection connection, UserShipTier tier, EmbedBuilder embed)
         {
             var userShipExistsDb = dbUserShips.Has(tier);
+            var isNewShip = !dbUserShips.Has(tier);
             var userShip = dbUserShips.Get(tier)
                 ?? new UserShip() { UserId = dbUser.UserId, CharacterId1 = "DEFAULT", CharacterId2 = "DEFAULT", Tier = (int)tier };
-            dbUserShips.Set(tier, userShip);
+            var displayShips = dbUserShips.Clone();
+            displayShips.Set(tier, userShip);
 
-            bool shipValid = false;
-            var embed = (await GetEmbed(dbUser, dbUserShips, (int)tier))
-                .WithTitle($"{tier} Ship Setup");
-            embed.Description = $"Enter {tier.ToString().ToLower()} ship. Use the format: `Character One X Character Two`. Either first or full names are fine, and order doesn't matter. All dialogue is placeholder.";
+            var title = $"{tier.ToString()} Pair Setup";
+            var tierKey = userHasRegistered ? "EDIT" : tier.ToString().ToUpper();
+            embed.Description += "\n\n" + DialogueDict.Get($"REGISTRATION_ENTER_{tierKey}", tier.ToString().ToLower(), GameHelper.GetPointPercent(tier));
+
+            var enterInstructions = DialogueDict.Get("REGISTRATION_SHIP_FORMAT");
+            if (isNewShip && tier != UserShipTier.Primary)
+                enterInstructions += "\n" + DialogueDict.Get($"REGISTRATION_SKIP_SHIP", SkipEmote.ToString(), tier.ToString().ToLower());
+            else if (!isNewShip)
+                enterInstructions += "\n" + DialogueDict.Get($"REGISTRATION_KEEP_SHIP", SkipEmote.ToString());
+            embed.Description += "\n\n" + enterInstructions;
 
             // Determine what bypasses are possible
-            var isDefault = userShip.CharacterId1.Equals("DEFAULT");
             var canSkip = tier != UserShipTier.Primary || userHasRegistered;
-            if (canSkip)
-            {
-                if (isDefault)
-                    embed.Description += $"\n\nReact {SkipEmote} to skip adding a {tier.ToString().ToLower()} ship.";
-                else
-                    embed.Description += $"\n\nReact {SkipEmote} to leave the characters as-is.";
-            }
 
             // Now register the ship
+            var shipValidated = false;
             Prompt response;
-            while (!shipValid)
+            embed.Title = title;
+            var skipped = false;
+            while (!shipValidated)
             {
+                embed.ImageUrl = await GenerateShipImage(dbUser, displayShips, highlightTier: (int)tier);
                 response = await SendAndAwaitResponseAsync(embed: embed, canSkip: canSkip);
                 if (response.IsSkipped)
                 {
-                    if (isDefault)
+                    skipped = true;
+                    if (isNewShip)
                     {
-                        dbUserShips.Remove(tier);
-                        return null;
+                        return "";
                     }
                     else
                         break;
                 }
-                userShip.Heart1 = null;
-                userShip.Heart2 = null;
                 var result = await ParseAndValidateShipAsync(connection, response.MessageResponse.Content, tier, dbUserShips);
-                shipValid = result.IsSuccess;
-                if (!shipValid)
-                    embed.Description = $"**Error:** {result.ErrorMessage}\n\nPlease try again. Use the format: `Character One X Character Two`. Either first or full names are fine, and order doesn't matter. All dialogue is placeholder.";
+                shipValidated = result.IsSuccess;
+                if (!shipValidated)
+                {
+                    embed.Description = $"{result.ErrorMessage}\n\n{DialogueDict.Get("SESSION_TRY_AGAIN")} {enterInstructions}";
+                    embed.ImageUrl = null;
+                    embed.Title = "Error";
+                }
                 else
                 {
                     // Add or update a user ship to the db and pull from it again to have full data
                     var ship = result.Value;
+
+                    //Act like the user skipped if this is the same pair
+                    if (userShip.ShipId != null && userShip.ShipId.Equals(ship.ShipId))
+                    {
+                        skipped = true;
+                        break;
+                    }
+
+                    userShip.Heart1 = null;
+                    userShip.Heart2 = null;
                     userShip.CharacterId1 = ship.CharacterId1;
                     userShip.CharacterId2 = ship.CharacterId2;
                     userShip.ShipId = ship.ShipId;
@@ -129,24 +153,33 @@ namespace PrideBot.Registration
                         await repo.AddUserShipAsync(connection, userShip);
                     userShip = await repo.GetUserShipAsync(connection, userShip.UserId, userShip.Tier);
                     dbUserShips.Set(tier, userShip);
+                    displayShips = dbUserShips;
                 }
             }
 
-            var heartDescription = $"Choose a heart for **{{0}}**, or finish selecting hearts by reacting with {SkipEmote}. (I haven't added them all yet sorry)";
+            if (!skipped)
+            {
+                var conirmationEmbed = GetEmbed()
+                    .WithTitle(DialogueDict.Get("REGISTRATION_SHIP_ENTERED"))
+                    .WithDescription(DialogueDict.Get("REGISTRATION_SHIP_REVIEW", userShip.GetDisplayName(), tier.ToString().ToLower()));
+                await channel.SendMessageAsync(embed: conirmationEmbed.Build());
+            }
+
+            embed = embed.WithDescription(DialogueDict.Get("REGISTRATION_HEART_PROMPT")
+                    + "\n\n" + DialogueDict.Get("REGISTRATION_HEART_CHOOSE", userShip.Character1First, SkipEmote))
+                .WithImageUrl(await GenerateShipImage(dbUser, displayShips, highlightTier: (int)tier, highlightHeart: 1))
+                .WithTitle(title);
             var heartEmotes = client.GetGuild(796585563166736394).Emotes.Where(a => a.Name.StartsWith("shipheart"))
                 .Select(a => (IEmote)a)
                 .ToList();
-            embed = embed
-                .WithDescription(string.Format(heartDescription, userShip.Character1First))
-                .WithImageUrl(await GenerateShipImage(dbUser, dbUserShips, (int)tier));
             response = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: heartEmotes, canSkip: true);
             if (!response.IsSkipped)
             {
                 userShip.Heart1 = ((Emote)response.emoteResponse).Name;
                 await repo.UpdateUserShipAsync(connection, userShip);
                 embed = embed
-                    .WithDescription(string.Format(heartDescription, userShip.Character2First))
-                    .WithImageUrl(await GenerateShipImage(dbUser, dbUserShips, (int)tier));
+                    .WithDescription(DialogueDict.Get("REGISTRATION_HEART_CHOOSE", userShip.Character2First, SkipEmote))
+                    .WithImageUrl(await GenerateShipImage(dbUser, displayShips, highlightTier: (int)tier, highlightHeart: 2));
                 response = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: heartEmotes, canSkip: true);
                 if (!response.IsSkipped)
                 {
@@ -156,7 +189,7 @@ namespace PrideBot.Registration
 
             }
 
-            return userShip;
+            return DialogueDict.Get("REGISTRATION_FINISH_SHIP", user.Honorific(client, "Queen", "King", "Monarch"));
         }
 
         async Task<ValueResult<Ship>> ParseAndValidateShipAsync(SqlConnection connection, string shipStr, UserShipTier tier, UserShipCollection currentShips)
@@ -164,37 +197,41 @@ namespace PrideBot.Registration
             using var typingState = channel.EnterTypingState();
             var split = shipStr.Replace(" x ", " X ").Split(" X ");
             if (split.Length != 2)
-                return ValueResult<Ship>.Error("That ship name isn't formatted correctly. Use the format: `Character One X Character Two`. Either first or full names are fine, and order doesn't matter.");
+                return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_FORMAT"));
+
+            var dbCharacters = await repo.GetAllCharactersAsync(connection);
 
             var char1 = FindMatch(split[0], dbCharacters);
             var char2 = FindMatch(split[1], dbCharacters);
 
             if (char1 == null)
-                return ValueResult<Ship>.Error($"I couldn't find a match for {split[0]} in my character records.");
+                return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_NOT_FOUND", split[0]));
             if (char2 == null)
-                return ValueResult<Ship>.Error($"I couldn't find a match for {split[1]} in my character records.");
+                return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_NOT_FOUND", split[1]));
 
             var shipKey = await repo.GetOrCreateShipAsync(connection, char1.CharacterId, char2.CharacterId);
             var ship = await repo.GetShipAsync(connection, shipKey);
 
             // Validation time
 
+            if (ship.CharacterId1.Equals("YURIKO") || ship.CharacterId2.Equals("YURIKO"))
+                return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_YURIKO"));
+            if (char1.CharacterId.Equals(char2.CharacterId) && !char1.CharacterId.Equals("TSUCHINOKO"))
+                return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_SELF"));
             if (ship.IsBlacklisted)
-                return ValueResult<Ship>.Error("That ship is not valid for this event.");
+                return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_INVALID"));
             var categories = new string[] { char1.Category, char2.Category };
             if (categories.Contains("AMBIGUOUS"))
             {
                 var compatibleFields = new string[] { "AMBIGUOUS", "ADULT", "CHILD" };
                 if (!compatibleFields.Contains(char1.Category ) || !compatibleFields.Contains(char2.Category))
-                    return ValueResult<Ship>.Error("That ship is not valid for this event.");
+                    return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_INVALID"));
             }
             else if (!char1.Category.Equals(char2.Category))
-                return ValueResult<Ship>.Error("That ship is not valid for this event.");
+                return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_INVALID"));
 
             if (!string.IsNullOrWhiteSpace(char1.Family) && char1.Family.Equals(char2.Family))
-                return ValueResult<Ship>.Error("That ship is not valid for this event.");
-            if (char1.CharacterId.Equals(char2.CharacterId))
-                return ValueResult<Ship>.Error("Wait hold on now! Let's hope nobody's that narcissistic!");
+                return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_INVALID"));
 
 
             // Handled duplicating
@@ -203,11 +240,11 @@ namespace PrideBot.Registration
             if (duplicateShip != null)
             {
                 if (duplicateShip.Tier == (int)UserShipTier.Primary)
-                    return ValueResult<Ship>.Error("You've already chosen that for your primary tier." +
-                        " The laws of love forbid deleting your primary, so you'll need to edit your primary ship to another pair first.");
+                    return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_PRIMARY_DUPE"));
                 var embed = GetEmbed()
-                    .WithDescription($"You've already chosen that for your {((UserShipTier)duplicateShip.Tier).ToString().ToLower()} ship." +
-                    $"\nWould you like to move it to {tier.ToString().ToLower()}?");
+                    .WithDescription(DialogueDict.Get("REGISTRATION_ERROR_SHIP_DUPE",
+                    ((UserShipTier)duplicateShip.Tier).ToString().ToLower(), duplicateShip.GetDisplayName(), tier.ToString().ToLower()))
+                    .WithTitle("Error");
                 var yesEmote = new Emoji("✅");
                 var noEmote = new Emoji("❌");
                 var response = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: new List<IEmote>() { yesEmote, noEmote });
@@ -239,15 +276,16 @@ namespace PrideBot.Registration
         }
 
         EmbedBuilder GetEmbed()
-            => EmbedHelper.GetEventEmbed(user, config, showUser: false);
+            => EmbedHelper.GetEventEmbed(user, config, showUser: false)
+            .WithThumbnailUrl("https://cdn.discordapp.com/avatars/812464137334292520/fe33c0e68b6b651d7cef55d16061f884.png");
 
-        async Task<EmbedBuilder> GetEmbed(User dbUser, UserShipCollection dbShips, int highlightTier = -1)
+        async Task<EmbedBuilder> GetEmbed(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0)
         => GetEmbed()
-            .WithImageUrl(await GenerateShipImage(dbUser, dbShips, highlightTier));
+            .WithImageUrl(await GenerateShipImage(dbUser, dbShips, highlightTier, highlightHeart));
 
-        public async Task<string> GenerateShipImage(User dbUser, UserShipCollection dbShips, int highlightTier = -1)
+        public async Task<string> GenerateShipImage(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0)
         {
-            var image = await shipImageGenerator.WriteUserAvatarAsync(dbUser, dbShips, highlightTier);
+            var image = await shipImageGenerator.WriteUserAvatarAsync(dbUser, dbShips, highlightTier, highlightHeart);
             return config.GetRelativeHostPathWeb(image);
         }
     }

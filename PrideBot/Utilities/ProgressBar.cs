@@ -10,7 +10,7 @@ namespace PrideBot
 {
     public class ProgressBar
     {
-        public const string HaniwaEmote = "<a:haniwadance:799928966403457074>";
+        public const string SignatureEmote = "💗";
         public const string TransparentEmote = "<:transparent:805664623318925403>";
         public const string ErrorEmote = "<:haniWhat:809543471449767946>";
         private const decimal ProgressPerHaniwa = .1m;
@@ -67,7 +67,7 @@ namespace PrideBot
             for (decimal d = 0; d <= 1; d+= ProgressPerHaniwa)
             {
                 if (progress >= d)
-                    text += HaniwaEmote;
+                    text += SignatureEmote;
                 else
                     text += TransparentEmote;
             }

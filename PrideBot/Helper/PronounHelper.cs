@@ -52,18 +52,27 @@ namespace PrideBot
             }
         }
 
+        public static string Pronoun(this SocketUser user, DiscordSocketClient client, Pronoun usage, string pluralSuffix = "", string singularSuffix = "", bool capitalize = false)
+            => Pronoun(client.Guilds
+                .Select(a => a.GetUser(user.Id))
+                .Where(a => a != null)
+                .SelectMany(a => a.Roles), usage, pluralSuffix, singularSuffix, capitalize);
+
         public static string Pronoun(this SocketGuildUser user, Pronoun usage, string pluralSuffix = "", string singularSuffix = "", bool capitalize = false)
+            => Pronoun(user.Roles, usage, pluralSuffix, singularSuffix, capitalize);
+
+        public static string Pronoun(IEnumerable<SocketRole> roles, Pronoun usage, string pluralSuffix = "", string singularSuffix = "", bool capitalize = false)
         {
             // Get preferred pronoun roles
             var matches = AllPronouns
-                .Where(a => user.Roles
+                .Where(a => roles
                     .Any(aa => aa.Name.Contains(a.Name, StringComparison.OrdinalIgnoreCase)
                     && aa.Name.Contains("preferred", StringComparison.OrdinalIgnoreCase)));
 
             // Get regular pronoun roles
             if (!matches.Any())
                 matches = AllPronouns
-                .Where(a => user.Roles
+                .Where(a => roles
                     .Any(aa => aa.Name.Contains(a.Name, StringComparison.OrdinalIgnoreCase)));
 
             var match = matches.FirstOrDefault() ?? AllPronouns.First();
@@ -72,6 +81,25 @@ namespace PrideBot
             if (capitalize)
                 usageStr = ((char)(usageStr.First() + ('A' - 'a'))).ToString() + usageStr.Substring(1);
             return usageStr + suffixStr;
+        }
+
+        public static string Honorific(this SocketUser user, DiscordSocketClient client, string sheResponse, string heResponse, string theyResponse)
+            => Honorific(client.Guilds
+                .Select(a => a.GetUser(user.Id))
+                .Where(a => a != null)
+                .SelectMany(a => a.Roles), sheResponse, heResponse, theyResponse);
+
+        public static string Honorific(this SocketGuildUser user, string sheResponse, string heResponse, string theyResponse)
+            => Honorific(user.Roles, sheResponse, heResponse, theyResponse);
+
+        public static string Honorific(IEnumerable<SocketRole> roles, string sheResponse, string heResponse, string theyResponse)
+        {
+            var pronoun = Pronoun(roles, PrideBot.Pronoun.They);
+            if (pronoun.Equals("she"))
+                return sheResponse;
+            else if (pronoun.Equals("he"))
+                return heResponse;
+            return theyResponse;
         }
     }
 }

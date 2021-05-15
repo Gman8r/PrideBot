@@ -28,6 +28,6 @@ namespace PrideBot.Models
 
         public bool IsEmpty() => string.IsNullOrWhiteSpace(CharacterId1) || string.IsNullOrWhiteSpace(CharacterId2);
 
-        public string GetDisplayName() => Nickname ?? $"{CharacterId1.ToLower().CapitalizeFirst()} X {CharacterId2.ToLower().CapitalizeFirst()}";
+        public string GetDisplayName() => Nickname ?? $"{Character1First}X{Character2First}";
     }
 }

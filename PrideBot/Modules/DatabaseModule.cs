@@ -29,25 +29,44 @@ namespace PrideBot.Modules
     {
         readonly ModelRepository modelRepository;
         readonly GoogleSheetsService sheetsService;
+        readonly DialogueDict dialogueDict;
 
-        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService)
+        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService, DialogueDict dialogueDict)
         {
             this.modelRepository = modelRepository;
             this.sheetsService = sheetsService;
+            this.dialogueDict = dialogueDict;
         }
 
-        [Command("table update")]
-        [Alias("sheet update")]
-        public async Task UploadSheet(string url, string range, string tableName)
+        [Command("updatesheet")]
+        [Alias("pushsheet")]
+        public async Task UploadSheet(string url, string tableName)
         {
             var idPattern = "\\/d\\/(.*?)\\/(|$)";
             var idMatch = new Regex(idPattern).Match(url);
             var groups = idMatch.Groups.Cast<Group>();
             var sheetId = groups.SkipLast(1).Last().Value + groups.Last().Value;
 
-            var sheetsResult = await sheetsService.ReadSheetDataAsync(sheetId, range);
+            var sheetsResult = await sheetsService.ReadSheetDataAsync(sheetId, "A1:Y1001");
             var fieldsRow = sheetsResult.Values.FirstOrDefault();
             var fieldDict = new Dictionary<string, Type>();
+
+            // Remove () columns
+            var notesColumns = fieldsRow
+                .Where(a => a.ToString().StartsWith("("))
+                .Select(a => fieldsRow.IndexOf(a))
+                .ToList();
+            for (int i = sheetsResult.Values.Count - 1; i >= 0; i--)
+            {
+                var row = sheetsResult.Values[i];
+                for (int j = notesColumns.Count - 1; j >= 0; j--)
+                {
+                    var notesColumn = notesColumns[j];
+                    if (notesColumn < row.Count)
+                        row.RemoveAt(notesColumn);
+                }
+            }
+            fieldDict = new Dictionary<string, Type>();
 
             // Get names and types
             foreach (var field in fieldsRow)
@@ -194,10 +213,15 @@ namespace PrideBot.Modules
             }
             var rowsAffected = await command.ExecuteNonQueryAsync();
 
-            await ReplyResultAsync($"Done. {rowsAffected} row(s) affected.");
+            await ReplyResultAsync($"Done! {rowsAffected} row(s) affected.");
 
         }
-
-
+        [Command("updatedialogue")]
+        [Alias("pushdialogue")]
+        public async Task UpdateDialogue()
+        {
+            await UploadSheet("https://docs.google.com/spreadsheets/d/14EGqZ5_gVpqRgNCjqbYXncwHrbNOjh9J-QjyrN0vJlY/edit#gid=0", "DIALOGUE");
+            await dialogueDict.PullDialogueAsync();
+        }
     }
 }

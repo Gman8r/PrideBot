@@ -19,7 +19,7 @@ namespace PrideBot
 
         public async Task CreateMessageAsync(IMessageChannel channel, string text)
         {
-            message = await channel.SendMessageAsync(ProgressBar.HaniwaEmote + " " + text);
+            message = await channel.SendMessageAsync(ProgressBar.SignatureEmote + " " + text);
             if (disposed)
             {
                 await AttemptDeleteAsync();

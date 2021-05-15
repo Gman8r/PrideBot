@@ -18,24 +18,22 @@ namespace PrideBot
             return await channel.SendMessageAsync(ConvertToErrorMessage(text, toOwner),
                 isTTS, embed, options, allowedMentions, messageReference);
         }
-        public static async Task<IUserMessage> SendResultMessageAsync(this IMessageChannel channel, string text = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, bool toOwner = false, AllowedMentions allowedMentions = null, MessageReference messageReference = null, bool sendEmote = true)
+        public static async Task<IUserMessage> SendResultMessageAsync(this IMessageChannel channel, string text = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, string honorific = "", AllowedMentions allowedMentions = null, MessageReference messageReference = null, bool sendEmote = true)
         {
-            return await channel.SendMessageAsync(ConvertToResultMessage(text, toOwner, sendEmote),
+            return await channel.SendMessageAsync(ConvertToResultMessage(text, honorific, sendEmote),
                 isTTS, embed, options, allowedMentions, messageReference);
         }
 
-        public static string ConvertToResultMessage(string message, bool isBotOwner, bool sendEmote = true)
+        public static string ConvertToResultMessage(string message, string honorific, bool sendEmote = true)
         {
-            if (isBotOwner)
-            {
-                var breakAt = message.IndexOfAny(new char[] { '.'});
-                if (breakAt >= 0)
-                    message = message.Substring(0, breakAt) + ", my lady" + message.Substring(breakAt);
-                else
-                    message += ", my lady.";
-            }
+            var breakAt = message.IndexOfAny(new char[] { '.' , '!' });
+            if (breakAt >= 0)
+                message = message.Substring(0, breakAt) + $" {honorific}" + message.Substring(breakAt);
+            else
+                message += $" {honorific}!";
+
             if (sendEmote)
-                return $"{ProgressBar.HaniwaEmote} {message}";
+                return $"{ProgressBar.SignatureEmote} {message}";
             else
                 return message;
         }

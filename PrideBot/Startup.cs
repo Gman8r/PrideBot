@@ -47,7 +47,8 @@ namespace PrideBot
 
             var provider = services.BuildServiceProvider();     // Build the service provider
             provider.GetRequiredService<LoggingService>();      // Start the logging service
-            provider.GetRequiredService<CommandHandler>(); 		// Start the command handler service
+            provider.GetRequiredService<CommandHandler>();      // Start the command handler service
+            provider.GetRequiredService<DialogueDict>();
 
             if (!(bool)Configuration.ParseBoolField("stealthmode")) 
             {
@@ -84,6 +85,7 @@ namespace PrideBot
             .AddSingleton<LoggingService>()         // Add loggingservice to the collection
             .AddSingleton<Random>()                 // Add random to the collection
             .AddSingleton<ModelRepository>()
+            .AddSingleton<DialogueDict>()
             .AddSingleton(Configuration);             // Add the configuration to the collection
 
             Console.WriteLine();
