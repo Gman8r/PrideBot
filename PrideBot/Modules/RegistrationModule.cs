@@ -37,13 +37,5 @@ namespace PrideBot.Modules
             this.shipImageGenerator = shipImageGenerator;
             this.client = client;
         }
-
-        [Command("register")]
-        [Summary("Register with a ship for the event, or change your ship. For arguments, use the format: `Character One X Character Two`. Either first or full names are fine, and order doesn't matter.")]
-        public async Task Register()
-        {
-            await new RegistrationSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, shipImageGenerator, repo, client, Context.Message)
-                .PerformSessionAsync();
-        }
     }
 }

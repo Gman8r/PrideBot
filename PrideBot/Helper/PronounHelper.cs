@@ -101,5 +101,8 @@ namespace PrideBot
                 return heResponse;
             return theyResponse;
         }
+
+        public static string Queen(this SocketUser user, DiscordSocketClient client) => Honorific(user, client, "Queen", "King", "Monarch");
+        public static string Queen(this SocketGuildUser user) => Honorific(user, "Queen", "King", "Monarch");
     }
 }

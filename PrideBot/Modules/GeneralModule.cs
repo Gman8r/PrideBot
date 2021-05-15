@@ -55,7 +55,7 @@ namespace PrideBot.Modules
 
                 var prefixes = config.GetPrefixes();
                 var defaultPrefix = config.GetDefaultPrefix();
-                var helpMessage = Context.User.IsOwner(config) ? "Here to serve, my lady." : "Here to serve.";
+                var helpMessage = "Yasss let's go!";
                 //var helpMessage = "Here to serve.";
                 helpMessage += $" `{defaultPrefix}help {{command}}` for more info\n\n"
                 + "Use any of these prefixes (case-insensitive) or mention me to call me:\n"

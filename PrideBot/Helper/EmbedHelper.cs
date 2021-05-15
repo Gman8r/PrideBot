@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -25,15 +26,23 @@ namespace PrideBot
                     .WithName((user as IGuildUser)?.Username ?? user.Username));
             return embed;
     }
-            
 
-        public static EmbedBuilder GetEventErrorEmbed(SocketCommandContext context, string title, string description) => new EmbedBuilder()
-            .WithTitle(title)
-            .WithDescription(description)
-            .WithColor(Color.Red)
-            .WithAuthor(new EmbedAuthorBuilder()
-                .WithIconUrl(context.User.GetAvatarUrlOrDefault().Split('?')[0])
-                .WithName(context.Guild == null ? context.User.Username : context.Guild.GetUser(context.User.Id).Nickname ?? context.User.Username))
-            .WithCurrentTimestamp();
+
+        public static EmbedBuilder GetEventErrorEmbed(IUser user, string description, DiscordSocketClient client = null, bool showUser = true)
+        {
+            var title = "Hold Up";
+            if (client != null && user is SocketUser sUser)
+                title = $"Hold Up {sUser.Queen(client)}";
+            var embed = new EmbedBuilder()
+                .WithTitle(title)
+                .WithDescription(description)
+                .WithColor(Color.Red);
+            if (showUser)
+                embed = embed
+                    .WithAuthor(new EmbedAuthorBuilder()
+                    .WithName((user as IGuildUser)?.Nickname ?? user.Username)
+                    .WithIconUrl(user.GetAvatarUrlOrDefault().Split('?')[0]));
+            return embed;
+        }
     }
 }

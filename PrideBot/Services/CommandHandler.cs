@@ -91,11 +91,10 @@ namespace PrideBot
                 }
                 else if (!string.IsNullOrEmpty(result.ErrorReason))
                 {
-                    await context.Channel.SendMessageAsync(embed: EmbedHelper.GetEventErrorEmbed(context as SocketCommandContext, "Error", result.ErrorReason).Build());
-                    //if (result.Error == CommandError.Exception)
-                    //    await context.Channel.SendResultMessageAsync(result.ErrorReason, toOwner: context.User.IsOwner(config), allowedMentions: AllowedMentions.None, sendEmote: false);
-                    //else
-                    //    await context.Channel.SendErrorMessageAsync(result.ErrorReason, toOwner: context.User.IsOwner(config), allowedMentions: AllowedMentions.None);
+                    var errorReason = result.Error != CommandError.Exception ? result.ErrorReason
+                        : DialogueDict.Get("EXCEPTION");
+                    await context.Channel.SendMessageAsync(embed:
+                        EmbedHelper.GetEventErrorEmbed(context.User, errorReason, context.Client as DiscordSocketClient).Build());
                 }
             }
             catch (Exception e)

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace PrideBot
@@ -23,8 +24,18 @@ namespace PrideBot
         protected readonly SocketUser user;
         protected readonly IConfigurationRoot config;
         protected readonly SocketMessage originMessage;
+        protected readonly TimeSpan timeout;
 
         protected Prompt currentPrompt;
+
+        public bool IsCancelled { get; private set; }
+        public void Cancel(string message)
+        {
+            IsCancelled = true;
+            cancellationMessage = message;
+        }
+
+        string cancellationMessage;
 
         protected class Prompt
         {
@@ -47,15 +58,14 @@ namespace PrideBot
             }
         }
 
-        public DMSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, DiscordSocketClient client, SocketMessage originMessage = null)
+        public DMSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, SocketMessage originMessage = null)
         {
             this.channel = channel;
             this.user = user;
             this.config = config;
             this.originMessage = originMessage;
+            this.timeout = timeout;
 
-            client.MessageReceived += MesageReceived;
-            client.ReactionAdded += ReactionAdded;
             this.client = client;
         }
 
@@ -92,22 +102,35 @@ namespace PrideBot
                 originMessage.AddReactionAsync(new Emoji("✅")).GetAwaiter();
             if (activeSessions.Any(a => a.user.Id == user.Id))
             {
-                await channel.SendMessageAsync("Hold up! We're already in the middle of a session! Let's finish up here before we do anything else, 'kaayyy?");
+                var errorEmbed = EmbedHelper.GetEventErrorEmbed(user, DialogueDict.Get("SESSION_DUPE"), client, showUser: false);
+                await channel.SendMessageAsync(embed: errorEmbed.Build());
                 return;
             }
             activeSessions.Add(this);
             try
             {
+                client.MessageReceived += MesageReceived;
+                client.ReactionAdded += ReactionAdded;
                 await PerformSessionInternalAsync();
+            }
+            catch (OperationCanceledException e)
+            {
+                var embed = EmbedHelper.GetEventEmbed(user, config, showUser: false)
+                    .WithTitle("Session Cancelled")
+                    .WithDescription(cancellationMessage);
+                await channel.SendMessageAsync(embed: embed.Build());
             }
             catch
             {
-                await channel.SendMessageAsync("UH OH! Something went wrong! Sorry, you'll need to start this session up again, please contact a sage if this continues and blame them instead, 'kay?");
+                var errorEmbed = EmbedHelper.GetEventErrorEmbed(user, DialogueDict.Get("SESSION_EXCEPTION"), client, showUser: false);
+                await channel.SendMessageAsync(embed: errorEmbed.Build());
                 throw;
             }
             finally
             {
                 activeSessions.Remove(this);
+                client.MessageReceived -= MesageReceived;
+                client.ReactionAdded -= ReactionAdded;
             }
         }
 
@@ -147,9 +170,16 @@ namespace PrideBot
             currentPrompt = new Prompt(message, acceptsText, emoteChoices);
             AddReactions(message, emoteChoices).GetAwaiter();
 
+            var startTime = DateTime.Now;
             while(!currentPrompt.IsEntered)
             {
                 await Task.Delay(100);
+                if (DateTime.Now - startTime > timeout)
+                    Cancel(DialogueDict.Get("SESSION_TIMEOUT"));
+                if (IsCancelled)
+                {
+                    throw new OperationCanceledException(cancellationMessage);
+                }
             }
 
             return currentPrompt;

@@ -47,7 +47,7 @@ namespace PrideBot
 
         protected virtual async Task<IUserMessage> ReplyResultAsync(string message = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, AllowedMentions allowedMentions = null, MessageReference messageReference = null)
         {
-            var honorific = Context.User.Honorific(Context.Client, "Queen", "King", "Monarch");
+            var honorific = Context.User.Queen(Context.Client);
             message = MessageHelper.ConvertToResultMessage(message, honorific);
             return await ReplyAsync(message, isTTS, embed, options, allowedMentions, messageReference);
         }

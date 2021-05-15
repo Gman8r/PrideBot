@@ -24,7 +24,7 @@ namespace PrideBot.Registration
         User dbUser;
         UserShipCollection dbUserShips;
 
-        public RegistrationSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, ModelRepository repo, DiscordSocketClient client, SocketMessage originmessage) : base(channel, user, config, client, originmessage)
+        public RegistrationSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage) : base(channel, user, config, client, timeout, originmessage)
         {
             this.shipImageGenerator = shipImageGenerator;
             this.repo = repo;
@@ -38,11 +38,11 @@ namespace PrideBot.Registration
             using var connection = DatabaseHelper.GetDatabaseConnection();
             await connection.OpenAsync();
 
-            dbUser = await repo.GetUserAsync(connection, user.Id.ToString());
             dbUserShips = new UserShipCollection();
+            dbUser = await repo.GetUserAsync(connection, user.Id.ToString());
             if (dbUser == null)
             {
-                await repo.AddUserAsync(connection, dbUser);
+                await repo.AddUserAsync(connection, new User() { UserId = user.Id.ToString() });
                 dbUser = await repo.GetUserAsync(connection, user.Id.ToString());
             }
             else                
@@ -55,7 +55,7 @@ namespace PrideBot.Registration
             var embed = GetEmbed()
                 .WithTitle(userHasRegistered ? "Edit Your Registration!" : "Registration Time!")
                 .WithDescription(userHasRegistered
-                ? DialogueDict.Get("REGISTRATION_EDIT", user.Honorific(client, "Queen", "King", "Monarch"))
+                ? DialogueDict.Get("REGISTRATION_EDIT", user.Queen(client))
                 : DialogueDict.Get("REGISTRATION_WELCOME", config.GetDefaultPrefix()));
 
             await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: new List<IEmote>() { new Emoji("✅")});
@@ -126,9 +126,10 @@ namespace PrideBot.Registration
                 shipValidated = result.IsSuccess;
                 if (!shipValidated)
                 {
-                    embed.Description = $"{result.ErrorMessage}\n\n{DialogueDict.Get("SESSION_TRY_AGAIN")} {enterInstructions}";
-                    embed.ImageUrl = null;
-                    embed.Title = "Error";
+                    var errorEmbed = EmbedHelper.GetEventErrorEmbed(user, $"{result.ErrorMessage}",
+                        client, showUser: false);
+                    await channel.SendMessageAsync(embed: errorEmbed.Build());
+                    embed.Description = $"{DialogueDict.Get("SESSION_TRY_AGAIN")} {enterInstructions}";
                 }
                 else
                 {
@@ -189,7 +190,7 @@ namespace PrideBot.Registration
 
             }
 
-            return DialogueDict.Get("REGISTRATION_FINISH_SHIP", user.Honorific(client, "Queen", "King", "Monarch"));
+            return DialogueDict.Get("REGISTRATION_FINISH_SHIP", user.Queen(client));
         }
 
         async Task<ValueResult<Ship>> ParseAndValidateShipAsync(SqlConnection connection, string shipStr, UserShipTier tier, UserShipCollection currentShips)
@@ -234,7 +235,7 @@ namespace PrideBot.Registration
                 return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_INVALID"));
 
 
-            // Handled duplicating
+            // Handle duplicates
             var duplicateShip = currentShips
                 .FirstOrDefault(a => a.Tier != (int)tier && a.ShipId.Equals(ship.ShipId));
             if (duplicateShip != null)
@@ -255,7 +256,7 @@ namespace PrideBot.Registration
                     dbUserShips = await repo.GetUserShipsAsync(connection, dbUser);
                 }
                 else
-                    return ValueResult<Ship>.Error("");
+                    return ValueResult<Ship>.Error("Suuuuuucks");
 
             }
 
@@ -277,7 +278,7 @@ namespace PrideBot.Registration
 
         EmbedBuilder GetEmbed()
             => EmbedHelper.GetEventEmbed(user, config, showUser: false)
-            .WithThumbnailUrl("https://cdn.discordapp.com/avatars/812464137334292520/fe33c0e68b6b651d7cef55d16061f884.png");
+            .WithThumbnailUrl("https://cdn.discordapp.com/attachments/419187329706491905/843048501458108436/unknown.png");
 
         async Task<EmbedBuilder> GetEmbed(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0)
         => GetEmbed()
