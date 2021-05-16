@@ -292,7 +292,7 @@
     <None Update="Assets\CharacterSprites\MOKOU.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Assets\CharacterSprites\MOMOJI.png">
+    <None Update="Assets\CharacterSprites\MOMIJI.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\CharacterSprites\MUGETSU.png">

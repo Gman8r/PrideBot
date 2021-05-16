@@ -24,5 +24,7 @@ namespace PrideBot
             }
             return r;
         }
+
+        public static string ToPercent(decimal d) => (d * 100).ToString();
     }
 }

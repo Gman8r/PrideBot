@@ -25,14 +25,14 @@ namespace PrideBot
 
         public static PronounSet[] AllPronouns = new PronounSet[]
         {
-            new PronounSet("they/them", true,
-                new string[] { "they", "them", "their", "theirs", "themself" }),
+            new PronounSet("she/her", false,
+                new string[] { "she", "her", "her", "hers", "herself" }),
 
             new PronounSet("he/him", false,
                 new string[] { "he", "him", "his", "his", "himself" }),
 
-            new PronounSet("she/her", false,
-                new string[] { "she", "her", "her", "hers", "herself" }),
+            new PronounSet("they/them", true,
+                new string[] { "they", "them", "their", "theirs", "themself" }),
 
             new PronounSet("it/its", false,
                 new string[] { "it", "it", "its", "its", "itself" })
@@ -75,7 +75,7 @@ namespace PrideBot
                 .Where(a => roles
                     .Any(aa => aa.Name.Contains(a.Name, StringComparison.OrdinalIgnoreCase)));
 
-            var match = matches.FirstOrDefault() ?? AllPronouns.First();
+            var match = matches.FirstOrDefault() ?? AllPronouns.First(a => a.Name.StartsWith("they"));
             var usageStr = match.Prounouns[(int)usage];
             var suffixStr = match.IsPlural ? pluralSuffix : singularSuffix;
             if (capitalize)

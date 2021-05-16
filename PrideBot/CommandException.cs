@@ -6,9 +6,12 @@ namespace PrideBot
 {
     class CommandException : Exception
     {
-        public CommandException(string errorMessage, Exception innerException = null) : base(errorMessage, innerException)
-        {
+        public string ParsedMessage { get; }
 
+        // We don't get passed the exception itself upon command execution, so CommandException messages have a special prefix to indicate they're not an internal error
+        public CommandException(string errorMessage, Exception innerException = null) : base("COMMANDEXCEPTION:" + errorMessage, innerException)
+        {
+            ParsedMessage = errorMessage;
         }
     }
 }

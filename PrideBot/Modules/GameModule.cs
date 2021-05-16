@@ -49,7 +49,7 @@ namespace PrideBot.Modules
         public async Task Register()
         {
             await new RegistrationSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, shipImageGenerator, repo, client,
-                new TimeSpan(0, 2, 0), Context.Message)
+                new TimeSpan(0, 5, 0), Context.Message)
                 .PerformSessionAsync();
         }
 
@@ -90,8 +90,8 @@ namespace PrideBot.Modules
             embed.AddField("Pairings Supported:",
                 string.Join("\n", Enumerable.Range(0, 3)
                 .Select(a => (UserShipTier)a)
-                .Select(a => $"{EmoteHelper.GetShipTierEmoji(a)} **{a}** Pairing: **{dbShips.Get(a).Character1First}X{dbShips.Get(a).Character2First}**" +
-                $" {(GameHelper.GetPointFraction(a) == 1m ? "" : $" ({GameHelper.GetPointPercent(a)}% SP)")}")));
+                .Select(a => $"{EmoteHelper.GetShipTierEmoji(a)} **{a}** Pairing: **{dbShips.Get(a)?.GetDisplayName() ?? "None"}**" +
+                    $" {((GameHelper.GetPointFraction(a) == 1m || !dbShips.Has(a)) ? "" : $" ({dbShips.Get(a).ScoreRatio}% SP)")}")));
 
             await ReplyAsync(embed: embed.Build());
         }

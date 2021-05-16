@@ -45,12 +45,12 @@ namespace PrideBot.Registration
             //else
             {
                 image.Composite(primaryShipImage, Gravity.Northwest, 80, 0, CompositeOperator.Over);
-                if (userShips.HasSecondaryShip)
+                if (userShips.HasSecondaryShip || highlightTier == 1)
                 {
                     ship2Image = await GenerateShipImageAsync(userShips.SecondaryShip, highlightTier == 1, highlightHeart);
                     image.Composite(ship2Image, Gravity.Northwest, 8, 116, CompositeOperator.Over);
                 }
-                if (userShips.HasTertiaryShip)
+                if (userShips.HasTertiaryShip || highlightTier == 2)
                 {
                     ship3Image = await GenerateShipImageAsync(userShips.TertiaryShip, highlightTier == 2, highlightHeart);
                     image.Composite(ship3Image, Gravity.Northwest, 216, 116, CompositeOperator.Over);

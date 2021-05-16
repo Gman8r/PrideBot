@@ -12,6 +12,9 @@ namespace PrideBot.Models
         public string UserId { get; set; }
         new public string ShipId { get; set; }
         public string Heart1 { get; set; }
+
         public string Heart2 { get; set; }
+        [DontPushToDatabase]
+        public decimal ScoreRatio { get; set; }
     }
 }

@@ -91,8 +91,20 @@ namespace PrideBot
                 }
                 else if (!string.IsNullOrEmpty(result.ErrorReason))
                 {
-                    var errorReason = result.Error != CommandError.Exception ? result.ErrorReason
-                        : DialogueDict.Get("EXCEPTION");
+                    var commandException = result.Error == CommandError.Exception && result.ErrorReason.StartsWith("COMMANDEXCEPTION:");
+                    string errorReason;
+                    if (result.Error != CommandError.Exception)
+                    {
+                        errorReason = result.ErrorReason;
+                    }
+                    else
+                    {
+                        if (result.ErrorReason.StartsWith("COMMANDEXCEPTION:"))
+                            errorReason = (result.ErrorReason.Substring("COMMANDEXCEPTION:".Count()));
+                        else
+                            errorReason = DialogueDict.Get("EXCEPTION");
+
+                    }
                     await context.Channel.SendMessageAsync(embed:
                         EmbedHelper.GetEventErrorEmbed(context.User, errorReason, context.Client as DiscordSocketClient).Build());
                 }

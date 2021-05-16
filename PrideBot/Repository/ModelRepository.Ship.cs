@@ -40,5 +40,18 @@ namespace PrideBot.Repository
 
         public async Task<int> UpdateShipAsync(SqlConnection conn, Ship value)
             => await DatabaseHelper.GetUpdateCommand(conn, value, "SHIPS").ExecuteNonQueryAsync();
+
+        public async Task<decimal> GetScoreRatioForTierAsync(UserShipTier tier)
+            => (decimal)(await new SqlCommand($"select dbo.fnGetScoreRatioForTier({(int)tier})").ExecuteScalarAsync());
+
+        public async Task SwapShipTiersAsync(SqlConnection conn, string userId, UserShipTier tier1, UserShipTier tier2)
+        {
+            var command = new SqlCommand("SP_SWAP_SHIP_TIERS", conn);
+            command.CommandType = CommandType.StoredProcedure;
+            command.Parameters.Add(new SqlParameter("@USER_ID", userId));
+            command.Parameters.Add(new SqlParameter("@TIER_1", (int)tier1));
+            command.Parameters.Add(new SqlParameter("@TIER_2", (int)tier2));
+            await command.ExecuteNonQueryAsync();
+        }
     }
 }

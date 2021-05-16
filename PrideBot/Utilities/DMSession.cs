@@ -142,7 +142,7 @@ namespace PrideBot
         protected async Task<Prompt> SendAndAwaitResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false)
         {
             emoteChoices ??= new List<IEmote>();
-            if (emoteChoices.Count >= 2)
+            if (emoteChoices.Count >= 3)
             {
                 if (embed != null)
                     embed.Description += "\n\n" + DialogueDict.Get("SESSION_EMOTE_FILLING");
@@ -175,7 +175,7 @@ namespace PrideBot
             {
                 await Task.Delay(100);
                 if (DateTime.Now - startTime > timeout)
-                    Cancel(DialogueDict.Get("SESSION_TIMEOUT"));
+                    Cancel(GetTimeoutMessage());
                 if (IsCancelled)
                 {
                     throw new OperationCanceledException(cancellationMessage);
@@ -184,6 +184,8 @@ namespace PrideBot
 
             return currentPrompt;
         }
+
+        protected virtual string GetTimeoutMessage() => DialogueDict.Get("SESSION_TIMEOUT");
 
         async Task AddReactions(IMessage message, List<IEmote> emotes)
         {

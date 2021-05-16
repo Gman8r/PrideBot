@@ -33,5 +33,15 @@ namespace PrideBot.Repository
             var b = $"update USER_SHIPS set tier = {newTier} where tier = {oldTier}";
             return await new SqlCommand($"update USER_SHIPS set tier = {newTier} where USER_ID = '{userId}' and tier = {oldTier}", conn).ExecuteNonQueryAsync();
         }
+
+        public async Task CreateOrReplaceUserShip(SqlConnection conn, string userId, UserShipTier tier, string shipId)
+        {
+            var command = new SqlCommand("SP_CREATE_OR_REPLACE_USER_SHIP", conn);
+            command.CommandType = CommandType.StoredProcedure;
+            command.Parameters.Add(new SqlParameter("@USER_ID", userId));
+            command.Parameters.Add(new SqlParameter("@TIER", (int)tier));
+            command.Parameters.Add(new SqlParameter("@SHIP_ID", shipId));
+            await command.ExecuteNonQueryAsync();
+        }
     }
 }

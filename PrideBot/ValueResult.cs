@@ -25,5 +25,7 @@ namespace PrideBot
             ErrorMessage = ex.Message
         };
 
+        public Result ToResult() => new Result(IsSuccess, ErrorMessage);
+
     }
 }
