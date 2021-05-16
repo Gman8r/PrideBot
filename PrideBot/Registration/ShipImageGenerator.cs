@@ -21,15 +21,15 @@ namespace PrideBot.Registration
         public string GetShipAvatarPath(User user, IConfigurationRoot config)
             => config.GetRelativeHostPathLocal("ships/" + user.UserId + ".png");
 
-        public async Task<string> WriteUserAvatarAsync(User user, UserShipCollection ships, int highlightTier = -1, int highlightHeart = 0)
+        public async Task<string> WriteUserAvatarAsync(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0)
         {
-            var path = $"ships/usericon-{user.UserId}-{Math.Abs(DateTimeOffset.Now.GetHashCode())}.png";
+            var path = $"ships/usericon-{dbUser.UserId}-{Math.Abs(DateTimeOffset.Now.GetHashCode())}.png";
             var fullPath = config.GetRelativeHostPathLocal(path);
-            await (await GenerateUserAvatarAsync(user, ships, highlightTier, highlightHeart)).WriteToFileAsync(fullPath);
+            await (await GenerateUserAvatarAsync(dbUser, dbShips, highlightTier, highlightHeart)).WriteToFileAsync(fullPath);
             return path;
         }
 
-        public async Task<MagickImage> GenerateUserAvatarAsync(User user, UserShipCollection userShips, int highlightTier = -1, int highlightHeart = 0)
+        public async Task<MagickImage> GenerateUserAvatarAsync(User dbUser, UserShipCollection userShips, int highlightTier = -1, int highlightHeart = 0)
         {
             var image = new MagickImage("Assets/CharacterSprites/shipbg1.png");
             //var image = new MagickImage(MagickColors.Transparent, 192, 128);

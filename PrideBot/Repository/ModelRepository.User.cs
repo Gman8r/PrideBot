@@ -16,6 +16,15 @@ namespace PrideBot.Repository
         public async Task<User> GetUserAsync(SqlConnection conn, string id)
         => (await new SqlCommand($"select * from VI_USERS where USER_ID = '{id.ToString()}'", conn).ExecuteReaderAsync()).As<User>().FirstOrDefault();
 
+        public async Task<User> GetOrCreateUserAsync(SqlConnection conn, string id)
+        {
+            var user = await GetUserAsync(conn, id);
+            if (user != null) return user;
+            user = new User() { UserId = id };
+            await AddUserAsync(conn, user);
+            return user;
+        }
+
         public async Task<int> AddUserAsync(SqlConnection conn, User value)
             => await DatabaseHelper.GetInsertCommand(conn, value, "USERS").ExecuteNonQueryAsync();
 

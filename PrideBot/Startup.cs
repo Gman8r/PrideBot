@@ -7,6 +7,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PrideBot.Game;
 using PrideBot.Registration;
 using PrideBot.Repository;
 using PrideBot.Sheets;
@@ -54,6 +55,7 @@ namespace PrideBot
             {
                 // PrideBot-specific services
                 provider.GetRequiredService<PlayStatusService>();
+                provider.GetRequiredService<ScoringService>();
             }
             else
             {
@@ -95,6 +97,7 @@ namespace PrideBot
                 services.AddSingleton<PlayStatusService>();
                 services.AddSingleton<GoogleSheetsService>();
                 services.AddSingleton<ShipImageGenerator>();
+                services.AddSingleton<ScoringService>();
                 //.AddSingleton<PlayStatusService>();
             }
         }
