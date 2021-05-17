@@ -56,7 +56,7 @@ namespace PrideBot.Registration
                 .WithTitle(userHasRegistered ? "Edit Your Registration!" : "Registration Time!")
                 .WithDescription(userHasRegistered
                 ? DialogueDict.Get("REGISTRATION_EDIT", user.Queen(client))
-                : DialogueDict.Get("REGISTRATION_WELCOME", config.GetDefaultPrefix()));
+                : DialogueDict.Get("REGISTRATION_WELCOME", user.Queen(client), config.GetDefaultPrefix()));
 
             var firstResponse = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: new List<IEmote>() { new Emoji("✅"), CancelEmote});
             if (firstResponse.emoteResponse.ToString().Equals(CancelEmote.ToString()))

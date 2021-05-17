@@ -102,7 +102,21 @@ namespace PrideBot
             return theyResponse;
         }
 
-        public static string Queen(this SocketUser user, DiscordSocketClient client) => Honorific(user, client, "Queen", "King", "Monarch");
-        public static string Queen(this SocketGuildUser user) => Honorific(user, "Queen", "King", "Monarch");
+        public static string Queen(this SocketUser user, DiscordSocketClient client)
+        {
+            var response = Honorific(user, client, "Queen", "King", "Gamer");
+            if (user.Id == 181874712375197696 && new Random().Next() % 10 == 0) //  That's right chai you're never safe
+                response = "Bitch";
+            return response;
+        }
+            
+
+        public static string Queen(this SocketGuildUser user)
+        {
+            var response = Honorific(user, "Queen", "King", "Gamer");
+            if (user.Id == 181874712375197696 && new Random().Next() % 10 == 0) //  That's right chai you're never safe
+                response = "Bitch";
+            return response;
+        }
     }
 }

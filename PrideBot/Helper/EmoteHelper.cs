@@ -19,6 +19,8 @@ namespace PrideBot
     public static class EmoteHelper
     {
 
+        public static IEmote SPEmote => new Emoji("<:SP:843515067977957377>");
+
         public static IEmote GetShipTierEmoji(UserShipTier tier) => tier == UserShipTier.Primary ? new Emoji("💗")
             : (tier == UserShipTier.Secondary ? new Emoji("💖") : new Emoji("♥"));
         public static string GetEmojiImage(string path, string target)

@@ -19,6 +19,7 @@ using Newtonsoft.Json;
 using PrideBot.Repository;
 using PrideBot.Registration;
 using PrideBot.Models;
+using PrideBot.Game;
 
 namespace PrideBot.Modules
 {
@@ -31,9 +32,10 @@ namespace PrideBot.Modules
         private readonly ModelRepository repo;
         private readonly ShipImageGenerator shipImageGenerator;
         private readonly DiscordSocketClient client;
+        private readonly ScoringService scoringService;
 
 
-        public GameModule(CommandService service, IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, ShipImageGenerator shipImageGenerator, DiscordSocketClient client)
+        public GameModule(CommandService service, IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService)
         {
             this.service = service;
             this.config = config;
@@ -41,6 +43,7 @@ namespace PrideBot.Modules
             this.repo = repo;
             this.shipImageGenerator = shipImageGenerator;
             this.client = client;
+            this.scoringService = scoringService;
         }
 
         [Command("register")]
@@ -55,7 +58,7 @@ namespace PrideBot.Modules
 
         [Command("ships")]
         [Alias("pairings")]
-        [Summary("Views your chosen pairings")]
+        [Summary("Views your chosen pairings.")]
         public async Task Ships(SocketUser user = null)
         {
             user ??= Context.User;
@@ -91,9 +94,25 @@ namespace PrideBot.Modules
                 string.Join("\n", Enumerable.Range(0, 3)
                 .Select(a => (UserShipTier)a)
                 .Select(a => $"{EmoteHelper.GetShipTierEmoji(a)} **{a}** Pairing: **{dbShips.Get(a)?.GetDisplayName() ?? "None"}**" +
-                    $" {((GameHelper.GetPointFraction(a) == 1m || !dbShips.Has(a)) ? "" : $" ({dbShips.Get(a).ScoreRatio}% SP)")}")));
+                    $" {((GameHelper.GetPointFraction(a) == 1m || !dbShips.Has(a)) ? "" : $" ({GameHelper.GetPointPercent(dbShips.Get(a).ScoreRatio)}% SP)")}")));
 
             await ReplyAsync(embed: embed.Build());
+        }
+
+        [Command("giveachievement")]
+        [Alias("grantachievement")]
+        [Summary("Gives a user an achievement, same as adding reactions")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task GiveAchievement(IUser user, string achievementId, [DefaultValueName("default")] int score = 0)
+        {
+            using var connection = DatabaseHelper.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var achievement = await repo.GetAchievementAsync(connection, achievementId);
+            if (achievement == null)
+                throw new CommandException("Achievement not found, make sure the Id matches the one in the sheet.");
+            await scoringService.AddAndDisplayAchievementAsync(connection, Context.Channel as ITextChannel, user, achievement, Context.User, score);
+            await ReplyResultAsync("Done!");
         }
 
     }

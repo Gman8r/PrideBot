@@ -55,12 +55,10 @@ namespace PrideBot.Modules
 
                 var prefixes = config.GetPrefixes();
                 var defaultPrefix = config.GetDefaultPrefix();
-                var helpMessage = "Yasss let's go!";
-                //var helpMessage = "Here to serve.";
-                helpMessage += $" `{defaultPrefix}help {{command}}` for more info\n\n"
-                + "Use any of these prefixes (case-insensitive) or mention me to call me:\n"
-                + string.Join("    ", ConfigHelper.GetPrefixes(config).Select(a => $"`{a}{{command}}`"))
+                var helpMessage = DialogueDict.Get("HELP", defaultPrefix)
                 + "\n\n";
+                //+ "Use any of these prefixes (case-insensitive) or mention me to call me:\n"
+                //+ string.Join("    ", ConfigHelper.GetPrefixes(config).Select(a => $"`{a}{{command}}`"))
 
                 var allUsableCommands = service.Commands
                     .Where(a => !a.Module.Name.Contains("Secret", StringComparison.OrdinalIgnoreCase));
@@ -167,6 +165,25 @@ namespace PrideBot.Modules
                 return ValueResult<string>.Error($"Command {commandName} not found");
 
             return ValueResult<string>.Success(message);
+        }
+
+        [Command("say")]
+        [Alias("echo")]
+        [Priority(0)]
+        [Summary("Relays a message.")]
+        public async Task Echo([Remainder] string message)
+        {
+            await ReplyAsync(DialogueDict.RollBullshit(message));
+        }
+
+        [Command("say")]
+        [Alias("echo")]
+        [Priority(1)]
+        [Summary("Relays a message in the specified chat channel.")]
+        public async Task Echo(SocketTextChannel channel, [Remainder] string message)
+        {
+            await channel.SendMessageAsync(DialogueDict.RollBullshit(message));
+            await ReplyResultAsync("Done.");
         }
 
     }

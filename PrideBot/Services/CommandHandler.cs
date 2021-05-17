@@ -71,6 +71,8 @@ namespace PrideBot
                     return;
                 }
 
+                string errorMessage = null;
+
                 if (result.Error == CommandError.UnknownCommand)
                 {
                     var argPos = commandArgData[context.Message.Id];
@@ -84,29 +86,30 @@ namespace PrideBot
                         // Submodule help (user used an invalid command in a submodule)
                         var moduleClass = PrideModuleBase.GetModule(module, commands).Value;
 
-                        await context.Channel.SendErrorMessageAsync($"Invalid subcommand for {module.GetModulePathPrefix().TrimEnd()}.\n\n" +
-                            await moduleClass.GetHelpLineAsync(module, module.Commands, context as SocketCommandContext, provider, config),
-                            toOwner: context.User.IsOwner(config));
+                        errorMessage = $"Invalid subcommand for {module.GetModulePathPrefix().TrimEnd()}.\n\n" +
+                            await moduleClass.GetHelpLineAsync(module, module.Commands, context as SocketCommandContext, provider, config);
                     }
                 }
                 else if (!string.IsNullOrEmpty(result.ErrorReason))
                 {
                     var commandException = result.Error == CommandError.Exception && result.ErrorReason.StartsWith("COMMANDEXCEPTION:");
-                    string errorReason;
                     if (result.Error != CommandError.Exception)
                     {
-                        errorReason = result.ErrorReason;
+                        errorMessage = result.ErrorReason;
                     }
                     else
                     {
                         if (result.ErrorReason.StartsWith("COMMANDEXCEPTION:"))
-                            errorReason = (result.ErrorReason.Substring("COMMANDEXCEPTION:".Count()));
+                            errorMessage = (result.ErrorReason.Substring("COMMANDEXCEPTION:".Count()));
                         else
-                            errorReason = DialogueDict.Get("EXCEPTION");
-
+                            errorMessage = DialogueDict.Get("EXCEPTION");
                     }
+                }
+
+                if (errorMessage != null)
+                {
                     await context.Channel.SendMessageAsync(embed:
-                        EmbedHelper.GetEventErrorEmbed(context.User, errorReason, context.Client as DiscordSocketClient).Build());
+                        EmbedHelper.GetEventErrorEmbed(context.User, DialogueDict.RollBullshit(errorMessage), context.Client as DiscordSocketClient).Build());
                 }
             }
             catch (Exception e)

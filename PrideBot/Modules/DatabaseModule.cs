@@ -139,16 +139,19 @@ namespace PrideBot.Modules
                 var changes = new Dictionary<string, object>();
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
+                    if (reader[0].Equals("GROUP_WATCH"))
+                    {
+
+                    }
                     var fieldName = reader.GetName(i);
-                    var j = 0;
-                    var fieldMatch = matchingRow
-                        .FirstOrDefault(a => fieldNames[j++].Equals(fieldName));
+                    var j = fieldNames.IndexOf(fieldName);
+                    var fieldMatch = j < matchingRow.Count ? matchingRow[j] : null;
                     if (fieldMatch == null)
                         continue;
+                    var row = reader[0].ToString();
+                    var b = reader[i].ToString();
                     if (!fieldMatch.ToString().Equals(reader[i].ToString()))
-                        changes[fieldNames[i]] = !string.IsNullOrEmpty(matchingRow[i].ToString())
-                            ? Convert.ChangeType(i < matchingRow.Count ? matchingRow[i] : "", fieldDict[fieldNames[i]])
-                            : "";
+                        changes[fieldName] = Convert.ChangeType(fieldMatch, fieldDict[fieldName]);
                 }
 
                 // Apply changes to update statement
@@ -210,6 +213,7 @@ namespace PrideBot.Modules
             foreach (var param in parameterDict)
             {
                 command.Parameters.AddWithValue(param.Key, param.Value);
+                query = query.Replace("@" + param.Key, $"'{param.Value.ToString()}'");
             }
             var rowsAffected = await command.ExecuteNonQueryAsync();
 

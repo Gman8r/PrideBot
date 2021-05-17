@@ -33,9 +33,9 @@ namespace PrideBot
                 message += $" {honorific}!";
 
             if (sendEmote)
-                return $"{ProgressBar.SignatureEmote} {message}";
-            else
-                return message;
+                message = $"{ProgressBar.SignatureEmote} {message}";
+            message = DialogueDict.RollBullshit(message);
+            return message;
         }
 
         public static string ConvertToErrorMessage(string message, bool isBotOwner)

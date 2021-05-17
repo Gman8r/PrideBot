@@ -35,14 +35,59 @@ namespace PrideBot
 
         public static string Get(string key, params object[] args)
         {
-            try
-            {
-                return string.Format(instance.dict[key], args);
-            }
-            catch
-            {
+            if (!instance.dict.ContainsKey(key))
                 return "(MISSING DIALOGUE OH NO MY BRAIN)";
-            }
+
+            var str = string.Format(instance.dict[key]
+                .Replace("{SP}", EmoteHelper.SPEmote.ToString())
+                , args);
+            return RollBullshit(str);
         } 
+
+        public static string RollBullshit(string str)
+        {
+            var rand = new Random();
+
+            var bullshitPhrases = new List<string>() {
+                    "Wowwwwwww.",
+                    "SJFKJFsg.",
+                    "Fortnite.",
+                    "Minecraft.",
+                    "Buy Skyrim.",
+                    "Gay.",
+                    "Gayyy.",
+                    "God I'm cute.",
+                    "Gamer.",
+                    "ASFJHAJSH!!",
+                    "KSHGSJVVH.",
+                    "PFPShfhfh.",
+                    "AAAkfsjkfsfdjsjs.",
+                    "Gender??",
+                    "Gay rights!",
+                    "Trans rights!",
+                    "ACAB!",
+                    "Worm.",
+                    "Like comment and subscribe.",
+                    "Brainrot got me like.",
+                    "On god?",
+                    "Yooooo.",
+                    "pspspsp here kitty.",
+                    "Where the hell am I?",
+                    "Tsuchinoko real.",
+                    "I love women.",
+                    "I want money.",
+                    "Women.",
+                    "Miku Hatsune.",
+                    "Daaaaamn.",
+                    "Fuck.",
+                    "Lasers!!",
+                    "Home of sexual.",
+                    "Gay Gay Homo Sexual Gay."};
+
+            var roll = rand.Next() % 25;
+            if (str.Length > 0 && char.IsPunctuation(str.Last()) && roll == 0)
+                str += " " + bullshitPhrases[rand.Next() % bullshitPhrases.Count];
+            return str;
+        }
     }
 }

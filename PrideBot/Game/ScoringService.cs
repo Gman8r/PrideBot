@@ -30,10 +30,15 @@ namespace PrideBot.Game
             this.config = config;
         }
 
-        public async Task AddAndDisplayAchievementAsync(SqlConnection connection, ITextChannel channel, IUser user, Achievement achievement, IUser approver, int overridePoints = -1, string titleUrl = null, bool ignoreIfNotRegistered = true)
+        public async Task AddAndDisplayAchievementAsync(SqlConnection connection, ITextChannel channel, IUser user, Achievement achievement, IUser approver, int overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = true)
         {
+            if (overridePoints > 999)
+                throw new CommandException("Max score for an achievement is 999, WHY ARE YOU EVEN DOING THIS??");
+            else if (overridePoints < 0)
+                throw new CommandException("I can't reverse the threads of love! Score must be positive or 0 for default.");
+
             var dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
-            var pointsEarned = overridePoints > -0 ? overridePoints : achievement.DefaultScore;
+            var pointsEarned = overridePoints == 0 ? achievement.DefaultScore : overridePoints;
             IEnumerable<Score> dbScores = null;
             if (!dbUser.ShipsSelected)
             {
@@ -46,17 +51,17 @@ namespace PrideBot.Game
                 dbScores = await repo.GetScoresFromGroupAsync(connection, groupId);
             }
 
-            if (achievement.Log)
-            {
+            //if (achievement.Log)
+            //{
                 await DisplayAchievementAsync(channel, user, dbUser, achievement, dbScores,
                     await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl);
-            }
+            //}
         }
 
         public async Task DisplayAchievementAsync(ITextChannel channel, IUser user, User dbUser, Achievement achievement, IEnumerable<Score> dbScores,
             UserShipCollection dbUserShips, IUser approver, string titleUrl = null)
         {
-            var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, dbScores.ToArray(), dbUserShips, approver, titleUrl);
+            var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, dbScores?.ToArray(), dbUserShips, approver, titleUrl);
             await channel.SendMessageAsync(user.Mention, embed: embed.Build());
         }
 
@@ -64,7 +69,7 @@ namespace PrideBot.Game
             UserShipCollection dbUserShips, IUser approver, string titleUrl = null)
         {
             var embed = EmbedHelper.GetEventEmbed(user, config, id: (dbScores?.FirstOrDefault()?.ScoreGroupId.ToString()) ?? "", showDate: true)
-                .WithTitle($"{achievement.Emoji} Challenge Completes: {achievement.Description}!")
+                .WithTitle($"{achievement.Emoji} Challenge Completed: {achievement.Description}!")
                 .WithUrl(titleUrl)
                 .WithDescription(achievement.Flavor);
             if (approver != null)
@@ -78,11 +83,15 @@ namespace PrideBot.Game
                     if (!dbUserShips.Has((UserShipTier)i))
                         continue;
                     var userShip = dbUserShips.Get((UserShipTier)i);
-                    scoreStr += $"{EmoteHelper.GetShipTierEmoji((UserShipTier)userShip.Tier)} **{dbScores[i].PointsEarned}** SP for **{userShip.GetDisplayName()}**\n";
+                    scoreStr += $"{EmoteHelper.GetShipTierEmoji((UserShipTier)userShip.Tier)} **{dbScores[i].PointsEarned}** for **{userShip.GetDisplayName()}**\n";
                 }
-                embed.AddField("You Earned:", scoreStr);
+                embed.AddField($"You've Earned {EmoteHelper.SPEmote} !", scoreStr);
 
-                var imagePath = await shipImageGenerator.WriteUserAvatarAsync(dbUser, dbUserShips);
+                var scores = Enumerable.Range(0, 3)
+                    .Select(a => dbScores
+                        .FirstOrDefault(aa => ((int)aa.Tier) == a)?.PointsEarned ?? 0)
+                    .ToArray();
+                var imagePath = await shipImageGenerator.WriteUserAvatarAsync(dbUser, dbUserShips, scores: scores);
                 embed.ImageUrl = config.GetRelativeHostPathWeb(imagePath);
             }
             else
@@ -107,7 +116,7 @@ namespace PrideBot.Game
                 using var connection = DatabaseHelper.GetDatabaseConnection();
                 await connection.OpenAsync();
                 var achievement = await repo.GetAchievementFromEmojiAsync(connection, reaction.Emote.ToString());
-                if (achievement == null || !achievement.Manual)
+                if (achievement == null)// || !achievement.Manual)
                     return;
 
                 var message = await msg.GetOrDownloadAsync();
