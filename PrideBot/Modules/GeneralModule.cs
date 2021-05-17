@@ -40,14 +40,18 @@ namespace PrideBot.Modules
         [Summary("You did it!")]
         public async Task Help([Remainder] string command = "")
         {
-            await ReplyAsync(await GenerateHelpMessageAsync(command, Context, service, config, provider));
+            await ReplyAsync(embed: (await GenerateHelpMessageAsync(command, Context, service, config, provider)).Build());
         }
 
-        public static async Task<string> GenerateHelpMessageAsync(string command, SocketCommandContext Context, CommandService service, IConfigurationRoot config, IServiceProvider provider)
+        public static async Task<EmbedBuilder> GenerateHelpMessageAsync(string command, SocketCommandContext Context, CommandService service, IConfigurationRoot config, IServiceProvider provider)
         {
             var moduleDict = GetModuleClassDictionary(service)
-       .OrderBy(a => a.Value.HelpSortOrder)
-       .ToDictionary(t => t.Key, t => t.Value);
+               .OrderBy(a => a.Value.HelpSortOrder)
+               .ToDictionary(t => t.Key, t => t.Value);
+
+            var embed = EmbedHelper.GetEventEmbed(Context.User, config)
+                .WithTitle("Gensokyo Pride Games Help");
+
 
             if (string.IsNullOrEmpty(command))
             {
@@ -60,6 +64,8 @@ namespace PrideBot.Modules
                 //+ "Use any of these prefixes (case-insensitive) or mention me to call me:\n"
                 //+ string.Join("    ", ConfigHelper.GetPrefixes(config).Select(a => $"`{a}{{command}}`"))
 
+                embed.Description = helpMessage;
+
                 var allUsableCommands = service.Commands
                     .Where(a => !a.Module.Name.Contains("Secret", StringComparison.OrdinalIgnoreCase));
 
@@ -67,10 +73,10 @@ namespace PrideBot.Modules
                 {
                     var helpLine = await module.Value.GetHelpLineAsync(
                         module.Key, allUsableCommands, Context, provider, config);
-                    if (!string.IsNullOrWhiteSpace(helpLine))
-                        helpMessage += helpLine + "\n";
+                    if (!string.IsNullOrWhiteSpace(helpLine?.Value?.ToString()))
+                        embed.AddField(helpLine);
                 }
-                return helpMessage;
+                return embed;
             }
             else
             {
@@ -82,7 +88,11 @@ namespace PrideBot.Modules
 
                     var moduleData = GetModule(matchingSubmodule, service);
                     var commands = await matchingSubmodule.GetExecutableCommandsAsync(Context, provider);
-                    return await moduleData.Value.GetHelpLineAsync(moduleData.Key, commands, Context, provider, config);
+                    embed = embed
+                        .WithTitle(matchingSubmodule.Name + " Help")
+                        .WithDescription(matchingSubmodule.Summary ?? "Hella.");
+                    embed.AddField(await moduleData.Value.GetHelpLineAsync(moduleData.Key, commands, Context, provider, config));
+                    return embed;
                 }
                 else
                 {
@@ -91,14 +101,14 @@ namespace PrideBot.Modules
                     var result = GetCommandHelp(command, Context, service, provider, config);
                     if (result.IsSuccess)
                     {
-                        return result.Value;
+                        embed = embed
+                            .WithTitle("Command Help")
+                            .WithDescription(result.Value);
+                        return embed;
                     }
                     else
                     {
-                        //var allUsableCommands = await service.GetExecutableCommandsAsync(Context, provider);
-                        //var moduleGroup = allUsableCommands
-                        //    .FirstOrDefault(a => a.Module.Name.Equals(command, StringComparison.OrdinalIgnoreCase) && a.Module.IsSubmodule);
-                        return result.ErrorMessage;
+                        return EmbedHelper.GetEventErrorEmbed(Context.User, result.ErrorMessage, Context.Client);
                     }
                 }
             }
@@ -107,13 +117,14 @@ namespace PrideBot.Modules
         public static ValueResult<string> GetCommandHelp(string commandName, SocketCommandContext context, CommandService service, IServiceProvider provider, IConfigurationRoot config)
         {
             var result = service.Search(commandName);
+            var errorStr = DialogueDict.Get("COMMAND_NOT_FOUND", commandName);
             if (!result.IsSuccess)
-                return ValueResult<string>.Error($"Command {commandName} not found");
+                return ValueResult<string>.Error(errorStr);
             var matches = result.Commands
                 .Where(a => !a.Command.Module.Name.Contains("secret", StringComparison.OrdinalIgnoreCase))
                 .ToList();
             if (!matches.Any())
-                return ValueResult<string>.Error($"Command {commandName} not found");
+                return ValueResult<string>.Error(errorStr);
 
             var message = "";
             foreach (var match in matches)

@@ -62,30 +62,32 @@ namespace PrideBot
 
         public virtual int HelpSortOrder => 0;
 
-        public virtual async Task<string> GetHelpLineAsync(ModuleInfo moduleInfo, IEnumerable<CommandInfo> allUsableCommands, SocketCommandContext context, IServiceProvider provider, IConfigurationRoot config)
+        public virtual async Task<EmbedFieldBuilder> GetHelpLineAsync(ModuleInfo moduleInfo, IEnumerable<CommandInfo> allUsableCommands, SocketCommandContext context, IServiceProvider provider, IConfigurationRoot config)
         {
+            var prefix = config.GetDefaultPrefix();
             var modulePath = moduleInfo.IsSubmodule ? moduleInfo.Name + " " : "";   // TODO support N-depth modules if needed
             var submodules = moduleInfo.Submodules
                 .Where(a => allUsableCommands.Any(aa => aa.Module == a));
             var commandStrings = allUsableCommands
                 .Where(a => a.Module.Equals(moduleInfo))
-                .Select(a => $"`{modulePath}{a.Name}`")
+                .Select(a => $"`{prefix}{modulePath}{a.Name}`")
                 .Distinct()
                 .Concat(submodules
                     .Select(a => $"`{modulePath}{a.Name} ...`"));
             if (!commandStrings.Any())
                 return null;
 
-            var msg = $"**{(!moduleInfo.IsSubmodule ? moduleInfo.Name : "Commands")}:**  {string.Join(",  ", commandStrings)}";
+            var fieldName = !moduleInfo.IsSubmodule ? moduleInfo.Name : "Commands";
+            var value = string.Join("\n", commandStrings);
             if (moduleInfo.IsSubmodule)
             {
                 var aliases = moduleInfo.Aliases.Except(new string[] { moduleInfo.Name });
                 if (aliases.Any())
-                    msg += $"\n**Aliases:**  {string.Join(",  ", aliases)}";
+                    value += $"\n**Aliases:**  {string.Join(",  ", aliases)}";
                 if (!string.IsNullOrWhiteSpace(moduleInfo.Summary))
-                    msg += $"\n**Description:**  {moduleInfo.Summary}";
+                    value += $"\n**Description:**  {moduleInfo.Summary}";
             }
-            return msg;
+            return new EmbedFieldBuilder().WithName(fieldName).WithValue(value).WithIsInline(true);
         }
     }
 }
