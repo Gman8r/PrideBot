@@ -30,7 +30,7 @@ namespace PrideBot.Game
             this.config = config;
         }
 
-        public async Task AddAndDisplayAchievementAsync(SqlConnection connection, ITextChannel channel, IUser user, Achievement achievement, IUser approver, int overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = true)
+        public async Task AddAndDisplayAchievementAsync(SqlConnection connection, ITextChannel channel, IUser user, Achievement achievement, IUser approver, int overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false)
         {
             if (overridePoints > 999)
                 throw new CommandException("Max score for an achievement is 999, WHY ARE YOU EVEN DOING THIS??");
@@ -42,8 +42,10 @@ namespace PrideBot.Game
             IEnumerable<Score> dbScores = null;
             if (!dbUser.ShipsSelected)
             {
-                //if (ignoreIfNotRegistered)
-                //    return;
+                if (ignoreIfNotRegistered)
+                    return;
+                dbUser.PreregPoints += pointsEarned;
+                await repo.UpdateUserAsync(connection, dbUser);
             }
             else
             {
@@ -51,11 +53,8 @@ namespace PrideBot.Game
                 dbScores = await repo.GetScoresFromGroupAsync(connection, groupId);
             }
 
-            //if (achievement.Log)
-            //{
-                await DisplayAchievementAsync(channel, user, dbUser, achievement, dbScores,
-                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl);
-            //}
+            await DisplayAchievementAsync(channel, user, dbUser, achievement, dbScores,
+                await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl);
         }
 
         public async Task DisplayAchievementAsync(ITextChannel channel, IUser user, User dbUser, Achievement achievement, IEnumerable<Score> dbScores,

@@ -10,6 +10,7 @@ namespace PrideBot.Models
         public string UserId { get; set; }
         public bool ShipsSelected { get; set; }
         public int CardBackground { get; set; }
+        public int PreregPoints { get; set; }
 
         [DontPushToDatabase]
         public DateTime RegisteredAt { get; set; }
