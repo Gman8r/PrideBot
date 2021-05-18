@@ -13,7 +13,7 @@ namespace PrideBot
         //public static Color GetEventColor(IConfigurationRoot config) => new Color(uint.Parse(config["eventcolor"]));
         public static Color GetEventColor(IConfigurationRoot config) => new Color(0xB00b69);
 
-        public static EmbedBuilder GetEventEmbed(IUser user, IConfigurationRoot config, string id = "", bool showUser = true, bool showDate = false)
+        public static EmbedBuilder GetEventEmbed(IUser user, IConfigurationRoot config, string id = "", bool showUser = true, bool showDate = false, bool userInThumbnail = false)
         {
             var embed = new EmbedBuilder().WithColor(GetEventColor(config))
             .WithFooter(new EmbedFooterBuilder()
@@ -24,6 +24,11 @@ namespace PrideBot
                 embed = embed.WithAuthor(new EmbedAuthorBuilder()
                     .WithIconUrl(user.GetAvatarUrlOrDefault().Split('?')[0])
                     .WithName((user as IGuildUser)?.Username ?? user.Username));
+            if (userInThumbnail)
+            {
+                embed.ThumbnailUrl = embed.Author?.IconUrl;
+                embed.Author = null;
+            }
             return embed;
     }
 

@@ -31,28 +31,31 @@
     <None Update="Assets\CharacterSprites\KASENARM.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Assets\CharacterSprites\shipbg1.png">
+    <None Update="Assets\Backgrounds\shipbg1.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Assets\CharacterSprites\shipheart.png">
+    <None Update="Assets\Backgrounds\shipbg2.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Assets\CharacterSprites\shipheartbi.png">
+    <None Update="Assets\Hearts\shipheart.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Assets\CharacterSprites\shipheartgay.png">
+    <None Update="Assets\Hearts\shipheartbi.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Assets\CharacterSprites\shipheartlesbian.png">
+    <None Update="Assets\Hearts\shipheartgay.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Assets\CharacterSprites\shipheartnonace.png">
+    <None Update="Assets\Hearts\shipheartlesbian.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Assets\CharacterSprites\shipheartnonbinary.png">
+    <None Update="Assets\Hearts\shipheartnonace.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Assets\CharacterSprites\shiphearttrans.png">
+    <None Update="Assets\Hearts\shipheartnonbinary.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Hearts\shiphearttrans.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\CharacterSprites\TSUCHINOKO.png">

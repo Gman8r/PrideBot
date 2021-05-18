@@ -13,5 +13,7 @@ namespace PrideBot.Models
         public string FirstName { get; set; }
         public string Category { get; set; }
         public string Family { get; set; }
+        [DontPushToDatabase]
+        public int PointsEarned { get; set; }
     }
 }

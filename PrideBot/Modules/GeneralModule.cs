@@ -37,7 +37,7 @@ namespace PrideBot.Modules
 
         [Command("help")]
         [Alias("help!")]
-        [Summary("You did it!")]
+        [Summary("Yassss you like, Nailed using that help command by using it on the help command! Nice goiiiinggg!")]
         public async Task Help([Remainder] string command = "")
         {
             await ReplyAsync(embed: (await GenerateHelpMessageAsync(command, Context, service, config, provider)).Build());

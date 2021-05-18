@@ -86,11 +86,11 @@ namespace PrideBot.Modules
             var dbShips = await repo.GetUserShipsAsync(connection, dbUser);
 
             var imagePath = await shipImageGenerator.WriteUserAvatarAsync(dbUser, dbShips);
-            var embed = EmbedHelper.GetEventEmbed(user, config)
+            var embed = EmbedHelper.GetEventEmbed(user, config, userInThumbnail: true)
                 .WithImageUrl(config.GetRelativeHostPathWeb(imagePath))
-                .WithTitle("Overview")
+                .WithTitle($"Overview for {user.Username}#{user.Discriminator}")
                 .WithDescription(isSelf ? "Here's who you're supporting!" : $"Here's who {user.Mention} is supporting!");
-            embed.AddField("Pairings Supported:",
+            embed.AddField("Ships Supported:",
                 string.Join("\n", Enumerable.Range(0, 3)
                 .Select(a => (UserShipTier)a)
                 .Select(a => $"{EmoteHelper.GetShipTierEmoji(a)} **{a}** Pairing: **{dbShips.Get(a)?.GetDisplayName() ?? "None"}**" +
@@ -101,7 +101,7 @@ namespace PrideBot.Modules
 
         [Command("giveachievement")]
         [Alias("grantachievement")]
-        [Summary("Gives a user an achievement, same as adding reactions")]
+        [Summary("Gives a user an achievement, same as adding reactions.")]
         [RequireContext(ContextType.Guild)]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task GiveAchievement(IUser user, string achievementId, [DefaultValueName("default")] int score = 0)
@@ -112,7 +112,32 @@ namespace PrideBot.Modules
             if (achievement == null)
                 throw new CommandException("Achievement not found, make sure the Id matches the one in the sheet.");
             await scoringService.AddAndDisplayAchievementAsync(connection, Context.Channel as ITextChannel, user, achievement, Context.User, score);
-            await ReplyResultAsync("Done!");
+            //await ReplyResultAsync("Done!");
+        }
+
+        [Command("revokeachievement")]
+        [Alias("removeachievement")]
+        [Summary("Removes a given achievement via its scoreboard message.")]
+        [RequireContext(ContextType.Guild)]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task RemoveAchievement(MessageUrl achievementdMessageUrl)
+        {
+            var message = achievementdMessageUrl.Value;
+            var footerText = message.Embeds.FirstOrDefault()?.Footer?.Text;
+            if (footerText == null)
+                throw new CommandException("Noooope you gotta link to a valid achievement post from the achievement board.");
+            int groupId;
+            var groupIdStr = footerText.Split().FirstOrDefault() ?? "INVALID";
+            if (!int.TryParse(groupIdStr, out groupId))
+                throw new CommandException("Noooope you gotta link to a valid achievement post from the achievement board.");
+
+            using var connection = DatabaseHelper.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var result = await repo.DeleteScoreAsync(connection, groupId.ToString());
+            if (result <= 0)
+                throw new CommandException("HMMMM sorry bestie, I couldn't find the achievement from that message. Did it get removed already?");
+
+            await ReplyResultAsync("Daaaamn OK then, I have reversed the waves of love (just for a bit) and revoked the achievement!");
         }
 
     }

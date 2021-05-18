@@ -33,8 +33,8 @@ namespace PrideBot.Registration
         public async Task<MagickImage> GenerateUserAvatarAsync(User dbUser, UserShipCollection userShips, int highlightTier = -1, int highlightHeart = 0, int[] scores = null)
         {
             scores ??= new int[3];
-            var image = new MagickImage("Assets/CharacterSprites/shipbg1.png");
-            //var image = new MagickImage(MagickColors.Transparent, 192, 128);
+            var image = new MagickImage($"Assets/Backgrounds/shipbg{dbUser.CardBackground}.png");
+            //var image = new MagickImage(MagickColors.Transparent, 288, 192);
             MagickImage ship2Image = null;
             MagickImage ship3Image = null;
             using var primaryShipImage = await GenerateShipImageAsync(userShips.PrimaryShip, highlightTier == 0, highlightHeart);
@@ -49,7 +49,7 @@ namespace PrideBot.Registration
                 image.Composite(primaryShipImage, Gravity.Northwest, 80, 0, CompositeOperator.Over);
                 if (scores[0] > 0)
                 {
-                    using var numberImage = GenerateNumberText(scores[0]);
+                    using var numberImage = GenerateScoreText(scores[0]);
                     numberImage.InterpolativeResize(128, 128, PixelInterpolateMethod.Nearest);
                     image.Composite(numberImage, Gravity.Northwest, 80, 84, CompositeOperator.Over);
                 }
@@ -60,7 +60,7 @@ namespace PrideBot.Registration
                     image.Composite(ship2Image, Gravity.Northwest, 8, yLevel, CompositeOperator.Over);
                     if (scores[1] > 0)
                     {
-                        using var number2Image = GenerateNumberText(scores[1]);
+                        using var number2Image = GenerateScoreText(scores[1]);
                         number2Image.InterpolativeResize(64, 64, PixelInterpolateMethod.Nearest);
                         image.Composite(number2Image, Gravity.Northwest, 8, yLevel + 44, CompositeOperator.Over);
                     }
@@ -72,7 +72,7 @@ namespace PrideBot.Registration
                     image.Composite(ship3Image, Gravity.Northwest, 216, yLevel, CompositeOperator.Over);
                     if (scores[2] > 0)
                     {
-                        using var number3Image = GenerateNumberText(scores[2]);
+                        using var number3Image = GenerateScoreText(scores[2]);
                         number3Image.InterpolativeResize(64, 64, PixelInterpolateMethod.Nearest);
                         image.Composite(number3Image, Gravity.Northwest, 216, yLevel + 44, CompositeOperator.Over);
                     }
@@ -101,8 +101,8 @@ namespace PrideBot.Registration
 
             ship.Heart1 = string.IsNullOrWhiteSpace(ship.Heart1) ? "shipheart" : ship.Heart1;
             ship.Heart2 = string.IsNullOrWhiteSpace(ship.Heart2) ? "shipheart" : ship.Heart2;
-            using var heartImage1 = new MagickImage(await File.ReadAllBytesAsync($"Assets/CharacterSprites/{ship.Heart1}.png"));
-            using var heartImage2 = new MagickImage(await File.ReadAllBytesAsync($"Assets/CharacterSprites/{ship.Heart2}.png"));
+            using var heartImage1 = new MagickImage(await File.ReadAllBytesAsync($"Assets/Hearts/{ship.Heart1}.png"));
+            using var heartImage2 = new MagickImage(await File.ReadAllBytesAsync($"Assets/Hearts/{ship.Heart2}.png"));
             using var char1Image = new MagickImage(await File.ReadAllBytesAsync(file1));
             using var char2Image = new MagickImage(await File.ReadAllBytesAsync(file2));
 
@@ -128,9 +128,42 @@ namespace PrideBot.Registration
 
             return image;
         }
+        public async Task<string> GenerateBackgroundChoicesAsync(User dbUser)
+        {
+            var backgroundFiles = Directory.GetFiles("Assets/Backgrounds");
+            var rows = backgroundFiles.Length > 2 ? 2 : 1;
+            var columns = (int)Math.Ceiling((double)(backgroundFiles.Length) / rows);
+            var backgroundImages = backgroundFiles
+                .Select(a => new MagickImage(a))
+                .ToList();
+            var bgWidth = backgroundImages.First().Width;
+            var bgHeight = backgroundImages.First().Height;
+            using var image = new MagickImage(MagickColors.Transparent, bgWidth * columns, bgHeight * rows);
+
+            var i = 0;
+            for (int row = 0; row < rows; row++)
+            {
+                for (int column = 0; column < columns; column++)
+                {
+                    if (i >= backgroundImages.Count)
+                        break;
+                    using var numberImage = new MagickImage($"Assets/NumberSprites/{i + 1}.png");
+                    numberImage.InterpolativeResize(24, 36, PixelInterpolateMethod.Nearest);
+                    backgroundImages[i].Composite(numberImage, Gravity.Northwest, 8, 8, CompositeOperator.Over);
+                    image.Composite(backgroundImages[i], Gravity.Northwest, column * bgWidth, row * bgHeight, CompositeOperator.Over);
+                    i++;
+                }
+            }
+
+            var path = $"ships/userbg-{dbUser.UserId}-{Math.Abs(DateTimeOffset.Now.GetHashCode())}.png";
+            var fullPath = config.GetRelativeHostPathLocal(path);
+            await image.WriteToFileAsync(fullPath);
+            backgroundImages.ForEach(a => a.Dispose());
+            return path;
+        }
 
 
-        MagickImage GenerateNumberText(int num)
+        MagickImage GenerateScoreText(int num)
         {
             var numStr = "+" + num.ToString();
             var baseGeometry = new MagickGeometry(32, 32);

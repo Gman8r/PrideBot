@@ -31,5 +31,8 @@ namespace PrideBot.Repository
             await command.ExecuteNonQueryAsync();
             return scoreGroupIdParam.Value.ToString();
         }
+
+        public async Task<int> DeleteScoreAsync(SqlConnection conn, string groupId)
+            => await new SqlCommand($"delete from VI_SCORES where SCORE_GROUP_ID = {groupId}", conn).ExecuteNonQueryAsync();
     }
 }

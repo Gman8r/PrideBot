@@ -15,7 +15,8 @@ namespace PrideBot
     public abstract class DMSession
     {
         protected static IEmote SkipEmote => new Emoji("➡");
-        protected static IEmote CancelEmote => new Emoji("❌");
+        protected static IEmote YesEmote => new Emoji("✅");
+        protected static IEmote NoEmote => new Emoji("❌");
 
         protected static readonly List<DMSession> activeSessions = new List<DMSession>();
 
@@ -48,7 +49,8 @@ namespace PrideBot
             public SocketMessage MessageResponse { get; set; }
             public IEmote emoteResponse { get; set; }
             public bool IsSkipped => emoteResponse?.ToString().Equals(SkipEmote.ToString()) ?? false;
-            public bool IsCancelled => emoteResponse?.ToString().Equals(CancelEmote.ToString()) ?? false;
+            public bool IsYes => emoteResponse?.ToString().Equals(YesEmote.ToString()) ?? false;
+            public bool IsNo => emoteResponse?.ToString().Equals(NoEmote.ToString()) ?? false;
 
             public Prompt(IMessage botMessage, bool acceptsText, List<IEmote> emoteChoies)
             {
@@ -136,6 +138,9 @@ namespace PrideBot
 
         protected abstract Task PerformSessionInternalAsync();
 
+        protected async Task<Prompt> SendAndAwaitYesNoResponseAsync(string text = null, EmbedBuilder embed = null, bool canSkip = false, bool canCancel = false)
+            => await SendAndAwaitEmoteResponseAsync(text, embed, new List<IEmote>() { YesEmote, NoEmote }, canSkip, canCancel);
+
         protected async Task<Prompt> SendAndAwaitEmoteResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool canSkip = false, bool canCancel = false)
             => await SendAndAwaitResponseAsync(text, embed, emoteChoices, false, canSkip, canCancel);
 
@@ -159,7 +164,7 @@ namespace PrideBot
             }
             else if (canCancel)
             {
-                emoteChoices.Add(CancelEmote);
+                emoteChoices.Add(NoEmote);
                 //if (embed != null)
                 //    embed.Description += $"\n\nSelect {CancelEmote} to cancel.";
                 //else
@@ -186,6 +191,17 @@ namespace PrideBot
         }
 
         protected virtual string GetTimeoutMessage() => DialogueDict.Get("SESSION_TIMEOUT");
+
+        protected EmbedBuilder GetUserCancelledEmbed()
+        => GetEmbed()
+                    .WithTitle("'Kay, Laters Then")
+                    .WithDescription(DialogueDict.Get("SESSION_CANCEL"))
+                    .WithImageUrl(null)
+                    .WithThumbnailUrl(null);
+
+        protected EmbedBuilder GetEmbed()
+            => EmbedHelper.GetEventEmbed(user, config, showUser: false)
+            .WithThumbnailUrl("https://cdn.discordapp.com/attachments/419187329706491905/843048501458108436/unknown.png");
 
         async Task AddReactions(IMessage message, List<IEmote> emotes)
         {

@@ -79,7 +79,7 @@ namespace PrideBot
                     "Women.",
                     "Miku Hatsune.",
                     "Daaaaamn.",
-                    "Fuck.",
+                    "Fuck!",
                     "Lasers!!",
                     "Home of sexual.",
                     "Gay Gay Homo Sexual Gay."};

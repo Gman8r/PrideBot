@@ -42,8 +42,8 @@ namespace PrideBot.Game
             IEnumerable<Score> dbScores = null;
             if (!dbUser.ShipsSelected)
             {
-                if (ignoreIfNotRegistered)
-                    return;
+                //if (ignoreIfNotRegistered)
+                //    return;
             }
             else
             {
@@ -68,14 +68,14 @@ namespace PrideBot.Game
         public async Task<EmbedBuilder> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, Score[] dbScores,
             UserShipCollection dbUserShips, IUser approver, string titleUrl = null)
         {
-            var embed = EmbedHelper.GetEventEmbed(user, config, id: (dbScores?.FirstOrDefault()?.ScoreGroupId.ToString()) ?? "", showDate: true)
+            var embed = EmbedHelper.GetEventEmbed(user, config, id: (dbScores?.FirstOrDefault()?.ScoreGroupId.ToString()) ?? "", showDate: true, userInThumbnail: true)
                 .WithTitle($"{achievement.Emoji} Challenge Completed: {achievement.Description}!")
                 .WithUrl(titleUrl)
                 .WithDescription(achievement.Flavor);
             if (approver != null)
                 embed.Footer.Text += $" | Approver: {approver.Username}#{approver.Discriminator}";
 
-                if (dbUser.ShipsSelected && dbUserShips.Any())
+            if (dbUser.ShipsSelected && dbUserShips.Any())
             {
                 var scoreStr = "";
                 for (int i = 0; i < dbUserShips.Count(); i++)
@@ -85,7 +85,7 @@ namespace PrideBot.Game
                     var userShip = dbUserShips.Get((UserShipTier)i);
                     scoreStr += $"{EmoteHelper.GetShipTierEmoji((UserShipTier)userShip.Tier)} **{dbScores[i].PointsEarned}** for **{userShip.GetDisplayName()}**\n";
                 }
-                embed.AddField($"You've Earned {EmoteHelper.SPEmote} !", scoreStr);
+                embed.AddField($"You Earned {EmoteHelper.SPEmote} !", scoreStr);
 
                 var scores = Enumerable.Range(0, 3)
                     .Select(a => dbScores
@@ -103,6 +103,9 @@ namespace PrideBot.Game
         }
 
         private async Task ReactionAddedAsync(Cacheable<Discord.IUserMessage, ulong> msg, ISocketMessageChannel channel, SocketReaction reaction)
+            => CheckReactionForScore(msg, channel, reaction).GetAwaiter();
+
+        private async Task CheckReactionForScore(Cacheable<Discord.IUserMessage, ulong> msg, ISocketMessageChannel channel, SocketReaction reaction)
         {
             try
             {
@@ -116,7 +119,7 @@ namespace PrideBot.Game
                 using var connection = DatabaseHelper.GetDatabaseConnection();
                 await connection.OpenAsync();
                 var achievement = await repo.GetAchievementFromEmojiAsync(connection, reaction.Emote.ToString());
-                if (achievement == null)// || !achievement.Manual)
+                if (achievement == null || !achievement.Manual)
                     return;
 
                 var message = await msg.GetOrDownloadAsync();

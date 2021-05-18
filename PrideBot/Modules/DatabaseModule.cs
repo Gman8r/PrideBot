@@ -30,12 +30,14 @@ namespace PrideBot.Modules
         readonly ModelRepository modelRepository;
         readonly GoogleSheetsService sheetsService;
         readonly DialogueDict dialogueDict;
+        readonly ModelRepository repo;
 
-        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService, DialogueDict dialogueDict)
+        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService, DialogueDict dialogueDict, ModelRepository repo)
         {
             this.modelRepository = modelRepository;
             this.sheetsService = sheetsService;
             this.dialogueDict = dialogueDict;
+            this.repo = repo;
         }
 
         [Command("updatesheet")]
@@ -220,12 +222,79 @@ namespace PrideBot.Modules
             await ReplyResultAsync($"Done! {rowsAffected} row(s) affected.");
 
         }
+
         [Command("updatedialogue")]
         [Alias("pushdialogue")]
         public async Task UpdateDialogue()
         {
             await UploadSheet("https://docs.google.com/spreadsheets/d/14EGqZ5_gVpqRgNCjqbYXncwHrbNOjh9J-QjyrN0vJlY/edit#gid=0", "DIALOGUE");
             await dialogueDict.PullDialogueAsync();
+        }
+
+        [Command("randomdata")]
+        public async Task RandomShips(int userCount, int scoreCount, int seed = 0)
+        {
+            using var typingState = Context.Channel.EnterTypingState();
+            var rand = seed == 0 ? new Random() : new Random(seed);
+            using var connection = DatabaseHelper.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var allChars = (await repo.GetAllCharactersAsync(connection)).ToList();
+            var achievements = (await repo.GetAllAchievementsAsync(connection)).ToList();
+            for (int userId = 0; userId < userCount; userId++)
+            {
+                var dbUser = await repo.GetOrCreateUserAsync(connection, userId.ToString());
+                var previousShips = new List<string>();
+                for (int tier = 0; tier < 3; tier++)
+                {
+                    if (tier > 0 && rand.NextDouble() > .75)
+                        continue;
+                    var char1 = allChars[GetWeightedIndex(allChars.Count, .2, rand)];
+                    var char2 = allChars[GetWeightedIndex(allChars.Count, .2, rand)];
+                    var dbShipId = await repo.GetOrCreateShipAsync(connection, char1.CharacterId, char2.CharacterId);
+                    if (!previousShips.Contains(dbShipId))
+                    {
+                        await repo.CreateOrReplaceUserShip(connection, dbUser.UserId, (UserShipTier)tier, dbShipId);
+                        previousShips.Add(dbShipId);
+                    }
+                }
+                dbUser.ShipsSelected = true;
+                await repo.UpdateUserAsync(connection, dbUser);
+                var achievement = achievements.FirstOrDefault(a => a.AchievementId.Equals("PREREGISTER"));
+                await repo.AddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore);
+            }
+
+            for (int i = 0; i < scoreCount; i++)
+            {
+                var userId = GetWeightedIndex(userCount, .05, rand);
+                var achievement = achievements[rand.Next() % achievements.Count];
+                await repo.AddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore);
+            }
+
+            await ReplyAsync("***WOP!*** I pulled a collection of info from a contest in another reality, just for you bestie!");
+        }
+
+        [Command("clearrandomdata")]
+        public async Task RandomShips()
+        {
+            using var connection = DatabaseHelper.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var query = $"delete from SCORES where len(USER_ID) < 5; "
+                + $"delete from USER_SHIPS where len(USER_ID) < 5; "
+                + $"delete from USERS where len(USER_ID) < 5; ";
+
+            await new SqlCommand(query, connection).ExecuteNonQueryAsync();
+
+            await ReplyAsync("***FOOP!*** I sent that data back to the universe from which it came~");
+        }
+
+        int GetWeightedIndex(int upperBoundExclusive, double individualProb, Random rand)
+        {
+            for (int i = 0; i < upperBoundExclusive; i++)
+            {
+                if (rand.NextDouble() < individualProb)
+                    return i;
+            }
+            return rand.Next(rand.Next() % upperBoundExclusive);
         }
     }
 }

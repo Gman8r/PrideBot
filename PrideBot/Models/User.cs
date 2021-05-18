@@ -9,6 +9,7 @@ namespace PrideBot.Models
         [PrimaryKey]
         public string UserId { get; set; }
         public bool ShipsSelected { get; set; }
+        public int CardBackground { get; set; }
 
         [DontPushToDatabase]
         public DateTime RegisteredAt { get; set; }
