@@ -2,14 +2,27 @@
 prefixes:
     - '~'
 status: 🏳‍🌈
-eventcolor: 0xB00B69
+eventmonth: 5
+eventcolor: 0xB00B69 # not sure if used
 paths:
-    wwwhostpath: http://intile.ddns.net:88/pbotassets/
-    wwwhostpathlocal: \\media\wwwroot\pbotassets\
+    wwwhostpath: http://intile.ddns.net:88/pbotassetsdebug/
+    wwwhostpathlocal: \\media\wwwroot\pbotassetsdebug\
 ids:
     owner: 199875078790316032
-    gyn: 796585563166736394
+    #GYN
+    #gyn: 584841110283747328
+    #sage: 584851607318036501
+    #youkai: 584850930416091146
+    #muted: 796579779880419368
+    #nsfwaccess: 694944862667145337
+    #modchat: 606104629306195988
+    #Testing Grounds
+    gyn: 248446374679543810
     sage: 797225471942066206
+    ruleschannel: 844354683829223424
+    achievementschannel: 844354667977637900
+    quizchannel: 844357532695789568
+    registeredrole: 844355731410386964
+    quiztakenrole: 844355888876617749
+    modchat: 808049429528444928
     youkai: 358435805779197955
-    filedumpguild: 248446374679543810
-    filedumpchannel: 841596968182743050

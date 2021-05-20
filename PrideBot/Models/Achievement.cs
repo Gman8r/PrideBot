@@ -12,6 +12,7 @@ namespace PrideBot.Models
         public string Description { get; set; }
         public string Flavor { get; set; }
         public int DefaultScore { get; set; }
+        public int CooldownHours { get; set; }
         public bool Log { get; set; }
         public bool Manual { get; set; }
         public bool PerDay { get; set; }

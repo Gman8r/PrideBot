@@ -5,6 +5,7 @@ using Microsoft.Data.SqlClient;
 using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Data;
 
 namespace PrideBot.Repository
 {
@@ -16,13 +17,15 @@ namespace PrideBot.Repository
         public async Task<User> GetUserAsync(SqlConnection conn, string id)
         => (await new SqlCommand($"select * from VI_USERS where USER_ID = '{id.ToString()}'", conn).ExecuteReaderAsync()).As<User>().FirstOrDefault();
 
-        public async Task<User> GetOrCreateUserAsync(SqlConnection conn, string id)
+        public async Task<User> GetOrCreateUserAsync(SqlConnection conn, string userId)
         {
-            var user = await GetUserAsync(conn, id);
-            if (user != null) return user;
-            user = new User() { UserId = id };
-            await AddUserAsync(conn, user);
-            return user;
+            var command = new SqlCommand("SP_GET_OR_CREATE_USER", conn);
+            command.CommandType = CommandType.StoredProcedure;
+            command.Parameters.Add(new SqlParameter("@USER_ID", userId));
+            await command.ExecuteNonQueryAsync();
+
+            return (await new SqlCommand($"select * from VI_USERS where USER_ID = '{userId}'", conn)
+                .ExecuteReaderAsync()).As<User>().FirstOrDefault();
         }
 
         public async Task<int> AddUserAsync(SqlConnection conn, User value)

@@ -11,6 +11,7 @@ using PrideBot.Game;
 using PrideBot.Registration;
 using PrideBot.Repository;
 using PrideBot.Sheets;
+using PrideBot.Quizzes;
 
 namespace PrideBot
 {
@@ -56,6 +57,7 @@ namespace PrideBot
                 // PrideBot-specific services
                 provider.GetRequiredService<PlayStatusService>();
                 provider.GetRequiredService<ScoringService>();
+                provider.GetRequiredService<QuizService>();
             }
             else
             {
@@ -98,6 +100,7 @@ namespace PrideBot
                 services.AddSingleton<GoogleSheetsService>();
                 services.AddSingleton<ShipImageGenerator>();
                 services.AddSingleton<ScoringService>();
+                services.AddSingleton<QuizService>();
                 //.AddSingleton<PlayStatusService>();
             }
         }

@@ -33,15 +33,23 @@ namespace PrideBot
             dict = results.ToDictionary(t => t.DialogueId, t => t.Content);
         }
 
+        public static Dictionary<string, string> GetDict() => instance.dict;
+
         public static string Get(string key, params object[] args)
         {
             if (!instance.dict.ContainsKey(key))
                 return "(MISSING DIALOGUE OH NO MY BRAIN)";
-
-            var str = string.Format(instance.dict[key]
-                .Replace("{SP}", EmoteHelper.SPEmote.ToString())
-                , args);
-            return RollBullshit(str);
+            try
+            {
+                var str = string.Format(instance.dict[key]
+                    .Replace("{SP}", EmoteHelper.SPEmote.ToString())
+                    , args);
+                return RollBullshit(str);
+            }
+            catch (Exception e)
+            {
+                throw;
+            }
         } 
 
         public static string RollBullshit(string str)
@@ -53,7 +61,6 @@ namespace PrideBot
                     "SJFKJFsg.",
                     "Fortnite.",
                     "Minecraft.",
-                    "Buy Skyrim.",
                     "Gay.",
                     "Gayyy.",
                     "God I'm cute.",
@@ -63,30 +70,38 @@ namespace PrideBot
                     "PFPShfhfh.",
                     "AAAkfsjkfsfdjsjs.",
                     "Gender??",
+                    "Gender.",
                     "Gay rights!",
                     "Trans rights!",
                     "ACAB!",
                     "Worm.",
                     "Like comment and subscribe.",
                     "Brainrot got me like.",
-                    "On god?",
+                    "On God?",
                     "Yooooo.",
+                    "AAAAAAA!",
                     "pspspsp here kitty.",
                     "Where the hell am I?",
                     "Tsuchinoko real.",
                     "I love women.",
                     "I want money.",
                     "Women.",
+                    "Toontown.",
                     "Miku Hatsune.",
                     "Daaaaamn.",
-                    "Fuck!",
+                    "Fuck.",
                     "Lasers!!",
                     "Home of sexual.",
                     "Gay Gay Homo Sexual Gay."};
 
             var roll = rand.Next() % 25;
             if (str.Length > 0 && char.IsPunctuation(str.Last()) && roll == 0)
-                str += " " + bullshitPhrases[rand.Next() % bullshitPhrases.Count];
+            {
+                var phrase = bullshitPhrases[rand.Next() % bullshitPhrases.Count];
+                if (str.Last() == '!' && phrase.Last() == '.')
+                    phrase = phrase.Substring(0, phrase.Length - 1) + "!";
+                str += " " + phrase;
+            }
             return str;
         }
     }

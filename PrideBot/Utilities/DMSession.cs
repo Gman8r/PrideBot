@@ -46,11 +46,12 @@ namespace PrideBot
 
             public bool AcceptsEmote => EmoteChoices.Any();
             public bool IsEntered { get; set; }
+            public bool AlwaysPopulateEmotes { get; set; }
             public SocketMessage MessageResponse { get; set; }
-            public IEmote emoteResponse { get; set; }
-            public bool IsSkipped => emoteResponse?.ToString().Equals(SkipEmote.ToString()) ?? false;
-            public bool IsYes => emoteResponse?.ToString().Equals(YesEmote.ToString()) ?? false;
-            public bool IsNo => emoteResponse?.ToString().Equals(NoEmote.ToString()) ?? false;
+            public IEmote EmoteResponse { get; set; }
+            public bool IsSkipped => EmoteResponse?.ToString().Equals(SkipEmote.ToString()) ?? false;
+            public bool IsYes => EmoteResponse?.ToString().Equals(YesEmote.ToString()) ?? false;
+            public bool IsNo => EmoteResponse?.ToString().Equals(NoEmote.ToString()) ?? false;
 
             public Prompt(IMessage botMessage, bool acceptsText, List<IEmote> emoteChoies)
             {
@@ -82,7 +83,7 @@ namespace PrideBot
                 || !currentPrompt.EmoteChoices.Select(a => a.ToString()).Contains(reaction.Emote.ToString())) return;
 
             currentPrompt.IsEntered = true;
-            currentPrompt.emoteResponse = reaction.Emote;
+            currentPrompt.EmoteResponse = reaction.Emote;
         }
 
         private Task MesageReceived(SocketMessage message)
@@ -146,6 +147,12 @@ namespace PrideBot
 
         protected async Task<Prompt> SendAndAwaitResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false)
         {
+            await SendResponseAsync(text, embed, emoteChoices, acceptsText, canSkip, canCancel);
+            return await AwaitCurrentResponseAsync();
+        }
+
+        protected async Task<Prompt> SendResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false)
+        {
             emoteChoices ??= new List<IEmote>();
             if (emoteChoices.Count >= 3)
             {
@@ -173,10 +180,17 @@ namespace PrideBot
 
             var message = await channel.SendMessageAsync(text, embed: embed.Build());
             currentPrompt = new Prompt(message, acceptsText, emoteChoices);
+            currentPrompt.AlwaysPopulateEmotes = alwaysPopulateEmotes;
             AddReactions(message, emoteChoices).GetAwaiter();
-
+            return currentPrompt;
+        }
+        protected async Task<Prompt> AwaitCurrentResponseAsync()
+        {
+            currentPrompt.EmoteResponse = null;
+            currentPrompt.MessageResponse = null;
+            currentPrompt.IsEntered = false;
             var startTime = DateTime.Now;
-            while(!currentPrompt.IsEntered)
+            while (!currentPrompt.IsEntered)
             {
                 await Task.Delay(100);
                 if (DateTime.Now - startTime > timeout)
@@ -186,18 +200,24 @@ namespace PrideBot
                     throw new OperationCanceledException(cancellationMessage);
                 }
             }
-
             return currentPrompt;
         }
 
         protected virtual string GetTimeoutMessage() => DialogueDict.Get("SESSION_TIMEOUT");
 
         protected EmbedBuilder GetUserCancelledEmbed()
-        => GetEmbed()
+        {
+            var goodbyeKeys = DialogueDict.GetDict()
+                .Where(a => a.Key.StartsWith("SESSION_CANCEL"))
+                .Select(a => a.Key)
+                .ToList();
+            var goodbyeKey = goodbyeKeys[new Random().Next() % goodbyeKeys.Count];
+            return GetEmbed()
                     .WithTitle("'Kay, Laters Then")
-                    .WithDescription(DialogueDict.Get("SESSION_CANCEL"))
+                    .WithDescription(DialogueDict.Get(goodbyeKey))
                     .WithImageUrl(null)
                     .WithThumbnailUrl(null);
+        }
 
         protected EmbedBuilder GetEmbed()
             => EmbedHelper.GetEventEmbed(user, config, showUser: false)
@@ -207,7 +227,9 @@ namespace PrideBot
         {
             foreach (var emote in emotes)
             {
-                if (currentPrompt != null && currentPrompt.IsEntered || currentPrompt.BotMessage.Id != message.Id)
+                if (currentPrompt != null &&
+                    (currentPrompt.IsEntered || currentPrompt.BotMessage.Id != message.Id)
+                    && !currentPrompt.AlwaysPopulateEmotes)
                     break;
                 await message.AddReactionAsync(emote);
             }

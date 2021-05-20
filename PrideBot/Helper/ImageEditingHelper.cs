@@ -57,11 +57,18 @@ namespace PrideBot
             }
         }
 
-        public static async Task WriteToFileAsync(this IMagickImage<byte> image, string path)
+        public static async Task<string> WriteToFileAsync(this IMagickImage<byte> image, IConfigurationRoot config, string relativeFolderPath)
         {
-            var fs = File.Create(path);
+            var hash = Math.Abs(image.GetHashCode());
+            var path = $"/{relativeFolderPath}/{hash}.png";
+            path = path.Replace("//", "/").Substring(1);
+            var fullPath = config.GetRelativeHostPathLocal(path);
+            if (File.Exists(fullPath))
+                return path;
+            var fs = File.Create(fullPath);
             await image.WriteAsync(fs, MagickFormat.Png);
             fs.Close();
+            return path;
         }
 
         public static async Task<MemoryFile> WriteToMemoryFileAsync(this IMagickImage<byte> image, string name)

@@ -114,10 +114,12 @@ namespace PrideBot
             foreach (var field in fields.Where(a => a.Value != null))
             {
                 command.Parameters.AddWithValue($"@{field.Key}F", field.Value);
+                query = query.Replace($"@{field.Key}F", field.Value.ToString());
             }
             foreach (var key in primaryKeys.Where(a => a.Value != null))
             {
                 command.Parameters.AddWithValue($"@{key.Key}K", key.Value);
+                query = query.Replace($"@{key.Key}K", key.Value.ToString());
             }
 
             return command;

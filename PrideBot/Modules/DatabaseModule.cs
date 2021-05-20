@@ -147,7 +147,7 @@ namespace PrideBot.Modules
                     }
                     var fieldName = reader.GetName(i);
                     var j = fieldNames.IndexOf(fieldName);
-                    var fieldMatch = j < matchingRow.Count ? matchingRow[j] : null;
+                    var fieldMatch = (j >= 0 && j < matchingRow.Count) ? matchingRow[j] : null;
                     if (fieldMatch == null)
                         continue;
                     var row = reader[0].ToString();

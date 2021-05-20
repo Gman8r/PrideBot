@@ -67,7 +67,8 @@ namespace PrideBot.Modules
                 embed.Description = helpMessage;
 
                 var allUsableCommands = service.Commands
-                    .Where(a => !a.Module.Name.Contains("Secret", StringComparison.OrdinalIgnoreCase));
+                    .Where(a => !a.Module.Name.Contains("Secret", StringComparison.OrdinalIgnoreCase)
+                    && UserHasPermissionsForCommand(Context, a));
 
                 foreach (var module in moduleDict.Where(a => !a.Key.IsSubmodule))
                 {
@@ -178,10 +179,24 @@ namespace PrideBot.Modules
             return ValueResult<string>.Success(message);
         }
 
+        static bool UserHasPermissionsForCommand(SocketCommandContext context, CommandInfo command)
+        {
+            if (!command.Preconditions.Any(a => a.GetType() == typeof(RequireUserPermissionAttribute))
+                && !command.Module.Preconditions.Any(a => a.GetType() == typeof(RequireUserPermissionAttribute)))
+                return true;
+            if (context.User is SocketGuildUser gUser)
+            {
+                return gUser.GuildPermissions.Has(GuildPermission.Administrator);
+                //return false;
+            }
+            return false;
+        }
+
         [Command("say")]
         [Alias("echo")]
         [Priority(0)]
         [Summary("Relays a message.")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task Echo([Remainder] string message)
         {
             await ReplyAsync(DialogueDict.RollBullshit(message));
@@ -191,6 +206,7 @@ namespace PrideBot.Modules
         [Alias("echo")]
         [Priority(1)]
         [Summary("Relays a message in the specified chat channel.")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         public async Task Echo(SocketTextChannel channel, [Remainder] string message)
         {
             await channel.SendMessageAsync(DialogueDict.RollBullshit(message));

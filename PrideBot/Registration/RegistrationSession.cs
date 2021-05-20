@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PrideBot.Game;
 
 namespace PrideBot.Registration
 {
@@ -19,16 +20,17 @@ namespace PrideBot.Registration
 
         readonly ShipImageGenerator shipImageGenerator;
         readonly ModelRepository repo;
-        Dictionary<string, string> dialogue;
+        readonly ScoringService scoringService;
 
         bool userHasRegistered;
         User dbUser;
         UserShipCollection dbUserShips;
 
-        public RegistrationSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage) : base(channel, user, config, client, timeout, originmessage)
+        public RegistrationSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ScoringService scoringService) : base(channel, user, config, client, timeout, originmessage)
         {
             this.shipImageGenerator = shipImageGenerator;
             this.repo = repo;
+            this.scoringService = scoringService;
         }
 
         public IDMChannel Channel { get; }
@@ -40,16 +42,9 @@ namespace PrideBot.Registration
             await connection.OpenAsync();
 
             dbUserShips = new UserShipCollection();
-            dbUser = await repo.GetUserAsync(connection, user.Id.ToString());
-            if (dbUser == null)
-            {
-                await repo.AddUserAsync(connection, new User() { UserId = user.Id.ToString() });
-                dbUser = await repo.GetUserAsync(connection, user.Id.ToString());
-            }
-            else                
-            {
+            dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
+            if (dbUser != null)
                 dbUserShips = await repo.GetUserShipsAsync(connection, dbUser);
-            }
             userHasRegistered = dbUser.ShipsSelected;
 
 
@@ -68,42 +63,63 @@ namespace PrideBot.Registration
                 return;
             }
 
-            embed = GetEmbed()
-                .WithDescription("");
-            for (int i = 0; i < 3; i++)
+            // Main loop for reg finalization
+            while(true)
             {
-                embed.Description = await SetUpShip(connection, (UserShipTier)i, embed);
-            }
-
-            embed = GetEmbed()
-                .WithTitle("Choose a Background")
-                .WithDescription(embed.Description
-                + "\n\n" + DialogueDict.Get("REGISTRATION_CUSTOMIZE_BG")
-                + "\n\n" + DialogueDict.Get("REGISTRATION_CHOOSE_BG"));
-
-            while (true)
-            {
-                var emotes = Enumerable.Range(1, Directory.GetFiles("Assets/Backgrounds").Length)
-                    .Select(a => new Emoji(EmoteHelper.NumberEmotes[a]) as IEmote)
-                    .ToList();
-                emotes.Insert(0, YesEmote);
-                embed.ImageUrl = config.GetRelativeHostPathWeb(await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser));
-                var bgResponse = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: emotes);
-
-                if (bgResponse.IsYes)
-                    break;
-                dbUser.CardBackground = emotes.FindIndex(a => a.ToString().Equals(bgResponse.emoteResponse.ToString()));
-                embed = (await GetEmbedWithShipsAsync(dbUser, dbUserShips))
-                    .WithTitle("Background Config")
-                    .WithDescription(DialogueDict.Get("REGISTRATION_BG_CHANGED", user.Queen(client)));
-                await channel.SendMessageAsync(embed: embed.Build());
+                embed = GetEmbed()
+                    .WithDescription("");
+                for (int i = 0; i < 3; i++)
+                {
+                    embed.Description = await SetUpShip(connection, (UserShipTier)i, embed);
+                }
 
                 embed = GetEmbed()
                     .WithTitle("Choose a Background")
-                    .WithDescription(DialogueDict.Get("REGISTRATION_CHOOSE_BG"));
+                    .WithDescription(embed.Description
+                    + "\n\n" + DialogueDict.Get("REGISTRATION_CUSTOMIZE_BG")
+                    + "\n\n" + DialogueDict.Get("REGISTRATION_CHOOSE_BG"));
+
+                while (true)
+                {
+                    var emotes = Enumerable.Range(1, Directory.GetFiles("Assets/Backgrounds").Length)
+                        .Select(a => new Emoji(EmoteHelper.NumberEmotes[a]) as IEmote)
+                        .ToList();
+                    emotes.Insert(0, YesEmote);
+                    embed.ImageUrl = config.GetRelativeHostPathWeb(await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser));
+                    var bgResponse = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: emotes);
+
+                    if (bgResponse.IsYes)
+                        break;
+                    dbUser.CardBackground = emotes.FindIndex(a => a.ToString().Equals(bgResponse.EmoteResponse.ToString()));
+                    embed = (await GetEmbedWithShipsAsync(dbUser, dbUserShips))
+                        .WithTitle("Background Config")
+                        .WithDescription(DialogueDict.Get("REGISTRATION_BG_CHANGED", user.Queen(client)));
+                    await repo.UpdateUserAsync(connection, dbUser);
+                    await channel.SendMessageAsync(embed: embed.Build());
+
+                    embed = GetEmbed()
+                        .WithTitle("Choose a Background")
+                        .WithDescription(DialogueDict.Get("REGISTRATION_CHOOSE_BG"));
+                }
+
+                embed = GetEmbed()
+                    .WithTitle("Confirm Please!")
+                    .WithDescription(DialogueDict.Get(dbUser.ShipsSelected ? "REGISTRATION_CONFIRM_EDIT" : "REGISTRATION_CONFIRM"));
+                var confirmChoices = new List<IEmote>() { YesEmote, new Emoji("↩") };
+                if (!dbUser.ShipsSelected)
+                    confirmChoices.Add(NoEmote);
+                var result = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: confirmChoices);
+
+                if (result.IsYes)
+                    break;
+                else if (result.IsNo)
+                {
+                    await channel.SendMessageAsync(embed: GetUserCancelledEmbed().Build());
+                    return;
+                }
             }
 
-            var key = "REGISTRATION_" + (userHasRegistered ? "EDITED" : "COMPLETE") + (GameHelper.EventStarted ? "" : "_PREREG");
+            var key = "REGISTRATION_" + (userHasRegistered ? "EDITED" : "COMPLETE") + (GameHelper.EventStarted(config) ? "" : "_PREREG");
             embed = (await GetEmbedWithShipsAsync(dbUser, dbUserShips))
                 .WithTitle("Setup Complete!")
                 .WithDescription(DialogueDict.Get(key, config.GetDefaultPrefix()));
@@ -112,6 +128,10 @@ namespace PrideBot.Registration
             {
                 dbUser.ShipsSelected = true;
                 await repo.UpdateUserAsync(connection, dbUser);
+
+                var achievementId = GameHelper.EventStarted(config) ? "REGISTER" : "PREREGISTER";
+                var achievement = await repo.GetAchievementAsync(connection, achievementId);
+                await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser);
             }
             
         }
@@ -123,7 +143,8 @@ namespace PrideBot.Registration
 
             var title = $"{tier} Pair Setup";
             var tierKey = userHasRegistered ? "EDIT" : tier.ToString().ToUpper();
-            embed.Description += "\n\n" + DialogueDict.Get($"REGISTRATION_ENTER_{tierKey}", tier.ToString().ToLower(), GameHelper.GetPointPercent(tier));
+            var pointPercent = GameHelper.GetPointPercent(await repo.GetScoreRatioForShipTierAsync(connection, tier));
+            embed.Description += "\n\n" + DialogueDict.Get($"REGISTRATION_ENTER_{tierKey}", tier.ToString().ToLower(), pointPercent);
 
             var enterInstructions = DialogueDict.Get("REGISTRATION_SHIP_FORMAT");
             if (isNewShip && tier != UserShipTier.Primary)
@@ -190,7 +211,7 @@ namespace PrideBot.Registration
             response = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: heartEmotes, canSkip: true);
             if (!response.IsSkipped)
             {
-                selectedUserShip.Heart1 = ((Emote)response.emoteResponse).Name;
+                selectedUserShip.Heart1 = ((Emote)response.EmoteResponse).Name;
                 await repo.UpdateUserShipAsync(connection, selectedUserShip);
                 embed = embed
                     .WithDescription(DialogueDict.Get("REGISTRATION_HEART_CHOOSE", selectedUserShip.Character2First, SkipEmote))
@@ -198,7 +219,7 @@ namespace PrideBot.Registration
                 response = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: heartEmotes, canSkip: true);
                 if (!response.IsSkipped)
                 {
-                    selectedUserShip.Heart2 = ((Emote)response.emoteResponse).Name;
+                    selectedUserShip.Heart2 = ((Emote)response.EmoteResponse).Name;
                     await repo.UpdateUserShipAsync(connection, selectedUserShip);
                 }
 
@@ -209,6 +230,8 @@ namespace PrideBot.Registration
 
         async Task<Result> ProcessPairingInputAsync(SqlConnection connection, string shipStr, UserShipTier tier)
         {
+            if (shipStr.ToLower().Contains("drop table"))
+                return Result.Error("HAHAHAHA THAT'S SO FUNNY I HOPE YOU KNOW HOW FUNNY YOU ARE !!!");
             using var typingState = channel.EnterTypingState();
             var dbCharacters = await repo.GetAllCharactersAsync(connection);
             var parseResult = await ParseShipAsync(connection, shipStr, dbCharacters);

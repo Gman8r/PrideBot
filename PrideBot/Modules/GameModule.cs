@@ -20,6 +20,7 @@ using PrideBot.Repository;
 using PrideBot.Registration;
 using PrideBot.Models;
 using PrideBot.Game;
+using PrideBot.Quizzes;
 
 namespace PrideBot.Modules
 {
@@ -44,16 +45,6 @@ namespace PrideBot.Modules
             this.shipImageGenerator = shipImageGenerator;
             this.client = client;
             this.scoringService = scoringService;
-        }
-
-        [Command("register")]
-        [Alias("setup")]
-        [Summary("Allows you to register with for the event, or change your setup.")]
-        public async Task Register()
-        {
-            await new RegistrationSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, shipImageGenerator, repo, client,
-                new TimeSpan(0, 5, 0), Context.Message)
-                .PerformSessionAsync();
         }
 
         [Command("ships")]
@@ -94,7 +85,7 @@ namespace PrideBot.Modules
                 string.Join("\n", Enumerable.Range(0, 3)
                 .Select(a => (UserShipTier)a)
                 .Select(a => $"{EmoteHelper.GetShipTierEmoji(a)} **{a}** Pairing: **{dbShips.Get(a)?.GetDisplayName() ?? "None"}**" +
-                    $" {((GameHelper.GetPointFraction(a) == 1m || !dbShips.Has(a)) ? "" : $" ({GameHelper.GetPointPercent(dbShips.Get(a).ScoreRatio)}% SP)")}")));
+                    $" {((dbShips.Get(a).ScoreRatio == 1m || !dbShips.Has(a)) ? "" : $" ({GameHelper.GetPointPercent(dbShips.Get(a).ScoreRatio)}% SP)")}")));
 
             await ReplyAsync(embed: embed.Build());
         }
@@ -111,7 +102,7 @@ namespace PrideBot.Modules
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
             if (achievement == null)
                 throw new CommandException("Achievement not found, make sure the Id matches the one in the sheet.");
-            await scoringService.AddAndDisplayAchievementAsync(connection, Context.Channel as ITextChannel, user, achievement, Context.User, score);
+            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, Context.User, score);
             //await ReplyResultAsync("Done!");
         }
 

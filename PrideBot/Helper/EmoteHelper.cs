@@ -95,6 +95,18 @@ namespace PrideBot
                 return Emote.Parse(NumberEmotes[num]);
         }
 
+        public static IEmote GetLetterEmote(char letter)
+        {
+            if (!char.IsLetter(letter))
+                throw new IndexOutOfRangeException("Char is not a letter.");
+            letter = letter.ToString().ToLower()[0];
+
+            return new Emoji(LetterEmotes[letter - 'a']);
+        }
+
+
+        public static readonly string[] LetterEmotes = { "🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲", "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿" };
+
         public static readonly string[] NumberEmotes = { "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣",
             "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟",
             //11-50 require number emojis server (541091599975972864)

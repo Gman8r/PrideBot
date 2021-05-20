@@ -18,35 +18,33 @@ using System.Net;
 using Microsoft.Data.SqlClient;
 using PrideBot.Models;
 using PrideBot.Repository;
-using PrideBot.Registration;
+using PrideBot.Quizzes;
 using PrideBot.Game;
 
 namespace PrideBot.Modules
 {
-    [Name("Registration")]
-    public class RegistrationModule : PrideModuleBase
+    [Name("Daily Quiz")]
+    public class QuizModule : PrideModuleBase
     {
         readonly ModelRepository repo;
         readonly IConfigurationRoot config;
-        readonly ShipImageGenerator shipImageGenerator;
         readonly DiscordSocketClient client;
         readonly ScoringService scoringService;
 
-        public RegistrationModule(ModelRepository modelRepository, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService)
+        public QuizModule(ModelRepository modelRepository, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService)
         {
             this.repo = modelRepository;
             this.config = config;
-            this.shipImageGenerator = shipImageGenerator;
             this.client = client;
             this.scoringService = scoringService;
         }
 
-        [Command("register")]
-        [Alias("setup")]
-        [Summary("Allows you to register with for the event, or change your setup.")]
-        public async Task Register()
+        [Command("takequiz")]
+        [Summary("Attempt today's daily quiz question!")]
+        [RequireRegistration]
+        public async Task Quiz()
         {
-            await new RegistrationSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, shipImageGenerator, repo, client,
+            await new QuizSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, repo, client,
                 new TimeSpan(0, 5, 0), Context.Message, scoringService)
                 .PerformSessionAsync();
         }

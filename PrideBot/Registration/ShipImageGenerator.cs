@@ -24,9 +24,9 @@ namespace PrideBot.Registration
 
         public async Task<string> WriteUserAvatarAsync(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0, int[] scores = null)
         {
-            var path = $"ships/usericon-{dbUser.UserId}-{Math.Abs(DateTimeOffset.Now.GetHashCode())}.png";
-            var fullPath = config.GetRelativeHostPathLocal(path);
-            await (await GenerateUserAvatarAsync(dbUser, dbShips, highlightTier, highlightHeart, scores)).WriteToFileAsync(fullPath);
+            var path =
+                await (await GenerateUserAvatarAsync(dbUser, dbShips, highlightTier, highlightHeart, scores))
+                .WriteToFileAsync(config, "ships");
             return path;
         }
 
@@ -126,6 +126,7 @@ namespace PrideBot.Registration
             }
             image.Composite(heartImage2, Gravity.Northwest, 31, 5, CompositeOperator.Over);
 
+
             return image;
         }
         public async Task<string> GenerateBackgroundChoicesAsync(User dbUser)
@@ -155,9 +156,7 @@ namespace PrideBot.Registration
                 }
             }
 
-            var path = $"ships/userbg-{dbUser.UserId}-{Math.Abs(DateTimeOffset.Now.GetHashCode())}.png";
-            var fullPath = config.GetRelativeHostPathLocal(path);
-            await image.WriteToFileAsync(fullPath);
+            var path = await image.WriteToFileAsync(config, "backgrounds");
             backgroundImages.ForEach(a => a.Dispose());
             return path;
         }

@@ -30,12 +30,15 @@ namespace PrideBot.Game
             this.config = config;
         }
 
-        public async Task AddAndDisplayAchievementAsync(SqlConnection connection, ITextChannel channel, IUser user, Achievement achievement, IUser approver, int overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false)
+        public async Task AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, int overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, ITextChannel overrideChannel = null)
         {
             if (overridePoints > 999)
                 throw new CommandException("Max score for an achievement is 999, WHY ARE YOU EVEN DOING THIS??");
             else if (overridePoints < 0)
                 throw new CommandException("I can't reverse the threads of love! Score must be positive or 0 for default.");
+
+            overrideChannel ??= client.GetGyn(config)
+                .GetChannelfromConfig(config, "achievementschannel") as ITextChannel;
 
             var dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
             var pointsEarned = overridePoints == 0 ? achievement.DefaultScore : overridePoints;
@@ -53,7 +56,7 @@ namespace PrideBot.Game
                 dbScores = await repo.GetScoresFromGroupAsync(connection, groupId);
             }
 
-            await DisplayAchievementAsync(channel, user, dbUser, achievement, dbScores,
+            await DisplayAchievementAsync(overrideChannel, user, dbUser, achievement, dbScores,
                 await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl);
         }
 
@@ -70,7 +73,7 @@ namespace PrideBot.Game
             var embed = EmbedHelper.GetEventEmbed(user, config, id: (dbScores?.FirstOrDefault()?.ScoreGroupId.ToString()) ?? "", showDate: true, userInThumbnail: true)
                 .WithTitle($"{achievement.Emoji} Challenge Completed: {achievement.Description}!")
                 .WithUrl(titleUrl)
-                .WithDescription(achievement.Flavor);
+                .WithDescription(DialogueDict.RollBullshit(achievement.Flavor));
             if (approver != null)
                 embed.Footer.Text += $" | Approver: {approver.Username}#{approver.Discriminator}";
 
@@ -122,8 +125,8 @@ namespace PrideBot.Game
                     return;
 
                 var message = await msg.GetOrDownloadAsync();
-                if (message.Author.IsBot) return;
-                await AddAndDisplayAchievementAsync(connection, channel as ITextChannel, message.Author, achievement,
+                if (message.Author.IsBot || message.Reactions[reaction.Emote].IsMe) return;
+                await AddAndDisplayAchievementAsync(connection, message.Author, achievement,
                     reaction.User.IsSpecified ? reaction.User.Value : null, titleUrl: message.GetJumpUrl(), ignoreIfNotRegistered: false);
 
                 await (message.AddReactionAsync(reaction.Emote));
