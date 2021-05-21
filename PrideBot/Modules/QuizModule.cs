@@ -43,7 +43,7 @@ namespace PrideBot.Modules
         [Summary("Attempt today's daily quiz question!")]
         [RequireRegistration]
         [RequireSingleSession]
-        [ValidTimes(ValidTimesAttribute.Times.DuringEvent)]
+        [ValidEventPeriods(EventPeriod.DuringEvent)]
         public async Task TakeQuiz()
         {
             var connection = DatabaseHelper.GetDatabaseConnection();

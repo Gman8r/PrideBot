@@ -4,6 +4,7 @@ using PrideBot.Models;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using PrideBot.Game;
 
 namespace PrideBot
 {
@@ -14,7 +15,10 @@ namespace PrideBot
         //public static int GetPointPercent(UserShipTier tier) => (int)(GetPointFraction(tier) * 100m);
         public static int GetPointPercent(Decimal mult) => (int)(mult * 100m);
 
-        public static bool EventStarted(IConfigurationRoot config) => DateTime.Now.Month == int.Parse(config["eventmonth"]);
+        public static bool EventOccuring(IConfigurationRoot config) => DateTime.Now.Month == int.Parse(config["eventmonth"]);
+
+        public static EventPeriod GetEventPeriod(IConfigurationRoot config) => !EventOccuring(config) ? EventPeriod.DuringEvent
+            : (DateTime.Now.Month > int.Parse(config["eventmonth"]) ? EventPeriod.AfterEvent : EventPeriod.BeforeEvent);
 
         public static int GetQuizDay(DateTime atTime) => atTime.Day;
 

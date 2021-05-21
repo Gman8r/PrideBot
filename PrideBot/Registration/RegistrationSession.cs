@@ -121,7 +121,7 @@ namespace PrideBot.Registration
                 }
             }
 
-            var key = "REGISTRATION_" + (userHasRegistered ? "EDITED" : "COMPLETE") + (GameHelper.EventStarted(config) ? "" : "_PREREG");
+            var key = "REGISTRATION_" + (userHasRegistered ? "EDITED" : "COMPLETE") + (GameHelper.EventOccuring(config) ? "" : "_PREREG");
             embed = (await GetEmbedWithShipsAsync(dbUser, dbUserShips))
                 .WithTitle("Setup Complete!")
                 .WithDescription(DialogueDict.Get(key, config.GetDefaultPrefix()));
@@ -132,7 +132,7 @@ namespace PrideBot.Registration
                 await repo.UpdateUserAsync(connection, dbUser);
                 userRegs[user.Id.ToString()] = true;
 
-                var achievementId = GameHelper.EventStarted(config) ? "REGISTER" : "PREREGISTER";
+                var achievementId = GameHelper.EventOccuring(config) ? "REGISTER" : "PREREGISTER";
                 var achievement = await repo.GetAchievementAsync(connection, achievementId);
                 await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser);
 

@@ -10,6 +10,5 @@ namespace PrideBot.Models
         public string GuildId { get; set; }
         public int QuizDay { get; set; }
         public bool QuizOpen { get; set; }
-        public int FirstStreakDay { get; set; }
     }
 }

@@ -212,7 +212,7 @@ namespace PrideBot.Quizzes
 
             await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, titleUrl: quizOpenedUrl);
             // Streak bonus
-            if (quizLog.Correct && quizLog.Guesses == 1 && quizLog.Day >= guildSettings.FirstStreakDay)
+            if (quizLog.Correct && quizLog.Guesses == 1 && quizLog.Day >= int.Parse(config["firstquizstreakday"]))
             {
                 var previousLog = await repo.GetLastQuizLogForUserAsync(connection, user.Id.ToString(), quizLog.Day.ToString());
                 if (previousLog != null && previousLog.Correct && previousLog.Guesses == 1)

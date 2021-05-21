@@ -35,7 +35,7 @@ using PrideBot.Game;
 
 namespace PrideBot.Quizzes
 {
-    class StarboardService
+    class StarboardScoringService
     {
         const ulong CarlBotId = 235148962103951360;
 
@@ -45,7 +45,7 @@ namespace PrideBot.Quizzes
         readonly ScoringService scoringService;
         readonly LoggingService loggingService;
 
-        public StarboardService(ModelRepository repo, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, LoggingService loggingService)
+        public StarboardScoringService(ModelRepository repo, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, LoggingService loggingService)
         {
             this.repo = repo;
             this.config = config;
@@ -67,6 +67,7 @@ namespace PrideBot.Quizzes
             SocketTextChannel starboardChannel = null;
             try
             {
+                if (!GameHelper.EventOccuring(config)) return;
                 if (msg.Author.Id != CarlBotId) return;
                 starboardChannel = client.GetGyn(config).GetChannelFromConfig(config, "starboardchannel") as SocketTextChannel;
                 if (msg.Channel.Id != starboardChannel.Id) return;

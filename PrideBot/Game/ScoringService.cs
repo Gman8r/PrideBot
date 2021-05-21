@@ -55,19 +55,23 @@ namespace PrideBot.Game
             var addScoreResults = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarned, approver.Id.ToString(), ignoreCooldown);
             var scoreId = addScoreResults.Item1;
             var errorCode = addScoreResults.Item2;
-            var dbShipScores = (await repo.GetShipScoresAsync(connection, scoreId)).ToArray();
 
-            var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, pointsEarned, dbShipScores,
-                await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, errorCode);
-            var text = user.Mention;
-            if (!achievement.Ping || !dbUser.PingForAchievements)
+            if (achievement.Log)
             {
-                text = null;
-                embed.Author ??= new EmbedAuthorBuilder();
-                embed.Author.Name = $"{approver.Username}#{approver.Discriminator}";
-            }
+                var dbShipScores = (await repo.GetShipScoresAsync(connection, scoreId)).ToArray();
 
-            await overrideChannel.SendMessageAsync(text, embed: embed.Build());
+                var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, pointsEarned, dbShipScores,
+                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, errorCode);
+                var text = user.Mention;
+                if (!achievement.Ping || !dbUser.PingForAchievements)
+                {
+                    text = null;
+                    embed.Author ??= new EmbedAuthorBuilder();
+                    embed.Author.Name = $"{user.Username}#{user.Discriminator}";
+                }
+
+                await overrideChannel.SendMessageAsync(text, embed: embed.Build());
+            }
             return errorCode == ModelRepository.AddScoreError.None || errorCode == ModelRepository.AddScoreError.UserNotRegistered;
         }
 

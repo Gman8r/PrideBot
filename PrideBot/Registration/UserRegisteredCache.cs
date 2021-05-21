@@ -19,7 +19,7 @@ namespace PrideBot.Registration
             this.repo = repo;
         }
 
-        public async Task<bool> GetOrDownload(string userId)
+        public async Task<bool> GetOrDownloadAsync(string userId)
         {
             if (dict.ContainsKey(userId))
                 return dict[userId];

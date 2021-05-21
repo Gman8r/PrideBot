@@ -5,25 +5,18 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using PrideBot.Game;
 
 namespace PrideBot
 {
-    public class ValidTimesAttribute : PreconditionAttribute
+    public class ValidEventPeriodsAttribute : PreconditionAttribute
     {
 
-        readonly Times ValidTimes;
+        readonly EventPeriod ValidPeriods;
 
-        public ValidTimesAttribute(Times validTimes)
+        public ValidEventPeriodsAttribute(EventPeriod validTimes)
         {
-            ValidTimes = validTimes;
-        }
-
-        [Flags]
-        public enum Times
-        {
-            BeforeEvent,
-            DuringEvent,
-            AfterEvent
+            ValidPeriods = validTimes;
         }
 
 
@@ -34,11 +27,11 @@ namespace PrideBot
                 return Task.FromResult(PreconditionResult.FromSuccess());
             var month = DateTime.Now.Month;
             var eventMonth = int.Parse(config["eventmonth"]);
-            if (month < eventMonth && ValidTimes.HasFlag(Times.BeforeEvent))
+            if (month < eventMonth && ValidPeriods.HasFlag(EventPeriod.BeforeEvent))
                 return Task.FromResult(PreconditionResult.FromSuccess());
-            else if (month == eventMonth && ValidTimes.HasFlag(Times.DuringEvent))
+            else if (month == eventMonth && ValidPeriods.HasFlag(EventPeriod.DuringEvent))
                 return Task.FromResult(PreconditionResult.FromSuccess());
-            else if (month > eventMonth && ValidTimes.HasFlag(Times.AfterEvent))
+            else if (month > eventMonth && ValidPeriods.HasFlag(EventPeriod.AfterEvent))
                 return Task.FromResult(PreconditionResult.FromSuccess());
 
             return Task.FromResult(PreconditionResult.FromError("Hmmm huhhh hold up, it looks like you aren't able to use this command at this time. Contact a sage if you think this something's wrong, 'kayyy?"));

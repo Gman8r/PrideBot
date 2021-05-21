@@ -72,7 +72,7 @@ namespace PrideBot.Quizzes
                 while (true)
                 {
                     await Task.Delay(500);
-                    if (!GameHelper.EventStarted(config))
+                    if (!GameHelper.EventOccuring(config))
                         continue;
 
                     // last 15 minutes of day, quiz should be closed

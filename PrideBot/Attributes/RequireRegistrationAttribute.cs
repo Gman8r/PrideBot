@@ -16,7 +16,7 @@ namespace PrideBot
         {
             var connection = DatabaseHelper.GetDatabaseConnection();
             var cache = services.GetService<UserRegisteredCache>();
-            if (await cache.GetOrDownload(context.User.Id.ToString()))
+            if (await cache.GetOrDownloadAsync(context.User.Id.ToString()))
                 return PreconditionResult.FromSuccess();
             else
                 return PreconditionResult.FromError($"You need to be registered for the event to use that command! Sign up with " +

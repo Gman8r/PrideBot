@@ -12,9 +12,12 @@ namespace PrideBot.Repository
     public partial class ModelRepository
     {
 
-        public async Task<Score> GetScoreAsync(SqlConnection conn, string groupId)
-        => (await new SqlCommand($"select * from VI_SCORES where SCORE_ID = '{groupId}'", conn).ExecuteReaderAsync()).As<Score>().FirstOrDefault();
+        public async Task<Score> GetScoreAsync(SqlConnection conn, string scoreId)
+        => (await new SqlCommand($"select * from VI_SCORES where SCORE_ID = '{scoreId}'", conn).ExecuteReaderAsync()).As<Score>().FirstOrDefault();
 
+        public async Task<Score> GetLastScoreFromUserAndAchievementAsync(SqlConnection conn, string userId, string achievementId)
+        => (await new SqlCommand($"select top 1 * from VI_SCORES where USER_ID = '{userId}' and ACHIEVEMENT_ID = '{achievementId}'" +
+            $" order by TIMESTAMP desc", conn).ExecuteReaderAsync()).As<Score>().FirstOrDefault();
 
         public enum AddScoreError
         {
@@ -22,7 +25,6 @@ namespace PrideBot.Repository
             UserNotRegistered = 1,
             CooldownViolated = 2
         }
-
 
         public async Task<(string, AddScoreError)> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, int pointsEarned, string approverId, bool ignoreCooldown)
         {

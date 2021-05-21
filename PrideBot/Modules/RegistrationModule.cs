@@ -49,7 +49,7 @@ namespace PrideBot.Modules
         [Alias("setup")]
         [Summary("Allows you to register with for the event, or change your setup.")]
         [RequireSingleSession]
-        [ValidTimes(ValidTimesAttribute.Times.BeforeEvent | ValidTimesAttribute.Times.DuringEvent)]
+        [ValidEventPeriods(EventPeriod.BeforeEvent | EventPeriod.DuringEvent)]
         public async Task Register()
         {
             await new RegistrationSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, shipImageGenerator, repo, client,
