@@ -28,7 +28,7 @@ namespace PrideBot
             if (gyn == null)
                 return false;
             var sage = gyn.GetRole(config.ParseUlongField("ids:sage"));
-            return sage.Members.Any(a => a.Id == user.Id);
+            return sage.Members.Any(a => a.Id == user.Id) || (user is SocketGuildUser gUser && gUser.GuildPermissions.Has(GuildPermission.Administrator));
         }
 
         public static string[] GetPrefixes(this IConfigurationRoot config)

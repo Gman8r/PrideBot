@@ -12,11 +12,13 @@ namespace PrideBot
     {
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            //var config = services.GetService<IConfigurationRoot>();
-            //if ((context.User as SocketUser).IsGYNSage(config))
+            var config = services.GetService<IConfigurationRoot>();
+            if ((context.User as SocketUser).IsGYNSage(config))
                 return Task.FromResult(PreconditionResult.FromSuccess());
+            //else if (context.User is SocketGuildUser gUser && gUser.GuildPermissions.Has(Discord.GuildPermission.Administrator))
+            //    return Task.FromResult(PreconditionResult.FromSuccess());
             //else
-            //    return Task.FromResult(PreconditionResult.FromError("I currently only respond to GYN sages, sorry."));
+                return Task.FromResult(PreconditionResult.FromError("You need to be one of GYN's sages use that command."));
         }
     }
 }

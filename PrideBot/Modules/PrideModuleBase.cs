@@ -11,7 +11,6 @@ using Discord.Commands.Builders;
 
 namespace PrideBot
 {
-    [RequireSage]
     public class PrideModuleBase : ModuleBase<SocketCommandContext>
     {
         private static Dictionary<string, PrideModuleBase> BuiltModules;

@@ -91,18 +91,18 @@ namespace PrideBot
             var primaryKeys = new Dictionary<string, object>();
             foreach (var property in typeof(T).GetProperties())
             {
-                if (typeof(T).BaseType != null)
-                {
-                    // Ignore superclass when pushing
-                    if (typeof(T).BaseType.GetProperties().Contains(property))
-                        continue;
-                }
                 var key = CamelCaseNameToSql(property.Name);
                 var value = property.GetValue(obj);
                 if (value != null && value.GetType() == typeof(bool))
                     value = (bool)value ? "Y" : "N";
                 if (property.CustomAttributes.Any(a => a.AttributeType == typeof(PrimaryKeyAttribute)))
                     primaryKeys[key] = value;
+                if (typeof(T).BaseType != null)
+                {
+                    // Ignore superclass when pushing
+                    if (typeof(T).BaseType.GetProperties().Contains(property))
+                        continue;
+                }
                 if (!property.CustomAttributes.Any(a => a.AttributeType == typeof(DontPushToDatabaseAttribute)))
                     fields[key] = value;
             }

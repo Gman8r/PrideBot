@@ -41,7 +41,16 @@ namespace PrideBot
                 return "(MISSING DIALOGUE OH NO MY BRAIN)";
             try
             {
-                var str = string.Format(instance.dict[key]
+                var variants = instance.dict.Keys
+                    .Where(a => a.StartsWith(key + "-"))
+                    .ToList();
+                string chosenKey;
+                if (variants.Any())
+                    chosenKey = variants[new Random().Next() % variants.Count];
+                else
+                    chosenKey = key;
+
+                var str = string.Format(instance.dict[chosenKey]
                     .Replace("{SP}", EmoteHelper.SPEmote.ToString())
                     , args);
                 return RollBullshit(str);
@@ -94,7 +103,7 @@ namespace PrideBot
                     "Home of sexual.",
                     "Gay Gay Homo Sexual Gay."};
 
-            var roll = rand.Next() % 25;
+            var roll = rand.Next() % 20;
             if (str.Length > 0 && char.IsPunctuation(str.Last()) && roll == 0)
             {
                 var phrase = bullshitPhrases[rand.Next() % bullshitPhrases.Count];

@@ -22,15 +22,15 @@ namespace PrideBot.Registration
         public string GetShipAvatarPath(User user, IConfigurationRoot config)
             => config.GetRelativeHostPathLocal("ships/" + user.UserId + ".png");
 
-        public async Task<string> WriteUserAvatarAsync(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0, int[] scores = null)
+        public async Task<string> WriteUserCardAsync(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0, int[] scores = null)
         {
             var path =
-                await (await GenerateUserAvatarAsync(dbUser, dbShips, highlightTier, highlightHeart, scores))
-                .WriteToFileAsync(config, "ships");
+                await (await GenerateUserCardAsync(dbUser, dbShips, highlightTier, highlightHeart, scores))
+                .WriteToWebFileAsync(config, "ships");
             return path;
         }
 
-        public async Task<MagickImage> GenerateUserAvatarAsync(User dbUser, UserShipCollection userShips, int highlightTier = -1, int highlightHeart = 0, int[] scores = null)
+        public async Task<MagickImage> GenerateUserCardAsync(User dbUser, UserShipCollection userShips, int highlightTier = -1, int highlightHeart = 0, int[] scores = null)
         {
             scores ??= new int[3];
             var image = new MagickImage($"Assets/Backgrounds/shipbg{dbUser.CardBackground}.png");
@@ -156,7 +156,7 @@ namespace PrideBot.Registration
                 }
             }
 
-            var path = await image.WriteToFileAsync(config, "backgrounds");
+            var path = await image.WriteToWebFileAsync(config, "backgrounds");
             backgroundImages.ForEach(a => a.Dispose());
             return path;
         }

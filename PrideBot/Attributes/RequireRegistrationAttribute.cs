@@ -1,6 +1,7 @@
 ﻿using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
+using PrideBot.Registration;
 using PrideBot.Repository;
 using System;
 using System.Collections.Generic;
@@ -14,13 +15,12 @@ namespace PrideBot
         public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
             var connection = DatabaseHelper.GetDatabaseConnection();
-            await connection.OpenAsync();
-            var dbUser = await services.GetService<ModelRepository>().GetOrCreateUserAsync(connection, context.User.Id.ToString());
-            if (!dbUser.ShipsSelected)
+            var cache = services.GetService<UserRegisteredCache>();
+            if (await cache.GetOrDownload(context.User.Id.ToString()))
+                return PreconditionResult.FromSuccess();
+            else
                 return PreconditionResult.FromError($"You need to be registered for the event to use that command! Sign up with " +
-                    $"`{services.GetService<IConfigurationRoot>().GetDefaultPrefix()}register`.");
-
-            return PreconditionResult.FromSuccess();
+                        $"`{services.GetService<IConfigurationRoot>().GetDefaultPrefix()}register`.");
         }
     }
 }

@@ -18,7 +18,7 @@ namespace PrideBot
         protected static IEmote YesEmote => new Emoji("✅");
         protected static IEmote NoEmote => new Emoji("❌");
 
-        protected static readonly List<DMSession> activeSessions = new List<DMSession>();
+        public static readonly List<DMSession> activeSessions = new List<DMSession>();
 
         protected readonly DiscordSocketClient client;
         protected readonly IDMChannel channel;
@@ -29,6 +29,7 @@ namespace PrideBot
 
         protected Prompt currentPrompt;
 
+        public IUser GetUser() => user;
         public bool IsCancelled { get; private set; }
         public void Cancel(string message)
         {
@@ -207,14 +208,14 @@ namespace PrideBot
 
         protected EmbedBuilder GetUserCancelledEmbed()
         {
-            var goodbyeKeys = DialogueDict.GetDict()
-                .Where(a => a.Key.StartsWith("SESSION_CANCEL"))
-                .Select(a => a.Key)
-                .ToList();
-            var goodbyeKey = goodbyeKeys[new Random().Next() % goodbyeKeys.Count];
+            //var goodbyeKeys = DialogueDict.GetDict()
+            //    .Where(a => a.Key.StartsWith("SESSION_CANCEL"))
+            //    .Select(a => a.Key)
+            //    .ToList();
+            //var goodbyeKey = goodbyeKeys[new Random().Next() % goodbyeKeys.Count];
             return GetEmbed()
                     .WithTitle("'Kay, Laters Then")
-                    .WithDescription(DialogueDict.Get(goodbyeKey))
+                    .WithDescription(DialogueDict.Get("SESSION_CANCEL"))
                     .WithImageUrl(null)
                     .WithThumbnailUrl(null);
         }

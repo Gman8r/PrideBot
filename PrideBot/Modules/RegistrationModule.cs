@@ -31,23 +31,29 @@ namespace PrideBot.Modules
         readonly ShipImageGenerator shipImageGenerator;
         readonly DiscordSocketClient client;
         readonly ScoringService scoringService;
+        readonly UserRegisteredCache userReg;
 
-        public RegistrationModule(ModelRepository modelRepository, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService)
+        public override int HelpSortOrder => -50;
+
+        public RegistrationModule(ModelRepository modelRepository, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService, UserRegisteredCache userReg)
         {
             this.repo = modelRepository;
             this.config = config;
             this.shipImageGenerator = shipImageGenerator;
             this.client = client;
             this.scoringService = scoringService;
+            this.userReg = userReg;
         }
 
         [Command("register")]
         [Alias("setup")]
         [Summary("Allows you to register with for the event, or change your setup.")]
+        [RequireSingleSession]
+        [ValidTimes(ValidTimesAttribute.Times.BeforeEvent | ValidTimesAttribute.Times.DuringEvent)]
         public async Task Register()
         {
             await new RegistrationSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, shipImageGenerator, repo, client,
-                new TimeSpan(0, 5, 0), Context.Message, scoringService)
+                new TimeSpan(0, 5, 0), Context.Message, scoringService, userReg)
                 .PerformSessionAsync();
         }
     }

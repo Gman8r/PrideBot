@@ -57,7 +57,7 @@ namespace PrideBot
             }
         }
 
-        public static async Task<string> WriteToFileAsync(this IMagickImage<byte> image, IConfigurationRoot config, string relativeFolderPath)
+        public static async Task<string> WriteToWebFileAsync(this IMagickImage<byte> image, IConfigurationRoot config, string relativeFolderPath)
         {
             var hash = Math.Abs(image.GetHashCode());
             var path = $"/{relativeFolderPath}/{hash}.png";

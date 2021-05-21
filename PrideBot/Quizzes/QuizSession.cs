@@ -19,33 +19,36 @@ namespace PrideBot.Quizzes
         const int TimerSeconds = 60;
 
         readonly ModelRepository repo;
+        readonly GuildSettings guildSettings;
         readonly ScoringService scoringService;
 
         bool sessionComplete = false;
         string correctChoice;
         QuizLog quizLog;
 
-        public QuizSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ScoringService scoringService) : base(channel, user, config, client, timeout, originmessage)
+        public QuizSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ScoringService scoringService, QuizLog quizLog, GuildSettings guildSettings) : base(channel, user, config, client, timeout, originmessage)
         {
             this.repo = repo;
             this.scoringService = scoringService;
+            this.quizLog = quizLog;
+            this.guildSettings = guildSettings;
         }
 
         public IDMChannel Channel { get; }
 
         protected override async Task PerformSessionInternalAsync()
         {
-            var day = GameHelper.GetQuizDay();
+            var day = quizLog.Day;
             using var connection = DatabaseHelper.GetDatabaseConnection();
             await connection.OpenAsync();
 
-            quizLog = await repo.GetOrCreateQuizLogAsync(connection, user.Id.ToString(), day.ToString());
-            if (quizLog.Attempted)
-            {
-                await channel.SendMessageAsync(embed: EmbedHelper.GetEventErrorEmbed(user, DialogueDict.Get("QUIZ_ATTEMPTED"), client, showUser: false).Build());
-                await channel.SendMessageAsync(embed: EmbedHelper.GetEventErrorEmbed(user, "(but that's ok we're debugging so just continue)", client, showUser: false).Build());
-                //return;
-            }
+            //quizLog = await repo.GetOrCreateQuizLogAsync(connection, user.Id.ToString(), day.ToString());
+            //if (quizLog.Attempted)
+            //{
+            //    await channel.SendMessageAsync(embed: EmbedHelper.GetEventErrorEmbed(user, DialogueDict.Get("QUIZ_ATTEMPTED"), client, showUser: false).Build());
+            //    await channel.SendMessageAsync(embed: EmbedHelper.GetEventErrorEmbed(user, "(but that's ok we're debugging so just continue)", client, showUser: false).Build());
+            //    //return;
+            //}
 
             var availableQuizzes = (await repo.GetQuizzesForDayAsync(connection, day.ToString())).ToList();
 
@@ -192,14 +195,36 @@ namespace PrideBot.Quizzes
                 embed.Description = DialogueDict.Get($"QUIZ_INCORRECT", correctChoice, user.Queen(client));
             embed.Description += "\n\n" + DialogueDict.Get("QUIZ_CLOSING");
             await channel.SendMessageAsync(embed: embed.Build());
-            await AddScore(connection);
+            await AddScoreAndFinish(connection);
         }
 
-        async Task AddScore(SqlConnection connection)
+        async Task AddScoreAndFinish(SqlConnection connection)
         {
             var achievementId = quizLog.Correct ? $"QUIZ_CORRECT_{quizLog.Guesses}" : "QUIZ_PARTICIPATE";
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
-            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser);
+
+            var gyn = client.GetGyn(config);
+            var discussionChannel = gyn.GetChannelFromConfig(config, "quizdiscussionchannel") as SocketTextChannel;
+            var quizChannel = gyn.GetChannelFromConfig(config, "quizchannel") as SocketTextChannel;
+            var quizTakenRole = gyn.GetRoleFromConfig(config, "quiztakenrole");
+            var quizOpenedMessage = (await quizChannel.GetPinnedMessagesAsync()).FirstOrDefault();
+            var quizOpenedUrl = quizOpenedMessage?.GetJumpUrl();
+
+            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, titleUrl: quizOpenedUrl);
+            // Streak bonus
+            if (quizLog.Correct && quizLog.Guesses == 1 && quizLog.Day >= guildSettings.FirstStreakDay)
+            {
+                var previousLog = await repo.GetLastQuizLogForUserAsync(connection, user.Id.ToString(), quizLog.Day.ToString());
+                if (previousLog != null && previousLog.Correct && previousLog.Guesses == 1)
+                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "QUIZ_STREAK", client.CurrentUser, titleUrl: quizOpenedUrl);
+            }
+
+            var guildUser = gyn.GetUser(user.Id);
+            if (guildUser != null)
+            {
+                await guildUser.AddRoleAsync(quizTakenRole);
+                await discussionChannel.SendMessageAsync(DialogueDict.Get("DAILY_QUIZ_DISCUSSION_WELCOME", user.Mention));
+            }
         }
 
         async Task RunTimer()
@@ -230,7 +255,7 @@ namespace PrideBot.Quizzes
                 await repo.UpdateQuizLogAsync(connection, quizLog);
 
                 await Task.Delay(500);
-                await AddScore(connection);
+                await AddScoreAndFinish(connection);
             }
         }
     }

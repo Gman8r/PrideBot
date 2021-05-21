@@ -24,7 +24,7 @@ using System.Text.RegularExpressions;
 namespace PrideBot.Modules
 {
     [Name("Database")]
-    [RequireUserPermission(GuildPermission.Administrator)]
+    [RequireSage]
     public class DatabaseModule : PrideModuleBase
     {
         readonly ModelRepository modelRepository;
@@ -40,8 +40,8 @@ namespace PrideBot.Modules
             this.repo = repo;
         }
 
-        [Command("updatesheet")]
-        [Alias("pushsheet")]
+        [Command("updatetable")]
+        [Alias("updatesheet", "pushtable", "pushsheet")]
         public async Task UploadSheet(string url, string tableName)
         {
             var idPattern = "\\/d\\/(.*?)\\/(|$)";
@@ -260,14 +260,14 @@ namespace PrideBot.Modules
                 dbUser.ShipsSelected = true;
                 await repo.UpdateUserAsync(connection, dbUser);
                 var achievement = achievements.FirstOrDefault(a => a.AchievementId.Equals("PREREGISTER"));
-                await repo.AddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore);
+                await repo.AttemptAddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore, null, true);
             }
 
             for (int i = 0; i < scoreCount; i++)
             {
                 var userId = GetWeightedIndex(userCount, .05, rand);
                 var achievement = achievements[rand.Next() % achievements.Count];
-                await repo.AddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore);
+                await repo.AttemptAddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore, null, true);
             }
 
             await ReplyAsync("***WOP!*** I pulled a collection of info from a contest in another reality, just for you bestie!");

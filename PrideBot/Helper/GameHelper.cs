@@ -26,7 +26,7 @@ namespace PrideBot
         public static SocketRole GetRoleFromConfig(this SocketGuild guild, IConfigurationRoot config, string subKey)
             => guild.GetRole(ulong.Parse(config[$"ids:{subKey}"]));
 
-        public static SocketChannel GetChannelfromConfig(this SocketGuild guild, IConfigurationRoot config, string subKey)
+        public static SocketChannel GetChannelFromConfig(this SocketGuild guild, IConfigurationRoot config, string subKey)
             => guild.GetChannel(ulong.Parse(config[$"ids:{subKey}"]));
     }
 }

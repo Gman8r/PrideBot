@@ -23,7 +23,6 @@ namespace PrideBot.Modules
 {
     [Name("Owner")]
     [RequireOwner]
-    [RequireContext(ContextType.DM)]
     public class OwnerModule : PrideModuleBase
     {
         readonly ModelRepository modelRepository;

@@ -21,16 +21,18 @@ namespace PrideBot.Registration
         readonly ShipImageGenerator shipImageGenerator;
         readonly ModelRepository repo;
         readonly ScoringService scoringService;
+        UserRegisteredCache userRegs;
 
         bool userHasRegistered;
         User dbUser;
         UserShipCollection dbUserShips;
 
-        public RegistrationSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ScoringService scoringService) : base(channel, user, config, client, timeout, originmessage)
+        public RegistrationSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ShipImageGenerator shipImageGenerator, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ScoringService scoringService, UserRegisteredCache userRegs) : base(channel, user, config, client, timeout, originmessage)
         {
             this.shipImageGenerator = shipImageGenerator;
             this.repo = repo;
             this.scoringService = scoringService;
+            this.userRegs = userRegs;
         }
 
         public IDMChannel Channel { get; }
@@ -128,10 +130,26 @@ namespace PrideBot.Registration
             {
                 dbUser.ShipsSelected = true;
                 await repo.UpdateUserAsync(connection, dbUser);
+                userRegs[user.Id.ToString()] = true;
 
                 var achievementId = GameHelper.EventStarted(config) ? "REGISTER" : "PREREGISTER";
                 var achievement = await repo.GetAchievementAsync(connection, achievementId);
                 await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser);
+
+                // Reward points from before user registered if needed
+                var storedPoints = await repo.GetUseNonRegPoints(connection, dbUser.UserId);
+                if (storedPoints > 0)
+                {
+                    var pointsAchievement = await repo.GetAchievementAsync(connection, "STORED");
+                    await scoringService.AddAndDisplayAchievementAsync(connection, user, pointsAchievement, client.CurrentUser, overridePoints: storedPoints);
+                }
+
+                // Give registered role
+                var gyn = client.GetGyn(config);
+                var registeredRole = gyn.GetRoleFromConfig(config, "registeredrole");
+                var guildUser = gyn.GetUser(user.Id);
+                if (guildUser != null)
+                    await guildUser.AddRoleAsync(registeredRole);
             }
             
         }
@@ -356,7 +374,7 @@ namespace PrideBot.Registration
 
         public async Task<string> GenerateShipImage(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0)
         {
-            var image = await shipImageGenerator.WriteUserAvatarAsync(dbUser, dbShips, highlightTier, highlightHeart);
+            var image = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips, highlightTier, highlightHeart);
             return config.GetRelativeHostPathWeb(image);
         }
 

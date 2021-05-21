@@ -57,7 +57,9 @@ namespace PrideBot
                 // PrideBot-specific services
                 provider.GetRequiredService<PlayStatusService>();
                 provider.GetRequiredService<ScoringService>();
-                provider.GetRequiredService<QuizService>();
+                provider.GetRequiredService<DailyQuizService>();
+                provider.GetRequiredService<StarboardService>();
+                provider.GetRequiredService<UserRegisteredCache>();
             }
             else
             {
@@ -100,7 +102,9 @@ namespace PrideBot
                 services.AddSingleton<GoogleSheetsService>();
                 services.AddSingleton<ShipImageGenerator>();
                 services.AddSingleton<ScoringService>();
-                services.AddSingleton<QuizService>();
+                services.AddSingleton<DailyQuizService>();
+                services.AddSingleton<StarboardService>();
+                services.AddSingleton<UserRegisteredCache>();
                 //.AddSingleton<PlayStatusService>();
             }
         }

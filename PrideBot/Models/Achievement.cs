@@ -15,7 +15,6 @@ namespace PrideBot.Models
         public int CooldownHours { get; set; }
         public bool Log { get; set; }
         public bool Manual { get; set; }
-        public bool PerDay { get; set; }
-        public bool PerHour { get; set; }
+        public bool Ping { get; set; }
     }
 }

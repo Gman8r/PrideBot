@@ -16,6 +16,7 @@ using System.IO.Compression;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 using Newtonsoft.Json;
+using PrideBot.Repository;
 
 namespace PrideBot.Modules
 {
@@ -25,14 +26,16 @@ namespace PrideBot.Modules
         private readonly CommandService service;
         private readonly IConfigurationRoot config;
         private readonly IServiceProvider provider;
+        private readonly ModelRepository repo;
 
         public override int HelpSortOrder => -100;
 
-        public GeneralModule(CommandService service, IConfigurationRoot config, IServiceProvider provider)
+        public GeneralModule(CommandService service, IConfigurationRoot config, IServiceProvider provider, ModelRepository repo)
         {
             this.service = service;
             this.config = config;
             this.provider = provider;
+            this.repo = repo;
         }
 
         [Command("help")]
@@ -67,8 +70,13 @@ namespace PrideBot.Modules
                 embed.Description = helpMessage;
 
                 var allUsableCommands = service.Commands
-                    .Where(a => !a.Module.Name.Contains("Secret", StringComparison.OrdinalIgnoreCase)
-                    && UserHasPermissionsForCommand(Context, a));
+                    .Where(a => !a.Module.Name.Contains("Secret", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                for (int i = allUsableCommands.Count - 1; i >= 0; i--)
+                {
+                    if (!(await UserHasPermissionsForCommand(Context, allUsableCommands[i], provider)))
+                        allUsableCommands.RemoveAt(i);
+                }
 
                 foreach (var module in moduleDict.Where(a => !a.Key.IsSubmodule))
                 {
@@ -170,7 +178,7 @@ namespace PrideBot.Modules
                     message += $"\n**Aliases:**  {string.Join(", ", aliases)}";
 
                 if (!string.IsNullOrWhiteSpace(command.Summary))
-                    message += "\n**Description:**  " + command.Summary;
+                    message += "\n**Description:**  " + DialogueDict.RollBullshit(command.Summary);
             }
 
             if (string.IsNullOrWhiteSpace(message))
@@ -179,38 +187,33 @@ namespace PrideBot.Modules
             return ValueResult<string>.Success(message);
         }
 
-        static bool UserHasPermissionsForCommand(SocketCommandContext context, CommandInfo command)
+        static async Task<bool> UserHasPermissionsForCommand(SocketCommandContext context, CommandInfo command, IServiceProvider provider)
         {
-            if (!command.Preconditions.Any(a => a.GetType() == typeof(RequireUserPermissionAttribute))
-                && !command.Module.Preconditions.Any(a => a.GetType() == typeof(RequireUserPermissionAttribute)))
-                return true;
-            if (context.User is SocketGuildUser gUser)
+            return (await command.CheckPreconditionsAsync(context, provider)).IsSuccess;
+
+            //var sageAttribute = command.Preconditions.FirstOrDefault(a => a.GetType() == typeof(RequireSageAttribute))
+            //    ?? command.Module.Preconditions.FirstOrDefault(a => a.GetType() == typeof(RequireSageAttribute));
+            //if (sageAttribute == null) return true;
+            //var result = await (sageAttribute as RequireSageAttribute).CheckPermissionsAsync(context, command, provider);
+            //return result.IsSuccess;
+        }
+
+        [Command("setpings")]
+        [Summary("Use with True or False to change whether I ping you for achievements.")]
+        public async Task SetPings(bool ping)
+        {
+            using var connection = DatabaseHelper.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var dbUser = await repo.GetOrCreateUserAsync(connection, Context.User.Id.ToString());
+            if (dbUser.PingForAchievements != ping)
             {
-                return gUser.GuildPermissions.Has(GuildPermission.Administrator);
-                //return false;
+                dbUser.PingForAchievements = ping;
+                await repo.UpdateUserAsync(connection, dbUser);
             }
-            return false;
-        }
-
-        [Command("say")]
-        [Alias("echo")]
-        [Priority(0)]
-        [Summary("Relays a message.")]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task Echo([Remainder] string message)
-        {
-            await ReplyAsync(DialogueDict.RollBullshit(message));
-        }
-
-        [Command("say")]
-        [Alias("echo")]
-        [Priority(1)]
-        [Summary("Relays a message in the specified chat channel.")]
-        [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task Echo(SocketTextChannel channel, [Remainder] string message)
-        {
-            await channel.SendMessageAsync(DialogueDict.RollBullshit(message));
-            await ReplyResultAsync("Done.");
+            if (ping)
+                await ReplyAsync("Done! I'll be pinging you for your achievements, 'kay?");
+            else
+                await ReplyAsync("Done! I will no longer ping you when you get an achievement.");
         }
 
     }
