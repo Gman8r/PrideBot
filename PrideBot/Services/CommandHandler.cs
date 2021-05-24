@@ -106,6 +106,9 @@ namespace PrideBot
                     }
                 }
 
+                if (result.Error == CommandError.ParseFailed || result.Error == CommandError.ObjectNotFound)
+                    errorMessage = DialogueDict.Get("ERROR_MESSAGE", errorMessage);
+
                 if (errorMessage != null)
                 {
                     await context.Channel.SendMessageAsync(embed:
@@ -114,9 +117,9 @@ namespace PrideBot
             }
             catch (Exception e)
             {
-                var logMessasge = new LogMessage(LogSeverity.Error, "CommandHandler",
+                var logMessage = new LogMessage(LogSeverity.Error, "CommandHandler",
                     "Error reporting an error: " + result.Error.ToString(), e);
-                await loggingService.OnLogAsync(logMessasge);
+                await loggingService.OnLogAsync(logMessage);
             }
         }
     }

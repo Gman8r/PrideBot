@@ -28,6 +28,8 @@ ids:
     quizchannel: 844357532695789568
     quizdiscussionchannel: 844354707916980244
     starboardchannel: 808049479999553556
+    pklogchannel: 808049429528444928
+    pluralkitid: 466378653216014359
     registeredrole: 844355731410386964
     quiztakenrole: 844355888876617749
     modchat: 808049429528444928
@@ -45,3 +47,5 @@ ids:
     #starboardchannel: 845109425224155146
     #modchat: 808049429528444928
     #youkai: 358435805779197955
+    #pklogchannel: 811106749683728445
+    #pluralkitid: 466378653216014359

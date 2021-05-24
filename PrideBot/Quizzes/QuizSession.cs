@@ -25,6 +25,8 @@ namespace PrideBot.Quizzes
         bool sessionComplete = false;
         string correctChoice;
         QuizLog quizLog;
+        List<Quiz> availableQuizzes;
+        int chosenQuizIndex;
 
         public QuizSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ScoringService scoringService, QuizLog quizLog, GuildSettings guildSettings) : base(channel, user, config, client, timeout, originmessage)
         {
@@ -50,7 +52,7 @@ namespace PrideBot.Quizzes
             //    //return;
             //}
 
-            var availableQuizzes = (await repo.GetQuizzesForDayAsync(connection, day.ToString())).ToList();
+            availableQuizzes = (await repo.GetQuizzesForDayAsync(connection, day.ToString())).ToList();
 
             var embed = GetEmbed()
                 .WithTitle("Daily Quiz")
@@ -94,7 +96,7 @@ namespace PrideBot.Quizzes
                 numberEmoteChoices.Add(NoEmote);
                 response = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: numberEmoteChoices);
             }
-            var quizChoice = 0;
+            chosenQuizIndex = 0;
             if (response.IsNo)
             {
                 await channel.SendMessageAsync(embed: GetUserCancelledEmbed().Build());
@@ -104,14 +106,14 @@ namespace PrideBot.Quizzes
             {
                 var selection = EmoteHelper.NumberEmotes.ToList()
                     .FindIndex(a => a.Equals(response.EmoteResponse.ToString()));
-                quizChoice = selection - 1;
+                chosenQuizIndex = selection - 1;
             }
 
             quizLog.Attempted = true;
             quizLog.Correct = false;
             var b = await repo.UpdateQuizLogAsync(connection, quizLog);
 
-            var quiz = availableQuizzes[quizChoice];
+            var quiz = availableQuizzes[chosenQuizIndex];
             var rand = new Random();
             correctChoice = quiz.Correct.Split('\n')[rand.Next() % quiz.Correct.Split('\n').Length];
             var incorrectChoicePool = quiz.Incorrect.Split('\n').ToList();
@@ -211,19 +213,25 @@ namespace PrideBot.Quizzes
             var quizOpenedUrl = quizOpenedMessage?.GetJumpUrl();
 
             await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, titleUrl: quizOpenedUrl);
+            var previousLog = await repo.GetLastQuizLogForUserAsync(connection, user.Id.ToString(), quizLog.Day.ToString());
             // Streak bonus
             if (quizLog.Correct && quizLog.Guesses == 1 && quizLog.Day >= int.Parse(config["firstquizstreakday"]))
             {
-                var previousLog = await repo.GetLastQuizLogForUserAsync(connection, user.Id.ToString(), quizLog.Day.ToString());
                 if (previousLog != null && previousLog.Correct && previousLog.Guesses == 1)
                     await scoringService.AddAndDisplayAchievementAsync(connection, user, "QUIZ_STREAK", client.CurrentUser, titleUrl: quizOpenedUrl);
             }
 
             var guildUser = gyn.GetUser(user.Id);
-            if (guildUser != null)
+            if (guildUser != null && availableQuizzes != null && availableQuizzes.Any())
             {
                 await guildUser.AddRoleAsync(quizTakenRole);
-                await discussionChannel.SendMessageAsync(DialogueDict.Get("DAILY_QUIZ_DISCUSSION_WELCOME", user.Mention));
+                //var msgText = DialogueDict.Get("DAILY_QUIZ_DISCUSSION_WELCOME", previousLog == null ? user.Mention : (guildUser.Nickname ?? guildUser.Username));
+                var msgText = DialogueDict.Get("DAILY_QUIZ_DISCUSSION_WELCOME", user.Mention);
+                if (availableQuizzes.Count > 1)
+                    msgText += "\n" + DialogueDict.Get("DAILY_QUIZ_DISCUSSION_CHOICE", chosenQuizIndex + 1, availableQuizzes[chosenQuizIndex].Category);
+                if (previousLog == null)
+                    msgText += "\n" + DialogueDict.Get("DAILY_QUIZ_DISCUSSION_REMINDER");
+                await discussionChannel.SendMessageAsync(msgText, allowedMentions: previousLog == null ? AllowedMentions.All : AllowedMentions.None);
             }
         }
 

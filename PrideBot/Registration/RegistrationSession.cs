@@ -307,7 +307,12 @@ namespace PrideBot.Registration
                 .FirstOrDefault(a => a.CharacterId == ship.CharacterId2);
 
             if (ship.CharacterId1.Equals("YURIKO") || ship.CharacterId2.Equals("YURIKO"))
-                return Result.Error(DialogueDict.Get("REGISTRATION_ERROR_YURIKO"));
+            {
+                if (ship.CharacterId1.Equals("JOON") || ship.CharacterId2.Equals("JOON"))
+                    return Result.Error("DAMN 💦💦 ok she's Got It but I still can't, RIIIPP.");
+                else
+                    return Result.Error(DialogueDict.Get("REGISTRATION_ERROR_YURIKO"));
+            }
             if (char1.CharacterId.Equals(char2.CharacterId) && !char1.CharacterId.Equals("TSUCHINOKO"))
                 return Result.Error(DialogueDict.Get("REGISTRATION_ERROR_SELF"));
             if (ship.IsBlacklisted)

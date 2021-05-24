@@ -35,33 +35,30 @@ namespace PrideBot
 
         public static Dictionary<string, string> GetDict() => instance.dict;
 
-        public static string Get(string key, params object[] args)
+
+        public static string GetNoBullshit(string key, params object[] args)
         {
             if (!instance.dict.ContainsKey(key))
                 return "(MISSING DIALOGUE OH NO MY BRAIN)";
-            try
-            {
-                var variants = instance.dict.Keys
-                    .Where(a => a.StartsWith(key + "-"))
-                    .ToList();
-                string chosenKey;
-                if (variants.Any())
-                    chosenKey = variants[new Random().Next() % variants.Count];
-                else
-                    chosenKey = key;
 
-                var str = string.Format(instance.dict[chosenKey]
-                    .Replace("{SP}", EmoteHelper.SPEmote.ToString())
-                    , args);
-                return RollBullshit(str);
-            }
-            catch (Exception e)
-            {
-                throw;
-            }
-        } 
+            var variants = instance.dict.Keys
+                .Where(a => a.StartsWith(key + "-"))
+                .ToList();
+            string chosenKey;
+            if (variants.Any())
+                chosenKey = variants[new Random().Next() % variants.Count];
+            else
+                chosenKey = key;
 
-        public static string RollBullshit(string str)
+            var str = string.Format(instance.dict[chosenKey]
+                .Replace("{SP}", EmoteHelper.SPEmote.ToString())
+                , args);
+            return str;
+        }
+
+        public static string Get(string key, params object[] args) => RollBullshit(GetNoBullshit(key, args));
+
+        public static string RollBullshit(string str, double chance = .05)
         {
             var rand = new Random();
 
@@ -72,6 +69,8 @@ namespace PrideBot
                     "Minecraft.",
                     "Gay.",
                     "Gayyy.",
+                    "I'm gay.",
+                    "I'm trans.",
                     "God I'm cute.",
                     "Gamer.",
                     "ASFJHAJSH!!",
@@ -103,13 +102,14 @@ namespace PrideBot
                     "Home of sexual.",
                     "Gay Gay Homo Sexual Gay."};
 
-            var roll = rand.Next() % 20;
-            if (str.Length > 0 && char.IsPunctuation(str.Last()) && roll == 0)
+            var roll = rand.NextDouble() < chance;
+            if (str.Length > 0 && char.IsPunctuation(str.Last()) && roll)
             {
                 var phrase = bullshitPhrases[rand.Next() % bullshitPhrases.Count];
                 if (str.Last() == '!' && phrase.Last() == '.')
                     phrase = phrase.Substring(0, phrase.Length - 1) + "!";
                 str += " " + phrase;
+                str = RollBullshit(str, .25);    // Double up baby
             }
             return str;
         }

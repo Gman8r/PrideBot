@@ -38,6 +38,7 @@ namespace PrideBot.Registration
             MagickImage ship2Image = null;
             MagickImage ship3Image = null;
             using var primaryShipImage = await GenerateShipImageAsync(userShips.PrimaryShip, highlightTier == 0, highlightHeart);
+            var yLevel = scores[2] > 0 ? 90 : 106;
             primaryShipImage.InterpolativeResize(128, 128, PixelInterpolateMethod.Nearest);
             //if (ships[1].IsEmpty() && ships[2].IsEmpty())
             //{
@@ -46,7 +47,7 @@ namespace PrideBot.Registration
             //}
             //else
             {
-                image.Composite(primaryShipImage, Gravity.Northwest, 80, 0, CompositeOperator.Over);
+                image.Composite(primaryShipImage, Gravity.Northwest, 80, yLevel - 90, CompositeOperator.Over);
                 if (scores[0] > 0)
                 {
                     using var numberImage = GenerateScoreText(scores[0]);
@@ -55,26 +56,25 @@ namespace PrideBot.Registration
                 }
                 if (userShips.HasSecondaryShip || highlightTier == 1)
                 {
-                    var yLevel = scores[1] > 0 ? 90 : 112;
+                    //var yLevel = scores[1] > 0 ? 90 : 90;
                     ship2Image = await GenerateShipImageAsync(userShips.SecondaryShip, highlightTier == 1, highlightHeart);
                     image.Composite(ship2Image, Gravity.Northwest, 8, yLevel, CompositeOperator.Over);
                     if (scores[1] > 0)
                     {
                         using var number2Image = GenerateScoreText(scores[1]);
                         number2Image.InterpolativeResize(64, 64, PixelInterpolateMethod.Nearest);
-                        image.Composite(number2Image, Gravity.Northwest, 8, yLevel + 44, CompositeOperator.Over);
+                        image.Composite(number2Image, Gravity.Northwest, 8, yLevel + 40, CompositeOperator.Over);
                     }
                 }
                 if (userShips.HasTertiaryShip || highlightTier == 2)
                 {
-                    var yLevel = scores[2] > 0 ? 90 : 112;
                     ship3Image = await GenerateShipImageAsync(userShips.TertiaryShip, highlightTier == 2, highlightHeart);
                     image.Composite(ship3Image, Gravity.Northwest, 216, yLevel, CompositeOperator.Over);
                     if (scores[2] > 0)
                     {
                         using var number3Image = GenerateScoreText(scores[2]);
                         number3Image.InterpolativeResize(64, 64, PixelInterpolateMethod.Nearest);
-                        image.Composite(number3Image, Gravity.Northwest, 216, yLevel + 44, CompositeOperator.Over);
+                        image.Composite(number3Image, Gravity.Northwest, 216, yLevel + 40, CompositeOperator.Over);
                     }
                 }
             }

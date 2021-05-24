@@ -60,8 +60,7 @@ namespace PrideBot.Game
             {
                 var dbShipScores = (await repo.GetShipScoresAsync(connection, scoreId)).ToArray();
 
-                var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, pointsEarned, dbShipScores,
-                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, errorCode);
+                var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, pointsEarned, dbShipScores,                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, errorCode);
                 var text = user.Mention;
                 if (!achievement.Ping || !dbUser.PingForAchievements)
                 {
@@ -94,7 +93,7 @@ namespace PrideBot.Game
                         var userShip = dbUserShips.Get((UserShipTier)shipScore.Tier);
                         scoreStr += $"{EmoteHelper.GetShipTierEmoji((UserShipTier)userShip.Tier)} **{shipScore.PointsEarned}** for **{userShip.GetDisplayName()}**\n";
                     }
-                    embed.AddField($"You Earned {EmoteHelper.SPEmote} !", scoreStr.Trim());
+                    embed.AddField($"You feel your bond with your community grow stronger...\nYou've earned {EmoteHelper.SPEmote} !", scoreStr.Trim());
 
                     var scores = Enumerable.Range(0, 3)
                         .Select(a => dbShipScores
@@ -127,10 +126,10 @@ namespace PrideBot.Game
             try
             {
                 var gChannel = channel as SocketGuildChannel;
-                if (gChannel == null)
+                if (gChannel == null || !gChannel.Guild.IsGyn(config))
                     return;
                 var gUser = gChannel.Guild.GetUser(reaction.UserId);
-                if (gUser == null || gUser.IsBot || !gUser.GuildPermissions.Has(GuildPermission.Administrator))
+                if (gUser == null || gUser.IsBot || !gUser.IsGYNSage(config))
                     return;
 
                 using var connection = DatabaseHelper.GetDatabaseConnection();
@@ -140,8 +139,24 @@ namespace PrideBot.Game
                     return;
 
                 var message = await msg.GetOrDownloadAsync();
-                if (message.Author.IsBot || message.Reactions[reaction.Emote].IsMe) return;
-                await AddAndDisplayAchievementAsync(connection, message.Author, achievement,
+                if (message.Reactions[reaction.Emote].IsMe) return;
+
+                // Determine user or PK uer
+                IUser user;
+                if (message.Author.IsWebhook && await message.IsFromPkUserAsync(config))
+                {
+                    user = await message.GetPkUserAsync(config);
+                }
+                else if (!message.Author.IsBot)
+                {
+                    user = message.Author;
+                }
+                else
+                    user = null;
+                if (user == null) return;
+
+
+                await AddAndDisplayAchievementAsync(connection, user, achievement,
                     reaction.User.IsSpecified ? reaction.User.Value : null, titleUrl: message.GetJumpUrl(), ignoreIfNotRegistered: false);
 
                 await (message.AddReactionAsync(reaction.Emote));

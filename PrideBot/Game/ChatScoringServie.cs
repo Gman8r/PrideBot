@@ -136,7 +136,8 @@ namespace PrideBot.Quizzes
             {
                 await loggingService.OnLogAsync(new LogMessage(LogSeverity.Error, this.GetType().Name, e.Message, e));
                 var embed = EmbedHelper.GetEventErrorEmbed(null, DialogueDict.Get("EXCEPTION"), client, showUser: false);
-                await starboardChannel.SendMessageAsync(embed: embed.Build());
+                var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
+                await modChannel.SendMessageAsync(embed: embed.Build());
                 throw e;
             }
         }

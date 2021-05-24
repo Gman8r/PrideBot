@@ -27,6 +27,9 @@ namespace PrideBot
         public static SocketGuild GetGyn(this DiscordSocketClient client, IConfigurationRoot config)
             => client.GetGuild(ulong.Parse(config["ids:gyn"]));
 
+        public static bool IsGyn(this SocketGuild guild, IConfigurationRoot config)
+            => ulong.Parse(config["ids:gyn"]) == guild.Id;
+
         public static SocketRole GetRoleFromConfig(this SocketGuild guild, IConfigurationRoot config, string subKey)
             => guild.GetRole(ulong.Parse(config[$"ids:{subKey}"]));
 

@@ -16,7 +16,7 @@ namespace PrideBot
             if (context.Guild != null && context.Guild.Id == ulong.Parse(config["ids:gyn"]))
                 return Task.FromResult(PreconditionResult.FromSuccess());
             else
-                return Task.FromResult(PreconditionResult.FromError("That command can only be use in the GYN server."));
+                return Task.FromResult(PreconditionResult.FromError("That command can only be used in the GYN server."));
         }
     }
 }

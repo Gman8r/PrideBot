@@ -83,17 +83,31 @@ namespace PrideBot.Quizzes
                 if (!ulong.TryParse(userMessageIdStr, out userMessageId)) return;
                 var userMessage = await (userChannel as SocketTextChannel).GetMessageAsync(userMessageId);
                 if (userMessage == null) return;
-                if (userMessage.Author.IsBot) return;
+
+                // Determine user or PK uer
+                IUser user;
+                if (userMessage.Author.IsWebhook && await userMessage.IsFromPkUserAsync(config))
+                {
+                    user = await userMessage.GetPkUserAsync(config);
+                }
+                else if (!userMessage.Author.IsBot)
+                {
+                    user = userMessage.Author;
+                }
+                else
+                    user = null;
+                if (user == null) return;
 
                 var connection = DatabaseHelper.GetDatabaseConnection();
                 await connection.OpenAsync();
-                await scoringService.AddAndDisplayAchievementAsync(connection, userMessage.Author, "STARBOARD", client.CurrentUser, titleUrl: message.GetJumpUrl());
+                await scoringService.AddAndDisplayAchievementAsync(connection, user, "STARBOARD", client.CurrentUser, titleUrl: message.GetJumpUrl());
             }
             catch (Exception e)
             {
                 await loggingService.OnLogAsync(new LogMessage(LogSeverity.Error, this.GetType().Name, e.Message, e));
                 var embed = EmbedHelper.GetEventErrorEmbed(null, DialogueDict.Get("EXCEPTION"), client, showUser: false);
-                await starboardChannel.SendMessageAsync(embed: embed.Build());
+                var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
+                await modChannel.SendMessageAsync(embed: embed.Build());
                 throw e;
             }
         }
