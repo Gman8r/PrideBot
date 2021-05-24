@@ -2,7 +2,7 @@
 prefixes:
     - '~'
 status: 🏳‍🌈
-eventmonth: 5
+eventmonth: 6
 eventcolor: 0xB00B69 # not sure if used
 firstquizstreakday: 11
 chatsessionmessages: 5
@@ -34,6 +34,7 @@ ids:
     quiztakenrole: 844355888876617749
     modchat: 808049429528444928
     youkai: 358435805779197955
+    announcementschannel: 419187329706491905
 
     #Testing 123
     #gyn: 796585563166736394
@@ -46,6 +47,7 @@ ids:
     #quiztakenrole: 844890078521982987
     #starboardchannel: 845109425224155146
     #modchat: 808049429528444928
-    #youkai: 358435805779197955
+    #youkai: 796585753864830976
     #pklogchannel: 811106749683728445
     #pluralkitid: 466378653216014359
+    #announcementschannel: 796592359508410379

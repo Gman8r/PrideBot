@@ -9,17 +9,6 @@ using Discord.Rest;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
-using Discord.Commands;
-using Discord.WebSocket;
-using Discord.Webhook;
-using Discord.Audio;
-using Discord.Net;
-using Discord.Rest;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
@@ -77,7 +66,7 @@ namespace PrideBot.Quizzes
         {
             var connection = DatabaseHelper.GetDatabaseConnection();
             await connection.OpenAsync();
-            guildSettings = await repo.GetOrCreateGuildSettingsAsync(connection, client.GetGyn(config).Id.ToString());
+            guildSettings = await repo.GetOrCreateGuildSettingsAsync(connection, config["ids:gyn"]);
         }
 
 

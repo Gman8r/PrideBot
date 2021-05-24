@@ -12,6 +12,7 @@ using PrideBot.Registration;
 using PrideBot.Repository;
 using PrideBot.Sheets;
 using PrideBot.Quizzes;
+using PrideBot.Events;
 
 namespace PrideBot
 {
@@ -61,6 +62,8 @@ namespace PrideBot
                 provider.GetRequiredService<StarboardScoringService>();
                 provider.GetRequiredService<UserRegisteredCache>();
                 provider.GetRequiredService<ChatScoringService>();
+                provider.GetRequiredService<VoiceScoringService>();
+                provider.GetRequiredService<AnnouncementService>();
             }
             else
             {
@@ -99,14 +102,16 @@ namespace PrideBot
 
             if (!Configuration.ParseBoolField("stealthmode"))
             {
-                services.AddSingleton<PlayStatusService>();
-                services.AddSingleton<GoogleSheetsService>();
-                services.AddSingleton<ShipImageGenerator>();
-                services.AddSingleton<ScoringService>();
-                services.AddSingleton<DailyQuizService>();
-                services.AddSingleton<StarboardScoringService>();
-                services.AddSingleton<UserRegisteredCache>();
-                services.AddSingleton<ChatScoringService>();
+                services.AddSingleton<PlayStatusService>()
+                .AddSingleton<GoogleSheetsService>()
+                .AddSingleton<ShipImageGenerator>()
+                .AddSingleton<ScoringService>()
+                .AddSingleton<DailyQuizService>()
+                .AddSingleton<StarboardScoringService>()
+                .AddSingleton<UserRegisteredCache>()
+                .AddSingleton<ChatScoringService>()
+                .AddSingleton<VoiceScoringService>()
+                .AddSingleton<AnnouncementService>();
                 //.AddSingleton<PlayStatusService>();
             }
         }

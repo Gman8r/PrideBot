@@ -65,9 +65,10 @@ namespace PrideBot.Quizzes
                 await connection.OpenAsync();
                 guildSettings = await GetGuildSettingsAsync(connection);
                 await connection.CloseAsync();
-                quizChannel = client.GetGyn(config).GetChannelFromConfig(config, "quizchannel") as SocketTextChannel;
-                quizDiscussionChannel = client.GetGyn(config).GetChannelFromConfig(config, "quizdiscussionchannel") as SocketTextChannel;
-                quizTakenRole = client.GetGyn(config).GetRoleFromConfig(config, "quiztakenrole");
+                var gyn = await client.AwaitGyn(config);
+                quizChannel = gyn.GetChannelFromConfig(config, "quizchannel") as SocketTextChannel;
+                quizDiscussionChannel = gyn.GetChannelFromConfig(config, "quizdiscussionchannel") as SocketTextChannel;
+                quizTakenRole = gyn.GetRoleFromConfig(config, "quiztakenrole");
 
                 while (true)
                 {
@@ -191,7 +192,8 @@ namespace PrideBot.Quizzes
 
         async Task<GuildSettings> GetGuildSettingsAsync(SqlConnection connection)
         {
-            return await repo.GetOrCreateGuildSettingsAsync(connection, client.GetGyn(config).Id.ToString());
+            
+            return await repo.GetOrCreateGuildSettingsAsync(connection, config["ids:gyn"]);
         }
 
         EmbedBuilder GetQuizReviewEmbed(List<Quiz> quizzes)

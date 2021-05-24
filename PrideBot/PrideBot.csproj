@@ -19,6 +19,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Assets\AnnouncementFiles\ANNOUNCEMENT_INTRO_1\SapphicSilhouette.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\AnnouncementFiles\ANNOUNCEMENT_INTRO_3\GaysInSpace.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\AnnouncementFiles\ANNOUNCEMENT_INTRO_2\LikeAndSubscribe.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\AnnouncementFiles\ANNOUNCEMENT_INTRO_4\OMGGAYLESBIANLOVEWOMENYASS.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Assets\Backgrounds\shipbg3.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -586,7 +598,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Assets\AnnouncementFiles\" />
     <Folder Include="Graphics\" />
   </ItemGroup>
 

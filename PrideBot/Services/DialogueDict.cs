@@ -93,6 +93,8 @@ namespace PrideBot
                     "Tsuchinoko real.",
                     "I love women.",
                     "I want money.",
+                    "What's your sign?",
+                    "Gemini.",
                     "Women.",
                     "Toontown.",
                     "Miku Hatsune.",

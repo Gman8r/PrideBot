@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using PrideBot.Game;
+using System.Threading.Tasks;
 
 namespace PrideBot
 {
@@ -26,6 +27,17 @@ namespace PrideBot
 
         public static SocketGuild GetGyn(this DiscordSocketClient client, IConfigurationRoot config)
             => client.GetGuild(ulong.Parse(config["ids:gyn"]));
+
+        public static async Task<SocketGuild> AwaitGyn(this DiscordSocketClient client, IConfigurationRoot config)
+        {
+            SocketGuild gyn = GetGyn(client, config);
+            while (gyn == null)
+            {
+                await Task.Delay(60000);
+                gyn = GetGyn(client, config);
+            }
+            return gyn;
+        }
 
         public static bool IsGyn(this SocketGuild guild, IConfigurationRoot config)
             => ulong.Parse(config["ids:gyn"]) == guild.Id;

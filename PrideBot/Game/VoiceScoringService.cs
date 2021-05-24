@@ -65,6 +65,7 @@ namespace PrideBot.Quizzes
         private Task ClientReady()
         {
             DoPrepAsync().GetAwaiter();
+            DoCheckLoop().GetAwaiter();
             return Task.CompletedTask;
         }
 
@@ -76,24 +77,17 @@ namespace PrideBot.Quizzes
             //gyn = client.GetGyn(config);
         }
 
-
-        private Task MessageReceived(SocketMessage msg)
-        {
-            DoCheckLoop(msg).GetAwaiter();
-            return Task.CompletedTask;
-        }
-
-        async Task DoCheckLoop(SocketMessage msg)
+        async Task DoCheckLoop()
         {
             SocketTextChannel starboardChannel = null;
             try
             {
-                while(true)
-                {
-                    await Task.Delay(1000);
-                    if (!GameHelper.EventOccuring(config)) continue;
-                    Console.WriteLine(client.GetGyn(config).VoiceChannels.Sum(a => a.Users.Count));
-                }    
+                //while(true)
+                //{
+                //    await Task.Delay(1000);
+                //    if (!GameHelper.EventOccuring(config)) continue;
+                //    Console.WriteLine(client.GetGyn(config).VoiceChannels.Sum(a => a.Users.Count));
+                //}    
                 //if (guildSettings == null) return;
                 //if (!(msg is SocketUserMessage message)) return;
                 //if (message.Author.IsBot) return;
