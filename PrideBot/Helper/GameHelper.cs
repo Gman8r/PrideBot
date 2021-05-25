@@ -16,9 +16,9 @@ namespace PrideBot
         //public static int GetPointPercent(UserShipTier tier) => (int)(GetPointFraction(tier) * 100m);
         public static int GetPointPercent(Decimal mult) => (int)(mult * 100m);
 
-        public static bool EventOccuring(IConfigurationRoot config) => DateTime.Now.Month == int.Parse(config["eventmonth"]);
+        public static bool IsEventOccuring(IConfigurationRoot config) => DateTime.Now.Month == int.Parse(config["eventmonth"]);
 
-        public static EventPeriod GetEventPeriod(IConfigurationRoot config) => !EventOccuring(config) ? EventPeriod.DuringEvent
+        public static EventPeriod GetEventPeriod(IConfigurationRoot config) => !IsEventOccuring(config) ? EventPeriod.DuringEvent
             : (DateTime.Now.Month > int.Parse(config["eventmonth"]) ? EventPeriod.AfterEvent : EventPeriod.BeforeEvent);
 
         public static int GetQuizDay(DateTime atTime) => atTime.Day;

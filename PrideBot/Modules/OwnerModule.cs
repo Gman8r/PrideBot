@@ -18,6 +18,7 @@ using System.Net;
 using Microsoft.Data.SqlClient;
 using PrideBot.Models;
 using PrideBot.Repository;
+using PrideBot.Events;
 
 namespace PrideBot.Modules
 {
@@ -26,10 +27,19 @@ namespace PrideBot.Modules
     public class OwnerModule : PrideModuleBase
     {
         readonly ModelRepository modelRepository;
+        readonly AnnouncementService announcementService;
 
-        public OwnerModule(ModelRepository modelRepository)
+        public OwnerModule(ModelRepository modelRepository, AnnouncementService announcementService)
         {
             this.modelRepository = modelRepository;
+            this.announcementService = announcementService;
+        }
+
+        [Command("announceintro")]
+        [RequireContext(ContextType.Guild)]
+        public async Task AnnounceIntro()
+        {
+            await announcementService.IntroAnnouncementAsync(Context.Guild);
         }
     }
 }

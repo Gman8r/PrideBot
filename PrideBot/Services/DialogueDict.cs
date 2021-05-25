@@ -27,7 +27,7 @@ namespace PrideBot
 
         public async Task PullDialogueAsync()
         {
-            var connection = DatabaseHelper.GetDatabaseConnection();
+            var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var results = await repo.GetAllDialogueAsync(connection);
             dict = results.ToDictionary(t => t.DialogueId, t => t.Content);

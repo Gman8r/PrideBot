@@ -40,7 +40,7 @@ namespace PrideBot.Registration
         protected override async Task PerformSessionInternalAsync()
         {
 
-            using var connection = DatabaseHelper.GetDatabaseConnection();
+            using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
 
             dbUserShips = new UserShipCollection();
@@ -78,7 +78,7 @@ namespace PrideBot.Registration
                 embed = GetEmbed()
                     .WithTitle("Choose a Background")
                     .WithDescription(embed.Description
-                    + "\n\n" + DialogueDict.Get("REGISTRATION_CUSTOMIZE_BG")
+                    + "\n\n" + DialogueDict.Get("REGISTRATION_CUSTOMIZE_BG", config.GetDefaultPrefix())
                     + "\n\n" + DialogueDict.Get("REGISTRATION_CHOOSE_BG"));
 
                 while (true)
@@ -121,7 +121,7 @@ namespace PrideBot.Registration
                 }
             }
 
-            var key = "REGISTRATION_" + (userHasRegistered ? "EDITED" : "COMPLETE") + (GameHelper.EventOccuring(config) ? "" : "_PREREG");
+            var key = "REGISTRATION_" + (userHasRegistered ? "EDITED" : "COMPLETE") + (GameHelper.IsEventOccuring(config) ? "" : "_PREREG");
             embed = (await GetEmbedWithShipsAsync(dbUser, dbUserShips))
                 .WithTitle("Setup Complete!")
                 .WithDescription(DialogueDict.Get(key, config.GetDefaultPrefix()));
@@ -132,12 +132,12 @@ namespace PrideBot.Registration
                 await repo.UpdateUserAsync(connection, dbUser);
                 userRegs[user.Id.ToString()] = true;
 
-                var achievementId = GameHelper.EventOccuring(config) ? "REGISTER" : "PREREGISTER";
+                var achievementId = GameHelper.IsEventOccuring(config) ? "REGISTER" : "PREREGISTER";
                 var achievement = await repo.GetAchievementAsync(connection, achievementId);
                 await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser);
 
                 // Reward points from before user registered if needed
-                var storedPoints = await repo.GetUseNonRegPoints(connection, dbUser.UserId);
+                var storedPoints = await repo.GetUserNonRegPoints(connection, dbUser.UserId);
                 if (storedPoints > 0)
                 {
                     var pointsAchievement = await repo.GetAchievementAsync(connection, "STORED");
@@ -149,7 +149,18 @@ namespace PrideBot.Registration
                 var registeredRole = gyn.GetRoleFromConfig(config, "registeredrole");
                 var guildUser = gyn.GetUser(user.Id);
                 if (guildUser != null)
-                    await guildUser.AddRoleAsync(registeredRole);
+                {
+                    try
+                    {
+                        await guildUser.AddRoleAsync(registeredRole);
+                    }
+                    catch (Exception e)
+                    {
+                        var modEmbed = EmbedHelper.GetEventErrorEmbed(null, $"OH NO! Sages I'm totes sorry to bug you all but I need my role to be higher so I can give people the registration role! And then give the {registeredRole.Mention} role to my bestie {guildUser.Mention}, pretty please?", client, showUser: false);
+                        var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
+                        await modChannel.SendMessageAsync(embed: modEmbed.Build());
+                    }
+                }
             }
             
         }

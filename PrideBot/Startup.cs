@@ -52,6 +52,7 @@ namespace PrideBot
             provider.GetRequiredService<LoggingService>();      // Start the logging service
             provider.GetRequiredService<CommandHandler>();      // Start the command handler service
             provider.GetRequiredService<DialogueDict>();
+            var tokenConfig = provider.GetRequiredService<TokenConfig>();
 
             if (!(bool)Configuration.ParseBoolField("stealthmode")) 
             {
@@ -72,7 +73,16 @@ namespace PrideBot
                     "\nStealh mode active for session!!" +
                     "\n----------------------------------------------------------"));
             }
-            var token = File.ReadAllText(DebugMode ? "tokendebug.txt" : "token.txt");
+
+            string token = "";
+            try
+            {
+                token = tokenConfig["bottoken"];
+            }
+            catch
+            {
+                // It'll catch this in StartAsync
+            }
             await provider.GetRequiredService<StartupService>().StartAsync(token);       // Start the startup service
             await Task.Delay(-1);                               // Keep the program alive
         }
@@ -111,6 +121,7 @@ namespace PrideBot
                 .AddSingleton<UserRegisteredCache>()
                 .AddSingleton<ChatScoringService>()
                 .AddSingleton<VoiceScoringService>()
+                .AddSingleton<TokenConfig>()
                 .AddSingleton<AnnouncementService>();
                 //.AddSingleton<PlayStatusService>();
             }

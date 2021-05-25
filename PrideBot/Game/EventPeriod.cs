@@ -7,8 +7,9 @@ namespace PrideBot.Game
     [Flags]
     public enum EventPeriod
     {
-        BeforeEvent,
-        DuringEvent,
-        AfterEvent
+        None = 0,
+        BeforeEvent = 1,
+        DuringEvent = 2,
+        AfterEvent = 4
     }
 }

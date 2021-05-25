@@ -6,19 +6,28 @@ eventmonth: 6
 eventcolor: 0xB00B69 # not sure if used
 firstquizstreakday: 11
 chatsessionmessages: 5
-chatsessionhours: 8
+chatsessionhours: 6
 paths:
     wwwhostpath: http://intile.ddns.net:88/pbotassetsdebug/
     wwwhostpathlocal: \\media\wwwroot\pbotassetsdebug\
 ids:
     owner: 199875078790316032
+    
     #GYN
     #gyn: 584841110283747328
     #sage: 584851607318036501
-    #youkai: 584850930416091146
-    #muted: 796579779880419368
-    #nsfwaccess: 694944862667145337
+    #ruleschannel: 846568676764549130
+    #achievementschannel: 846569499729461289
+    #quizchannel: 846569910230581248
+    #quizdiscussionchannel: 846571836128100382
+    #starboardchannel: 841866534799409193
+    #pklogchannel: 813688614465568779
+    #pluralkitid: 466378653216014359
+    #registeredrole: 846570072628658237
+    #quiztakenrole: 846569982058037288
     #modchat: 606104629306195988
+    #youkai: 584850930416091146
+    #announcementschannel: 584844280904810526
 
     #Testing Grounds
     gyn: 248446374679543810

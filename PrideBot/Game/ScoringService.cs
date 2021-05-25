@@ -68,8 +68,17 @@ namespace PrideBot.Game
                     embed.Author ??= new EmbedAuthorBuilder();
                     embed.Author.Name = $"{user.Username}#{user.Discriminator}";
                 }
+                var post = await overrideChannel.SendMessageAsync(text, embed: embed.Build());
 
-                await overrideChannel.SendMessageAsync(text, embed: embed.Build());
+                // Update database score with post data
+                if (!string.IsNullOrEmpty(scoreId) && int.Parse(scoreId) > 0)
+                {
+                    var score = await repo.GetScoreAsync(connection, scoreId);
+                    score.PostGuildId = (post.Channel as IGuildChannel)?.Guild.Id.ToString();
+                    score.PostChannelId = post.Channel?.Id.ToString();
+                    score.PostMessageId = post.Id.ToString();
+                    await repo.UpdateScoreAsync(connection, score);
+                }
             }
             return errorCode == ModelRepository.AddScoreError.None || errorCode == ModelRepository.AddScoreError.UserNotRegistered;
         }
@@ -131,8 +140,10 @@ namespace PrideBot.Game
                 var gUser = gChannel.Guild.GetUser(reaction.UserId);
                 if (gUser == null || gUser.IsBot || !gUser.IsGYNSage(config))
                     return;
+                if (!GameHelper.IsEventOccuring(config))
+                    return;
 
-                using var connection = DatabaseHelper.GetDatabaseConnection();
+                using var connection = repo.GetDatabaseConnection();
                 await connection.OpenAsync();
                 var achievement = await repo.GetAchievementFromEmojiAsync(connection, reaction.Emote.ToString());
                 if (achievement == null || !achievement.Manual)

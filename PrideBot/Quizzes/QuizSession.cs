@@ -41,7 +41,7 @@ namespace PrideBot.Quizzes
         protected override async Task PerformSessionInternalAsync()
         {
             var day = quizLog.Day;
-            using var connection = DatabaseHelper.GetDatabaseConnection();
+            using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
 
             //quizLog = await repo.GetOrCreateQuizLogAsync(connection, user.Id.ToString(), day.ToString());
@@ -258,7 +258,7 @@ namespace PrideBot.Quizzes
                     + "\n\n" + DialogueDict.Get("QUIZ_CLOSING"));
 
                 quizLog.Guesses = 3;
-                using var connection = DatabaseHelper.GetDatabaseConnection();
+                using var connection = repo.GetDatabaseConnection();
                 await connection.OpenAsync();
                 await repo.UpdateQuizLogAsync(connection, quizLog);
 

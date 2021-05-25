@@ -34,7 +34,7 @@ namespace PrideBot.Repository
         public async Task<int> UpdateUserAsync(SqlConnection conn, User value)
             => await DatabaseHelper.GetUpdateCommand(conn, value, "USERS").ExecuteNonQueryAsync();
 
-        public async Task<int> GetUseNonRegPoints(SqlConnection conn, string userId)
+        public async Task<int> GetUserNonRegPoints(SqlConnection conn, string userId)
             => (int)(await new SqlCommand($"select dbo.fnGetUserNonRegPoints({userId})", conn).ExecuteScalarAsync());
     }
 }

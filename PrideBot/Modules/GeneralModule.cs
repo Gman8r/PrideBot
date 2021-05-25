@@ -62,7 +62,8 @@ namespace PrideBot.Modules
 
                 var prefixes = config.GetPrefixes();
                 var defaultPrefix = config.GetDefaultPrefix();
-                var helpMessage = DialogueDict.Get("HELP", defaultPrefix)
+                var prefixStr = string.Join(", ", prefixes.Select(a => $"`{a}{{command}}`"));
+                var helpMessage = DialogueDict.Get("HELP", defaultPrefix, prefixStr)
                 + "\n\n";
                 //+ "Use any of these prefixes (case-insensitive) or mention me to call me:\n"
                 //+ string.Join("    ", ConfigHelper.GetPrefixes(config).Select(a => $"`{a}{{command}}`"))
@@ -202,7 +203,7 @@ namespace PrideBot.Modules
         [Summary("Use with True or False to change whether I ping you for achievements.")]
         public async Task SetPings(bool ping)
         {
-            using var connection = DatabaseHelper.GetDatabaseConnection();
+            using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var dbUser = await repo.GetOrCreateUserAsync(connection, Context.User.Id.ToString());
             if (dbUser.PingForAchievements != ping)

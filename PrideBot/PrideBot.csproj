@@ -28,9 +28,6 @@
     <None Update="Assets\AnnouncementFiles\ANNOUNCEMENT_INTRO_2\LikeAndSubscribe.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Assets\AnnouncementFiles\ANNOUNCEMENT_INTRO_4\OMGGAYLESBIANLOVEWOMENYASS.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="Assets\Backgrounds\shipbg3.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -577,13 +574,10 @@
     <None Update="Assets\NumberSprites\9.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="connectionstring.txt">
+    <None Update="tokensdebug.yml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="tokendebug.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="token.txt">
+    <None Update="tokens.yml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="configdebug.yml">

@@ -1,35 +1,56 @@
 ﻿stealthmode: False
-schedulereports: True
 prefixes:
-    - 'p!'
+    - 'y.'
+    - 'p.'
+    - 'gay '
+    - '❤️ '
 status: 🏳‍🌈
+eventmonth: 6
+eventcolor: 0xB00B69 # not sure if used
+firstquizstreakday: 11
+chatsessionmessages: 5
+chatsessionhours: 6
 paths:
-    toplevel: C:\Users\Brian\Dropbox\PrideBot
-verification:
-    warninghours: 12
-    kickhours: 24
-    kickbypasshours: 48
+    wwwhostpath: http://intile.ddns.net:88/pbotassetsdebug/
+    wwwhostpathlocal: \\media\wwwroot\pbotassetsdebug\
 ids:
     owner: 199875078790316032
     #GYN
-    gyn: 584841110283747328
-    sage: 584851607318036501
-    youkai: 584850930416091146
-    muted: 796579779880419368
-    nsfwaccess: 694944862667145337
-    modchat: 606104629306195988
-    logchat: 809232328773074976
-    introchat: 584841110283747330
-    pluralkitrole: 813341543930527786
-    pluralkitrequestrole: 813685574677561384
+    #gyn: 584841110283747328
+    #sage: 584851607318036501
+    #youkai: 584850930416091146
+    #muted: 796579779880419368
+    #nsfwaccess: 694944862667145337
+    #modchat: 606104629306195988
+
     #Testing Grounds
-    #gyn: 248446374679543810
-    #sage: 797225471942066206
-    #youkai: 358435805779197955
-    #muted: 813673168190308383
-    #nsfwaccess: 813673136851255313
+    gyn: 248446374679543810
+    sage: 797225471942066206
+    ruleschannel: 844354683829223424
+    achievementschannel: 844354667977637900
+    quizchannel: 844357532695789568
+    quizdiscussionchannel: 844354707916980244
+    starboardchannel: 808049479999553556
+    pklogchannel: 808049429528444928
+    pluralkitid: 466378653216014359
+    registeredrole: 844355731410386964
+    quiztakenrole: 844355888876617749
+    modchat: 808049429528444928
+    youkai: 358435805779197955
+    announcementschannel: 419187329706491905
+
+    #Testing 123
+    #gyn: 796585563166736394
+    #sage: 796589230968274944
+    #ruleschannel: 844885412181704725
+    #achievementschannel: 844885498581614632
+    #quizchannel: 844885508613734435
+    #quizdiscussionchannel: 844885523780337684
+    #registeredrole: 844890087346012170
+    #quiztakenrole: 844890078521982987
+    #starboardchannel: 845109425224155146
     #modchat: 808049429528444928
-    #logchat: 808049479999553556
-    #introchat: 809556555258396682
-    #pluralkitrole: 815357127941947472
-    #pluralkitrequestrole: 815357152074924032
+    #youkai: 796585753864830976
+    #pklogchannel: 811106749683728445
+    #pluralkitid: 466378653216014359
+    #announcementschannel: 796592359508410379

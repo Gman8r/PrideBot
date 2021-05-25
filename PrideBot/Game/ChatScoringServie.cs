@@ -64,7 +64,7 @@ namespace PrideBot.Quizzes
 
         private async Task DoPrepAsync()
         {
-            var connection = DatabaseHelper.GetDatabaseConnection();
+            var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             guildSettings = await repo.GetOrCreateGuildSettingsAsync(connection, config["ids:gyn"]);
         }
@@ -81,7 +81,7 @@ namespace PrideBot.Quizzes
             SocketTextChannel starboardChannel = null;
             try
             {
-                if (!GameHelper.EventOccuring(config)) return;
+                if (!GameHelper.IsEventOccuring(config)) return;
                 if (guildSettings == null) return;
                 if (!(msg is SocketUserMessage message)) return;
                 if (message.Author.IsBot) return;
@@ -101,7 +101,7 @@ namespace PrideBot.Quizzes
 
                 if (!userMessageCounts.ContainsKey(user.Id.ToString()))
                 {
-                    var connection = DatabaseHelper.GetDatabaseConnection();
+                    var connection = repo.GetDatabaseConnection();
                     await connection.OpenAsync();
                     var lastScore = await repo.GetLastScoreFromUserAndAchievementAsync(connection, user.Id.ToString(), "CHAT");
                     // If the user already got this score during this chat session, the bot probably rebooted and shouldn't give them another achievement yet
@@ -115,7 +115,7 @@ namespace PrideBot.Quizzes
 
                 if (userMessageCounts[user.Id.ToString()] == minChatSessionMessages)
                 {
-                    var connection = DatabaseHelper.GetDatabaseConnection();
+                    var connection = repo.GetDatabaseConnection();
                     await connection.OpenAsync();
                     await scoringService.AddAndDisplayAchievementAsync(connection, user, "CHAT", client.CurrentUser);
                 }

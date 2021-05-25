@@ -43,6 +43,37 @@ namespace PrideBot.Modules
         [Command("updatetable")]
         [Alias("updatesheet", "pushtable", "pushsheet")]
         public async Task UploadSheet(string url, string tableName)
+
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var mainRowsAffected = await PushSheetAsync(url, tableName, connection);
+            if (!string.IsNullOrWhiteSpace(repo.GetAltConnectionString()))
+            {
+                using var altConnection = repo.GetAltDatabaseConnecction();
+                await altConnection.OpenAsync();
+                var altRowsAffected = await PushSheetAsync(url, tableName, altConnection);
+                if (altRowsAffected == -1 && mainRowsAffected == -1)
+                    await ReplyResultAsync($"No rows need changing or adding.");
+                else
+                {
+                    altRowsAffected = Math.Max(altRowsAffected, 0);
+                    mainRowsAffected = Math.Max(mainRowsAffected, 0);
+                    await ReplyResultAsync($"Done! {mainRowsAffected} row(s) affected in my database, {altRowsAffected} row(s) in the other database.");
+                }
+                return;
+            }
+
+            if (mainRowsAffected == -1)
+                await ReplyResultAsync($"No rows need changing or adding.");
+            else
+            {
+                mainRowsAffected = Math.Max(mainRowsAffected, 0);
+                await ReplyResultAsync($"Done! {mainRowsAffected} row(s) affected.");
+            }
+        }
+
+        public async Task<int> PushSheetAsync(string url, string tableName, SqlConnection connection)
         {
             var idPattern = "\\/d\\/(.*?)\\/(|$)";
             var idMatch = new Regex(idPattern).Match(url);
@@ -83,9 +114,6 @@ namespace PrideBot.Modules
                 var type = Type.GetType("System." + typeName);
                 fieldDict[fieldName] = type;
             }
-
-            using var connection = DatabaseHelper.GetDatabaseConnection();
-            await connection.OpenAsync();
 
             // get primary keys
             var primaryKeyQuery = "SELECT column_name" +
@@ -172,6 +200,7 @@ namespace PrideBot.Modules
                     {
                         if (!pKey.Equals(primaryKeys.First()))
                             query += " AND ";
+                        var dataTest = pKey.Value;
                         query += $"{pKey.Key} = @PARAM{paramIndex}";
                         parameterDict[$"PARAM{paramIndex++}"] = pKey.Value;
                     }
@@ -206,21 +235,17 @@ namespace PrideBot.Modules
             // Report if none need changing
             if (string.IsNullOrWhiteSpace(query))
             {
-                await ReplyResultAsync($"No rows need changing or adding.");
-                return;
+                return -1;
             }
-
+            
             // Now push!!
             var command = new SqlCommand(query, connection);
-            foreach (var param in parameterDict)
+            foreach (var param in parameterDict.Reverse())
             {
                 command.Parameters.AddWithValue(param.Key, param.Value);
                 query = query.Replace("@" + param.Key, $"'{param.Value.ToString()}'");
             }
-            var rowsAffected = await command.ExecuteNonQueryAsync();
-
-            await ReplyResultAsync($"Done! {rowsAffected} row(s) affected.");
-
+            return await command.ExecuteNonQueryAsync();
         }
 
         [Command("updatedialogue")]
@@ -229,6 +254,7 @@ namespace PrideBot.Modules
         {
             await UploadSheet("https://docs.google.com/spreadsheets/d/14EGqZ5_gVpqRgNCjqbYXncwHrbNOjh9J-QjyrN0vJlY/edit#gid=0", "DIALOGUE");
             await dialogueDict.PullDialogueAsync();
+            await ReplyAsync("Please use the command on my other self as well, so that cute devil gets the dialogue re-cached too~");
         }
 
         [Command("randomdata")]
@@ -236,7 +262,7 @@ namespace PrideBot.Modules
         {
             using var typingState = Context.Channel.EnterTypingState();
             var rand = seed == 0 ? new Random() : new Random(seed);
-            using var connection = DatabaseHelper.GetDatabaseConnection();
+            using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var allChars = (await repo.GetAllCharactersAsync(connection)).ToList();
             var achievements = (await repo.GetAllAchievementsAsync(connection)).ToList();
@@ -276,7 +302,7 @@ namespace PrideBot.Modules
         [Command("clearrandomdata")]
         public async Task RandomShips()
         {
-            using var connection = DatabaseHelper.GetDatabaseConnection();
+            using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var query = $"delete from SCORES where len(USER_ID) < 5; "
                 + $"delete from USER_SHIPS where len(USER_ID) < 5; "

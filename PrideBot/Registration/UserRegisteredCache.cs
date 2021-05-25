@@ -23,7 +23,7 @@ namespace PrideBot.Registration
         {
             if (dict.ContainsKey(userId))
                 return dict[userId];
-            using var connection = DatabaseHelper.GetDatabaseConnection();
+            using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var user = await repo.GetOrCreateUserAsync(connection, userId);
             dict[userId] = user.ShipsSelected;

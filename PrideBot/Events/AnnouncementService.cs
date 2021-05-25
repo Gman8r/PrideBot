@@ -45,7 +45,7 @@ namespace PrideBot.Events
             return Task.CompletedTask;
         }
 
-        private async Task IntroAnnouncementAsync(SocketGuild guild)
+        public async Task IntroAnnouncementAsync(SocketGuild guild)
         {
             try
             {
@@ -102,5 +102,5 @@ namespace PrideBot.Events
             else
                 return await channel.SendFileAsync(Directory.GetFiles(folder).FirstOrDefault(), content);
         }
-    }
+    }   
 }

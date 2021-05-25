@@ -102,7 +102,7 @@ namespace PrideBot
 
         public async Task PerformSessionAsync()
         {
-            if (originMessage != null)
+            if (originMessage != null && originMessage.Channel.GetType() != typeof(SocketDMChannel))
                 originMessage.AddReactionAsync(new Emoji("✅")).GetAwaiter();
             if (activeSessions.Any(a => a.user.Id == user.Id))
             {

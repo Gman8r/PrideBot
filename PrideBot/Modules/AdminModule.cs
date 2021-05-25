@@ -55,7 +55,7 @@ namespace PrideBot.Modules
         [RequireContext(ContextType.Guild)]
         public async Task GiveAchievement(IUser user, string achievementId, bool ignoreCooldown = false, [DefaultValueName("achievement default")] int score = 0)
         {
-            using var connection = DatabaseHelper.GetDatabaseConnection();
+            using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
             if (achievement == null)
@@ -80,7 +80,7 @@ namespace PrideBot.Modules
             if (!int.TryParse(groupIdStr, out groupId))
                 throw new CommandException("Noooope you gotta link to a valid achievement post from the achievement board.");
 
-            using var connection = DatabaseHelper.GetDatabaseConnection();
+            using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var result = await repo.DeleteScoreAsync(connection, groupId.ToString());
             if (result <= 0)
@@ -107,6 +107,5 @@ namespace PrideBot.Modules
             await channel.SendMessageAsync(DialogueDict.RollBullshit(message));
             await ReplyResultAsync("Done.");
         }
-
     }
 }

@@ -61,7 +61,7 @@ namespace PrideBot.Quizzes
         {
             try
             {
-                using var connection = DatabaseHelper.GetDatabaseConnection();
+                using var connection = repo.GetDatabaseConnection();
                 await connection.OpenAsync();
                 guildSettings = await GetGuildSettingsAsync(connection);
                 await connection.CloseAsync();
@@ -73,7 +73,7 @@ namespace PrideBot.Quizzes
                 while (true)
                 {
                     await Task.Delay(500);
-                    if (!GameHelper.EventOccuring(config))
+                    if (!GameHelper.IsEventOccuring(config))
                         continue;
 
                     // last 15 minutes of day, quiz should be closed
@@ -124,15 +124,19 @@ namespace PrideBot.Quizzes
 
             await quizChannel.SendMessageAsync(embed: embed.Build());
 
-            foreach (var member in quizTakenRole.Members)
-            {
-                await member.RemoveRoleAsync(quizTakenRole);
-            }
+            //foreach (var member in quizTakenRole.Members)
+            //{
+            //    await member.RemoveRoleAsync(quizTakenRole);
+            //}
         }
 
 
         async Task OpenQuizAsync(SqlConnection connection, int day)
         {
+            foreach (var member in quizTakenRole.Members)
+            {
+                await member.RemoveRoleAsync(quizTakenRole);
+            }
 
             var oldPins = (await quizDiscussionChannel.GetPinnedMessagesAsync()).Select(msg => (msg.Channel, msg))
                 .Concat((await quizChannel.GetPinnedMessagesAsync()).Select(msg => (msg.Channel, msg)));
@@ -178,10 +182,6 @@ namespace PrideBot.Quizzes
             var quizMsg = await quizChannel.SendMessageAsync(embed: embed.Build());
             await quizMsg.PinAsync();
 
-            foreach (var member in quizTakenRole.Members)
-            {
-                await member.RemoveRoleAsync(quizTakenRole);
-            }
 
             embed = GetQuizReviewEmbed(quizzes)
                 .WithTitle("Daily Quiz Review")

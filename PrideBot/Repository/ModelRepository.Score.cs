@@ -19,6 +19,9 @@ namespace PrideBot.Repository
         => (await new SqlCommand($"select top 1 * from VI_SCORES where USER_ID = '{userId}' and ACHIEVEMENT_ID = '{achievementId}'" +
             $" order by TIMESTAMP desc", conn).ExecuteReaderAsync()).As<Score>().FirstOrDefault();
 
+        public async Task<int> UpdateScoreAsync(SqlConnection conn, Score value)
+            => await DatabaseHelper.GetUpdateCommand(conn, value, "SCORES").ExecuteNonQueryAsync();
+
         public enum AddScoreError
         {
             None = 0,

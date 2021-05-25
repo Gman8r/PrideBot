@@ -46,7 +46,6 @@ namespace PrideBot.Modules
         }
 
         [Command("register")]
-        [Alias("setup")]
         [Summary("Allows you to register with for the event, or change your setup.")]
         [RequireSingleSession]
         [ValidEventPeriods(EventPeriod.BeforeEvent | EventPeriod.DuringEvent)]
@@ -55,6 +54,40 @@ namespace PrideBot.Modules
             await new RegistrationSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, shipImageGenerator, repo, client,
                 new TimeSpan(0, 5, 0), Context.Message, scoringService, userReg)
                 .PerformSessionAsync();
+        }
+
+        [Command("setbackground")]
+        [Alias("setbg", "changebackground", "changebg")]
+        [Summary("Allows you to register with for the event, or change your setup.")]
+        [RequireRegistration]
+        [ValidEventPeriods(EventPeriod.BeforeEvent | EventPeriod.DuringEvent)]
+        public async Task SetBackground(int bgIndex = 0)
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var dbUser = await repo.GetOrCreateUserAsync(connection, Context.User.Id.ToString());
+            var embed = EmbedHelper.GetEventEmbed(Context.User, config)
+                .WithTitle("Background Config");
+            if (bgIndex == 0)
+            {
+                var bgImagePath = await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser);
+                embed.Description = DialogueDict.Get("SET_BACKGROUND_LIST", config.GetDefaultPrefix());
+                embed.ImageUrl = config.GetRelativeHostPathWeb(bgImagePath);
+            }
+            else
+            {
+                var fileCount = Directory.GetFiles("Assets/Backgrounds").Length;
+                if (bgIndex <= 0 || bgIndex > fileCount)
+                    throw new CommandException(DialogueDict.Get("SET_BACKGROUND_ERROR"));
+                dbUser.CardBackground = bgIndex;
+                await repo.UpdateUserAsync(connection, dbUser);
+
+                var dbShips = await repo.GetUserShipsAsync(connection, dbUser.UserId);
+                var shipImagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips);
+                embed.Description = DialogueDict.Get("SET_BACKGROUND_CHANGED");
+                embed.ImageUrl = config.GetRelativeHostPathWeb(shipImagePath);
+            }
+            await ReplyAsync(embed: embed.Build());
         }
     }
 }

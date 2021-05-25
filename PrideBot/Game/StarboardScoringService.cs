@@ -67,7 +67,7 @@ namespace PrideBot.Quizzes
             SocketTextChannel starboardChannel = null;
             try
             {
-                if (!GameHelper.EventOccuring(config)) return;
+                if (!GameHelper.IsEventOccuring(config)) return;
                 if (msg.Author.Id != CarlBotId) return;
                 starboardChannel = client.GetGyn(config).GetChannelFromConfig(config, "starboardchannel") as SocketTextChannel;
                 if (msg.Channel.Id != starboardChannel.Id) return;
@@ -98,7 +98,7 @@ namespace PrideBot.Quizzes
                     user = null;
                 if (user == null) return;
 
-                var connection = DatabaseHelper.GetDatabaseConnection();
+                var connection = repo.GetDatabaseConnection();
                 await connection.OpenAsync();
                 await scoringService.AddAndDisplayAchievementAsync(connection, user, "STARBOARD", client.CurrentUser, titleUrl: message.GetJumpUrl());
             }

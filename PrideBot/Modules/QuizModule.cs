@@ -46,7 +46,7 @@ namespace PrideBot.Modules
         [ValidEventPeriods(EventPeriod.DuringEvent)]
         public async Task TakeQuiz()
         {
-            var connection = DatabaseHelper.GetDatabaseConnection();
+            var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var guildSettings = await repo.GetOrCreateGuildSettingsAsync(connection, client.GetGyn(config).Id.ToString());
             if (!guildSettings.QuizOpen)
@@ -75,7 +75,7 @@ namespace PrideBot.Modules
         [RequireSage]
         public async Task TakeQuizDay(int day)
         {
-            var connection = DatabaseHelper.GetDatabaseConnection();
+            var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var guildSettings = await repo.GetOrCreateGuildSettingsAsync(connection, client.GetGyn(config).Id.ToString());
             var quizLog = await repo.GetOrCreateQuizLogAsync(connection, Context.User.Id.ToString(), day.ToString());

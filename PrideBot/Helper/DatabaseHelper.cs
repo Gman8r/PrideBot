@@ -11,13 +11,6 @@ namespace PrideBot
 {
     public static class DatabaseHelper
     {
-        public static string GetConnectionString()
-        {
-            return File.ReadAllText("connectionstring.txt");
-        }
-
-        public static SqlConnection GetDatabaseConnection()
-            => new SqlConnection(GetConnectionString());
 
 
         public static IEnumerable<T> As<T>(this SqlDataReader reader) where T : new()

@@ -58,7 +58,7 @@ namespace PrideBot.Modules
             if (user.IsBot)
                 throw new CommandException($"That's a bot...");
             var isSelf = user == Context.User;
-            using var connection = DatabaseHelper.GetDatabaseConnection();
+            using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var dbUser = await repo.GetUserAsync(connection, user.Id.ToString());
             var username = (user as SocketGuildUser)?.Nickname ?? user.Username;
@@ -84,6 +84,7 @@ namespace PrideBot.Modules
             embed.AddField("Ships Supported:",
                 string.Join("\n", Enumerable.Range(0, 3)
                 .Select(a => (UserShipTier)a)
+                .Where(a => dbShips.Has(a))
                 .Select(a => $"{EmoteHelper.GetShipTierEmoji(a)} **{a}** Pairing: **{dbShips.Get(a)?.GetDisplayName() ?? "None"}**" +
                     $" {((dbShips.Get(a).ScoreRatio == 1m || !dbShips.Has(a)) ? "" : $" ({GameHelper.GetPointPercent(dbShips.Get(a).ScoreRatio)}% SP)")}")));
 
