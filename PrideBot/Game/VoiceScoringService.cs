@@ -82,6 +82,10 @@ namespace PrideBot.Quizzes
             SocketTextChannel starboardChannel = null;
             try
             {
+                while(true)
+                {
+                    await Task.Delay(1000000);
+                }
                 //while(true)
                 //{
                 //    await Task.Delay(1000);
@@ -125,15 +129,22 @@ namespace PrideBot.Quizzes
                 //    await connection.OpenAsync();
                 //    await scoringService.AddAndDisplayAchievementAsync(connection, user, "CHAT", client.CurrentUser);
                 //}
-
             }
             catch (Exception e)
             {
                 await loggingService.OnLogAsync(new LogMessage(LogSeverity.Error, this.GetType().Name, e.Message, e));
-                var embed = EmbedHelper.GetEventErrorEmbed(null, DialogueDict.Get("EXCEPTION"), client, showUser: false);
+                var embed = EmbedHelper.GetEventErrorEmbed(null, DialogueDict.Get("EXCEPTION"), client, showUser: false)
+                    .WithTitle($"Exception in {this.GetType().Name} Module");
                 var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
                 await modChannel.SendMessageAsync(embed: embed.Build());
                 throw e;
+            }
+            finally
+            {
+                var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
+                await modChannel.SendMessageAsync("The module will be attempt to re-enable in 30 minutes.");
+                await Task.Delay(30 * 60000);
+                DoCheckLoop().GetAwaiter();
             }
         }
     }

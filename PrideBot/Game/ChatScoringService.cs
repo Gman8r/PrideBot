@@ -22,13 +22,11 @@ using PrideBot.Quizzes;
 using PrideBot.Game;
 using PrideBot.Registration;
 
-namespace PrideBot.Quizzes
+namespace PrideBot.Game
 {
-    class ChatScoringService
+    public class ChatScoringService
     {
-        int GetChatSession(DateTime dt) => (dt.Day * 24) + (dt.Hour / int.Parse(config["chatsessionhours"]));
-        int GetChatSession() => GetChatSession(DateTime.Now);
-        int minChatSessionMessages => int.Parse(config["chatsessionmessages"]);
+        int MinChatSessionMessages => int.Parse(config["chatsessionmessages"]);
 
         readonly ModelRepository repo;
         readonly IConfigurationRoot config;
@@ -37,9 +35,14 @@ namespace PrideBot.Quizzes
         readonly LoggingService loggingService;
         readonly UserRegisteredCache userReg;
 
-        Dictionary<string, int> userMessageCounts;
-        GuildSettings guildSettings;
-        int currentChatSession;
+        public Dictionary<ulong, UserChatData> ChatData { get; }
+        public class UserChatData
+        {
+            public ulong Id;
+            public int messageCount;
+            public DateTime expires;
+        }
+
 
         public ChatScoringService(ModelRepository repo, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, LoggingService loggingService, UserRegisteredCache userReg)
         {
@@ -50,23 +53,8 @@ namespace PrideBot.Quizzes
             this.loggingService = loggingService;
             this.userReg = userReg;
 
-            userMessageCounts = new Dictionary<string, int>();
-            currentChatSession = GetChatSession();
+            ChatData = new Dictionary<ulong, UserChatData>();
             client.MessageReceived += MessageReceived;
-            client.Ready += ClientReady;
-        }
-
-        private Task ClientReady()
-        {
-            DoPrepAsync().GetAwaiter();
-            return Task.CompletedTask;
-        }
-
-        private async Task DoPrepAsync()
-        {
-            var connection = repo.GetDatabaseConnection();
-            await connection.OpenAsync();
-            guildSettings = await repo.GetOrCreateGuildSettingsAsync(connection, config["ids:gyn"]);
         }
 
 
@@ -82,7 +70,6 @@ namespace PrideBot.Quizzes
             try
             {
                 if (!GameHelper.IsEventOccuring(config)) return;
-                if (guildSettings == null) return;
                 if (!(msg is SocketUserMessage message)) return;
                 if (message.Author.IsBot) return;
                 if (!(msg.Channel is IGuildChannel gChannel)) return;
@@ -92,28 +79,21 @@ namespace PrideBot.Quizzes
                 if (!await userReg.GetOrDownloadAsync(user.Id.ToString()))
                     return;
 
-                if (GetChatSession() != currentChatSession)
-                {
-                    currentChatSession = GetChatSession();
-                    userMessageCounts.Clear();
-                }
 
-
-                if (!userMessageCounts.ContainsKey(user.Id.ToString()))
+                if (!ChatData.ContainsKey(user.Id) || DateTime.Now > ChatData[user.Id].expires)
                 {
                     var connection = repo.GetDatabaseConnection();
                     await connection.OpenAsync();
-                    var lastScore = await repo.GetLastScoreFromUserAndAchievementAsync(connection, user.Id.ToString(), "CHAT");
-                    // If the user already got this score during this chat session, the bot probably rebooted and shouldn't give them another achievement yet
-                    if (lastScore != null && GetChatSession(lastScore.TimeStamp) == GetChatSession())
-                        userMessageCounts[user.Id.ToString()] = minChatSessionMessages + 1;
-                    else
-                        userMessageCounts[user.Id.ToString()] = 1;
+                    var achievement = await repo.GetAchievementAsync(connection, "CHAT");
+                    ChatData[user.Id] = new UserChatData()
+                    {
+                        Id = user.Id,
+                        expires = DateTime.Now.AddHours(achievement.CooldownHours).AddMinutes(1)
+                    };
                 }
-                else
-                    userMessageCounts[user.Id.ToString()]++;
-
-                if (userMessageCounts[user.Id.ToString()] == minChatSessionMessages)
+                
+                ChatData[user.Id].messageCount++;
+                if (ChatData[user.Id].messageCount == MinChatSessionMessages)
                 {
                     var connection = repo.GetDatabaseConnection();
                     await connection.OpenAsync();
@@ -124,7 +104,8 @@ namespace PrideBot.Quizzes
             catch (Exception e)
             {
                 await loggingService.OnLogAsync(new LogMessage(LogSeverity.Error, this.GetType().Name, e.Message, e));
-                var embed = EmbedHelper.GetEventErrorEmbed(null, DialogueDict.Get("EXCEPTION"), client, showUser: false);
+                var embed = EmbedHelper.GetEventErrorEmbed(null, DialogueDict.Get("EXCEPTION"), client, showUser: false)
+                    .WithTitle($"Exception in {this.GetType().Name} Module");
                 var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
                 await modChannel.SendMessageAsync(embed: embed.Build());
                 throw e;

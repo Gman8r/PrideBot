@@ -222,7 +222,7 @@ namespace PrideBot
 
         protected EmbedBuilder GetEmbed()
             => EmbedHelper.GetEventEmbed(user, config, showUser: false)
-            .WithThumbnailUrl("https://cdn.discordapp.com/attachments/419187329706491905/843048501458108436/unknown.png");
+            .WithThumbnailUrl(client.CurrentUser.GetAvatarUrl());
 
         async Task AddReactions(IMessage message, List<IEmote> emotes)
         {

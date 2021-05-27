@@ -19,6 +19,8 @@ using Microsoft.Data.SqlClient;
 using PrideBot.Models;
 using PrideBot.Repository;
 using PrideBot.Sheets;
+using PrideBot.Registration;
+using PrideBot.Game;
 using System.Text.RegularExpressions;
 
 namespace PrideBot.Modules
@@ -31,13 +33,17 @@ namespace PrideBot.Modules
         readonly GoogleSheetsService sheetsService;
         readonly DialogueDict dialogueDict;
         readonly ModelRepository repo;
+        readonly UserRegisteredCache regCache;
+        readonly ChatScoringService chatScoringService;
 
-        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService, DialogueDict dialogueDict, ModelRepository repo)
+        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService, DialogueDict dialogueDict, ModelRepository repo, UserRegisteredCache regCache, ChatScoringService chatScoringService)
         {
             this.modelRepository = modelRepository;
             this.sheetsService = sheetsService;
             this.dialogueDict = dialogueDict;
             this.repo = repo;
+            this.regCache = regCache;
+            this.chatScoringService = chatScoringService;
         }
 
         [Command("updatetable")]
@@ -286,14 +292,14 @@ namespace PrideBot.Modules
                 dbUser.ShipsSelected = true;
                 await repo.UpdateUserAsync(connection, dbUser);
                 var achievement = achievements.FirstOrDefault(a => a.AchievementId.Equals("PREREGISTER"));
-                await repo.AttemptAddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore, null, true);
+                await repo.AttemptAddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore, Context.Client.CurrentUser.Id.ToString(), true);
             }
 
             for (int i = 0; i < scoreCount; i++)
             {
                 var userId = GetWeightedIndex(userCount, .05, rand);
                 var achievement = achievements[rand.Next() % achievements.Count];
-                await repo.AttemptAddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore, null, true);
+                await repo.AttemptAddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore, Context.Client.CurrentUser.Id.ToString(), true);
             }
 
             await ReplyAsync("***WOP!*** I pulled a collection of info from a contest in another reality, just for you bestie!");
@@ -304,7 +310,8 @@ namespace PrideBot.Modules
         {
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
-            var query = $"delete from SCORES where len(USER_ID) < 5; "
+            var query = $"delete from ship_scores where SCORE_ID in (select SCORE_ID from VI_SCORES where len(USER_ID) < 10); "
+                + $"delete from SCORES where len(USER_ID) < 5; "
                 + $"delete from USER_SHIPS where len(USER_ID) < 5; "
                 + $"delete from USERS where len(USER_ID) < 5; ";
 
@@ -321,6 +328,17 @@ namespace PrideBot.Modules
                     return i;
             }
             return rand.Next(rand.Next() % upperBoundExclusive);
+        }
+
+        [Command("cleardbcaches")]
+        [Alias("cleardbcache")]
+        [Summary("Clears or refreshes certain cached database data, including dialogue")]
+        public async Task ClearCaches()
+        {
+            regCache.Clear();
+            chatScoringService.ChatData.Clear();
+            await dialogueDict.PullDialogueAsync();
+            await ReplyResultAsync("Done!");
         }
     }
 }

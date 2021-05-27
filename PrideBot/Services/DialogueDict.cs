@@ -38,8 +38,6 @@ namespace PrideBot
 
         public static string GetNoBullshit(string key, params object[] args)
         {
-            if (!instance.dict.ContainsKey(key))
-                return "(MISSING DIALOGUE OH NO MY BRAIN)";
 
             var variants = instance.dict.Keys
                 .Where(a => a.StartsWith(key + "-"))
@@ -47,8 +45,10 @@ namespace PrideBot
             string chosenKey;
             if (variants.Any())
                 chosenKey = variants[new Random().Next() % variants.Count];
-            else
+            else if (instance.dict.ContainsKey(key))
                 chosenKey = key;
+            else
+                return "(MISSING DIALOGUE OH NO MY BRAIN)";
 
             var str = string.Format(instance.dict[chosenKey]
                 .Replace("{SP}", EmoteHelper.SPEmote.ToString())

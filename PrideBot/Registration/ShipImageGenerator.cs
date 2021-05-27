@@ -38,7 +38,7 @@ namespace PrideBot.Registration
             MagickImage ship2Image = null;
             MagickImage ship3Image = null;
             using var primaryShipImage = await GenerateShipImageAsync(userShips.PrimaryShip, highlightTier == 0, highlightHeart);
-            var yLevel = scores[2] > 0 ? 90 : 106;
+            var yLevel = scores[0] > 0 ? 96 : 106;
             primaryShipImage.InterpolativeResize(128, 128, PixelInterpolateMethod.Nearest);
             //if (ships[1].IsEmpty() && ships[2].IsEmpty())
             //{
@@ -52,7 +52,7 @@ namespace PrideBot.Registration
                 {
                     using var numberImage = GenerateScoreText(scores[0]);
                     numberImage.InterpolativeResize(128, 128, PixelInterpolateMethod.Nearest);
-                    image.Composite(numberImage, Gravity.Northwest, 80, 84, CompositeOperator.Over);
+                    image.Composite(numberImage, Gravity.Northwest, 80, yLevel - 16, CompositeOperator.Over);
                 }
                 if (userShips.HasSecondaryShip || highlightTier == 1)
                 {
@@ -63,7 +63,7 @@ namespace PrideBot.Registration
                     {
                         using var number2Image = GenerateScoreText(scores[1]);
                         number2Image.InterpolativeResize(64, 64, PixelInterpolateMethod.Nearest);
-                        image.Composite(number2Image, Gravity.Northwest, 8, yLevel + 40, CompositeOperator.Over);
+                        image.Composite(number2Image, Gravity.Northwest, 8, yLevel + 37, CompositeOperator.Over);
                     }
                 }
                 if (userShips.HasTertiaryShip || highlightTier == 2)
@@ -74,7 +74,7 @@ namespace PrideBot.Registration
                     {
                         using var number3Image = GenerateScoreText(scores[2]);
                         number3Image.InterpolativeResize(64, 64, PixelInterpolateMethod.Nearest);
-                        image.Composite(number3Image, Gravity.Northwest, 216, yLevel + 40, CompositeOperator.Over);
+                        image.Composite(number3Image, Gravity.Northwest, 216, yLevel + 37, CompositeOperator.Over);
                     }
                 }
             }

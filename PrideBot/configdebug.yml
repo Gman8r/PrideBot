@@ -28,6 +28,7 @@ ids:
     #modchat: 606104629306195988
     #youkai: 584850930416091146
     #announcementschannel: 584844280904810526
+    #scorereportchannel: 846571306476634113
 
     #Testing Grounds
     gyn: 248446374679543810
@@ -44,6 +45,7 @@ ids:
     modchat: 808049429528444928
     youkai: 358435805779197955
     announcementschannel: 419187329706491905
+    scorereportchannel: 809556555258396682
 
     #Testing 123
     #gyn: 796585563166736394
@@ -60,3 +62,4 @@ ids:
     #pklogchannel: 811106749683728445
     #pluralkitid: 466378653216014359
     #announcementschannel: 796592359508410379
+    #scorereportchannel: 847243661313703937

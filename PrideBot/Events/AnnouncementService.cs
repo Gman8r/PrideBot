@@ -73,7 +73,6 @@ namespace PrideBot.Events
                 // Rules and perms and crap
                 var startTime = DateTime.Now;
                 var rulesChannel = guild.GetChannelFromConfig(config, "ruleschannel") as SocketTextChannel;
-                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBullshit("RULES"));
                 var youkaiPerms = new OverwritePermissions(viewChannel: PermValue.Allow);
                 var youkaiOverwrite = new Overwrite(ulong.Parse(config["ids:youkai"]), PermissionTarget.Role, youkaiPerms);
 
@@ -81,6 +80,12 @@ namespace PrideBot.Events
                 await rulesChannel.Category.ModifyAsync(a => a.PermissionOverwrites = new List<Overwrite>() { youkaiOverwrite });
                 await PostAnnouncementMessageAsync(announcementsChannel, announcementId, 4, true, rulesChannel.Mention, config.GetDefaultPrefix());
                 typing.Dispose();
+
+
+                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBullshit("RULES_1", config.GetDefaultPrefix(), guild.GetChannelFromConfig(config, "quizchannel")));
+                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBullshit("RULES_2"));
+                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBullshit("RULES_3"));
+                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBullshit("RULES_4", config.GetDefaultPrefix(), guild.GetChannelFromConfig(config, "scorereportchannel")));
             }
             catch (Exception e)
             {
@@ -88,6 +93,10 @@ namespace PrideBot.Events
                 var embed = EmbedHelper.GetEventErrorEmbed(null, DialogueDict.Get("EXCEPTION"), client, showUser: false);
                 var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
                 await modChannel.SendMessageAsync(embed: embed.Build());
+
+                var announcementsChannel = guild.GetChannelFromConfig(config, "announcementschannel") as SocketTextChannel;
+                embed = EmbedHelper.GetEventErrorEmbed(null, "OH NOOO did I really get an internal error during my grand intro? Ahaha, em-BARRASSING right? Isn't public speaking like, the hardest thing? Hold on juuuust a bit for me~" , client, showUser: false);
+                await announcementsChannel.SendMessageAsync(embed: embed.Build());
                 throw e;
             }
         }

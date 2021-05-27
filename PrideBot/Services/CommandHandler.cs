@@ -56,11 +56,11 @@ namespace PrideBot
         private async Task OnCommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
         {
             if (!string.IsNullOrEmpty(result?.ErrorReason))
-                await ReportErrorAsync(context, result);
+                await ReportErrorAsync(command, context, result);
             commandArgData.Remove(context.Message.Id);
         }
 
-        public async Task ReportErrorAsync(ICommandContext context, IResult result)
+        public async Task ReportErrorAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
         {
             try
             {
@@ -106,8 +106,8 @@ namespace PrideBot
                     }
                 }
 
-                if (result.Error == CommandError.ParseFailed || result.Error == CommandError.ObjectNotFound)
-                    errorMessage = DialogueDict.Get("ERROR_MESSAGE", errorMessage);
+                if (result.Error == CommandError.ParseFailed || result.Error == CommandError.ObjectNotFound || result.Error == CommandError.BadArgCount)
+                    errorMessage = DialogueDict.Get("ERROR_MESSAGE", errorMessage, config.GetDefaultPrefix(), command.IsSpecified ? command.Value.Name : "");
 
                 if (errorMessage != null)
                 {

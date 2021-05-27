@@ -104,7 +104,7 @@ namespace PrideBot.Registration
                         .WithDescription(DialogueDict.Get("REGISTRATION_CHOOSE_BG"));
                 }
 
-                embed = GetEmbed()
+                embed = (await GetEmbedWithShipsAsync(dbUser, dbUserShips))
                     .WithTitle("Confirm Please!")
                     .WithDescription(DialogueDict.Get(dbUser.ShipsSelected ? "REGISTRATION_CONFIRM_EDIT" : "REGISTRATION_CONFIRM"));
                 var confirmChoices = new List<IEmote>() { YesEmote, new Emoji("↩") };
@@ -122,7 +122,7 @@ namespace PrideBot.Registration
             }
 
             var key = "REGISTRATION_" + (userHasRegistered ? "EDITED" : "COMPLETE") + (GameHelper.IsEventOccuring(config) ? "" : "_PREREG");
-            embed = (await GetEmbedWithShipsAsync(dbUser, dbUserShips))
+            embed = GetEmbed()
                 .WithTitle("Setup Complete!")
                 .WithDescription(DialogueDict.Get(key, config.GetDefaultPrefix()));
             await channel.SendMessageAsync(embed: embed.Build());
