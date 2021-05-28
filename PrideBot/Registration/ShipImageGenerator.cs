@@ -35,8 +35,6 @@ namespace PrideBot.Registration
             scores ??= new int[3];
             var image = new MagickImage($"Assets/Backgrounds/shipbg{dbUser.CardBackground}.png");
             //var image = new MagickImage(MagickColors.Transparent, 288, 192);
-            MagickImage ship2Image = null;
-            MagickImage ship3Image = null;
             using var primaryShipImage = await GenerateShipImageAsync(userShips.PrimaryShip, highlightTier == 0, highlightHeart);
             var yLevel = scores[0] > 0 ? 96 : 106;
             primaryShipImage.InterpolativeResize(128, 128, PixelInterpolateMethod.Nearest);
@@ -47,40 +45,37 @@ namespace PrideBot.Registration
             //}
             //else
             {
-                image.Composite(primaryShipImage, Gravity.Northwest, 80, yLevel - 90, CompositeOperator.Over);
-                if (scores[0] > 0)
-                {
-                    using var numberImage = GenerateScoreText(scores[0]);
-                    numberImage.InterpolativeResize(128, 128, PixelInterpolateMethod.Nearest);
-                    image.Composite(numberImage, Gravity.Northwest, 80, yLevel - 16, CompositeOperator.Over);
-                }
                 if (userShips.HasSecondaryShip || highlightTier == 1)
                 {
                     //var yLevel = scores[1] > 0 ? 90 : 90;
-                    ship2Image = await GenerateShipImageAsync(userShips.SecondaryShip, highlightTier == 1, highlightHeart);
+                    using var ship2Image = await GenerateShipImageAsync(userShips.SecondaryShip, highlightTier == 1, highlightHeart);
                     image.Composite(ship2Image, Gravity.Northwest, 8, yLevel, CompositeOperator.Over);
                     if (scores[1] > 0)
                     {
                         using var number2Image = GenerateScoreText(scores[1]);
-                        number2Image.InterpolativeResize(64, 64, PixelInterpolateMethod.Nearest);
-                        image.Composite(number2Image, Gravity.Northwest, 8, yLevel + 37, CompositeOperator.Over);
+                        number2Image.InterpolativeResize(128, 128, PixelInterpolateMethod.Nearest);
+                        image.Composite(number2Image, Gravity.Northwest, 8 - 32, yLevel + 37 - 32, CompositeOperator.Over);
                     }
                 }
                 if (userShips.HasTertiaryShip || highlightTier == 2)
                 {
-                    ship3Image = await GenerateShipImageAsync(userShips.TertiaryShip, highlightTier == 2, highlightHeart);
+                    using var ship3Image = await GenerateShipImageAsync(userShips.TertiaryShip, highlightTier == 2, highlightHeart);
                     image.Composite(ship3Image, Gravity.Northwest, 216, yLevel, CompositeOperator.Over);
                     if (scores[2] > 0)
                     {
                         using var number3Image = GenerateScoreText(scores[2]);
-                        number3Image.InterpolativeResize(64, 64, PixelInterpolateMethod.Nearest);
-                        image.Composite(number3Image, Gravity.Northwest, 216, yLevel + 37, CompositeOperator.Over);
+                        number3Image.InterpolativeResize(128, 128, PixelInterpolateMethod.Nearest);
+                        image.Composite(number3Image, Gravity.Northwest, 216 - 32, yLevel + 37 - 32, CompositeOperator.Over);
                     }
                 }
+                image.Composite(primaryShipImage, Gravity.Northwest, 80, yLevel - 90, CompositeOperator.Over);
+                if (scores[0] > 0)
+                {
+                    using var numberImage = GenerateScoreText(scores[0]);
+                    numberImage.InterpolativeResize(256, 256, PixelInterpolateMethod.Nearest);
+                    image.Composite(numberImage, Gravity.Northwest, 80 - 64, yLevel - 16 - 64, CompositeOperator.Over);
+                }
             }
-            
-            ship2Image?.Dispose();
-            ship3Image?.Dispose();
 
             //image.Resize(new Percentage(150));
             return image;
@@ -165,10 +160,10 @@ namespace PrideBot.Registration
         MagickImage GenerateScoreText(int num)
         {
             var numStr = "+" + num.ToString();
-            var baseGeometry = new MagickGeometry(32, 32);
+            var baseGeometry = new MagickGeometry(64, 32);
             var offsetGeometry = new MagickGeometry((baseGeometry.Width - (8 * numStr.Length)) / 2, (baseGeometry.Width - 12) / 2);
-            if (numStr.Length < 4)
-                offsetGeometry.Width -= 2;
+            //if (numStr.Length < 4)
+            offsetGeometry.Width -= 3;
 
             var digitImages = numStr
                 .ToCharArray()

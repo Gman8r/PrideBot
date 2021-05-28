@@ -6,11 +6,16 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Data;
+using Microsoft.Extensions.Configuration;
 
 namespace PrideBot.Repository
 {
     public partial class ModelRepository
     {
+
+        public async Task<GuildSettings> GetGynGuildSettings(SqlConnection conn, IConfigurationRoot config)
+            => await GetGuildSettings(conn, config["ids:gyn"]);
+
         public async Task<GuildSettings> GetGuildSettings(SqlConnection conn, string guildId)
         => (await new SqlCommand($"select * from VI_GUILD_SETTINGS where GUILD_ID = '{guildId}'", conn).ExecuteReaderAsync()).As<GuildSettings>().FirstOrDefault();
 

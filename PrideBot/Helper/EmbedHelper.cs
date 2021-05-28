@@ -23,11 +23,11 @@ namespace PrideBot
             if (showUser)
                 embed = embed.WithAuthor(new EmbedAuthorBuilder()
                     .WithIconUrl(user.GetAvatarUrlOrDefault().Split('?')[0])
-                    .WithName((user as IGuildUser)?.Username ?? user.Username));
+                    .WithName((user as IGuildUser)?.Nickname ?? user.Username));
             if (userInThumbnail)
             {
                 embed.ThumbnailUrl = embed.Author?.IconUrl;
-                embed.Author = null;
+                //embed.Author = null;
             }
             return embed;
     }

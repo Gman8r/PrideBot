@@ -21,6 +21,7 @@ using PrideBot.Repository;
 using PrideBot.Sheets;
 using PrideBot.Registration;
 using PrideBot.Game;
+using PrideBot.Events;
 using System.Text.RegularExpressions;
 
 namespace PrideBot.Modules
@@ -35,8 +36,9 @@ namespace PrideBot.Modules
         readonly ModelRepository repo;
         readonly UserRegisteredCache regCache;
         readonly ChatScoringService chatScoringService;
+        readonly AnnouncementService announcementService;
 
-        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService, DialogueDict dialogueDict, ModelRepository repo, UserRegisteredCache regCache, ChatScoringService chatScoringService)
+        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService, DialogueDict dialogueDict, ModelRepository repo, UserRegisteredCache regCache, ChatScoringService chatScoringService, AnnouncementService announcementService)
         {
             this.modelRepository = modelRepository;
             this.sheetsService = sheetsService;
@@ -44,6 +46,7 @@ namespace PrideBot.Modules
             this.repo = repo;
             this.regCache = regCache;
             this.chatScoringService = chatScoringService;
+            this.announcementService = announcementService;
         }
 
         [Command("updatetable")]
@@ -328,6 +331,18 @@ namespace PrideBot.Modules
                     return i;
             }
             return rand.Next(rand.Next() % upperBoundExclusive);
+        }
+
+        [Command("updaterules")]
+        [RequireGyn]
+        [Summary("Updates the rules channel and auto-pushes dialogue.")]
+        public async Task UpdateRules()
+        {
+            await ReplyAsync("Pushing dialogue...");
+            await UpdateDialogue();
+            await ReplyAsync("Updating rules page...");
+            await announcementService.UpdateRulesAsync(Context.Guild);
+            await ReplyResultAsync("Done!");
         }
 
         [Command("cleardbcaches")]

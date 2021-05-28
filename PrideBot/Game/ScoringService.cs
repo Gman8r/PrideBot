@@ -61,13 +61,19 @@ namespace PrideBot.Game
                 var dbShipScores = (await repo.GetShipScoresAsync(connection, scoreId)).ToArray();
 
                 var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, pointsEarned, dbShipScores,                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, errorCode);
-                var text = user.Mention;
+                var text = user.Mention + " Achievement! " + achievement.Emoji;// + " Achievement!";// + " " + achievement.Emoji;
+
+                if (errorCode == ModelRepository.AddScoreError.CooldownViolated)
+                    text = user.Mention + ((user is SocketUser sUser) ? $" Hold Up { sUser.Queen(client)}!" : " Hold Up!");
                 if (!achievement.Ping || !dbUser.PingForAchievements)
                 {
                     text = null;
-                    embed.Author ??= new EmbedAuthorBuilder();
-                    embed.Author.Name = $"{user.Username}#{user.Discriminator}";
+                    //embed.Author ??= new EmbedAuthorBuilder();
+                    //embed.Author.Name = (user as IGuildUser)?.Nickname ?? user.Username;
+                    //embed.Author.IconUrl 
                 }
+                else
+                    embed.Author = null; 
                 var post = await overrideChannel.SendMessageAsync(text, embed: embed.Build());
 
                 // Update database score with post data
@@ -87,11 +93,12 @@ namespace PrideBot.Game
             string titleUrl = null, ModelRepository.AddScoreError errorCode = ModelRepository.AddScoreError.None)
         {
             var embed = EmbedHelper.GetEventEmbed(user, config, id: scoreId, showDate: true, userInThumbnail: true)
-                .WithTitle($"{achievement.Emoji} Challenge Completed: {achievement.Description}!")
+                .WithTitle($"{achievement.Emoji} {(errorCode == ModelRepository.AddScoreError.CooldownViolated ? "Cooldown Required" : "Challenge Completed")}" +
+                $": {achievement.Description}!")
                 .WithDescription(DialogueDict.RollBullshit(achievement.Flavor))
                 .WithUrl(titleUrl);
             if (approver != null)
-                embed.Footer.Text += $" | Approver: {approver.Username}#{approver.Discriminator}";
+                embed.Footer.Text += $" | {user.Id} | Approver: {approver.Username}#{approver.Discriminator} ({approver.Id})";
 
             switch (errorCode)
             {

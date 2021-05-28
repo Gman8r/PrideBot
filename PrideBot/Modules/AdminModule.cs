@@ -62,7 +62,7 @@ namespace PrideBot.Modules
             await connection.OpenAsync();
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
             if (achievement == null)
-                throw new CommandException("Achievement not found, make sure the Id matches the one in the sheet.");
+                throw new CommandException("Nope nuh-uh, I couldn't find that achievement like Anywheeeere, sorry! Make sure the Achievement Id matches the one in the sheet!");
             await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, Context.User, score, ignoreCooldown: ignoreCooldown);
             //if (Context.Client.GetGyn(config).GetChannelfromConfig(config, "achievementschannel").Id != Context.Channel.Id)
             await ReplyResultAsync("Done!");
@@ -92,15 +92,6 @@ namespace PrideBot.Modules
             await ReplyResultAsync("Daaaamn OK then, I have reversed the waves of love (just for a bit) and revoked the achievement!");
         }
 
-        [Command("updaterules")]
-        [RequireGyn]
-        [Summary("Updates the rules channel from my cached dialogue.")]
-        public async Task UpdateRules()
-        {
-            await announcementService.UpdateRulesAsync(Context.Guild);
-            await ReplyResultAsync("Done!");
-        }
-
         [Command("say")]
         [Alias("echo")]
         [Priority(0)]
@@ -117,7 +108,7 @@ namespace PrideBot.Modules
         public async Task Echo(SocketTextChannel channel, [Remainder] string message)
         {
             await channel.SendMessageAsync(DialogueDict.RollBullshit(message));
-            await ReplyResultAsync("Done.");
+            await ReplyResultAsync("Done!");
         }
     }
 }

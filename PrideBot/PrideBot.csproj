@@ -542,6 +542,9 @@
     <None Update="Assets\CharacterSprites\YUYUKO.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Assets\NumberSprites\#.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Assets\NumberSprites\+.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
