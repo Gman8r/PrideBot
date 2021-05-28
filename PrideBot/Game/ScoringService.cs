@@ -113,7 +113,7 @@ namespace PrideBot.Game
                     break;
 
                 case (ModelRepository.AddScoreError.UserNotRegistered):
-                    embed.Description += $"\n\n{ DialogueDict.Get("ACHIEVEMENT_NOT_REGISTERED", basePointsEarned, config.GetDefaultPrefix())}";
+                    embed.Description += $"\n\n{ DialogueDict.Get("ACHIEVEMENT_NOT_REGISTERED", basePointsEarned, config.GetDefaultPrefix(), (client.GetGyn(config).GetChannelFromConfig(config, "ruleschannel") as ITextChannel).Mention)}";
                     break;
 
                 case (ModelRepository.AddScoreError.CooldownViolated):

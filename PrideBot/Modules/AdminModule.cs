@@ -21,6 +21,7 @@ using PrideBot.Registration;
 using PrideBot.Models;
 using PrideBot.Game;
 using PrideBot.Quizzes;
+using PrideBot.Events;
 
 namespace PrideBot.Modules
 {
@@ -35,9 +36,10 @@ namespace PrideBot.Modules
         private readonly ShipImageGenerator shipImageGenerator;
         private readonly DiscordSocketClient client;
         private readonly ScoringService scoringService;
+        readonly AnnouncementService announcementService;
 
 
-        public AdminModule(CommandService service, IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService)
+        public AdminModule(CommandService service, IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService, AnnouncementService announcementService)
         {
             this.service = service;
             this.config = config;
@@ -46,6 +48,7 @@ namespace PrideBot.Modules
             this.shipImageGenerator = shipImageGenerator;
             this.client = client;
             this.scoringService = scoringService;
+            this.announcementService = announcementService;
         }
 
         [Command("giveachievement")]
@@ -87,6 +90,15 @@ namespace PrideBot.Modules
                 throw new CommandException("HMMMM sorry bestie, I couldn't find the achievement from that message. Did it get removed already?");
 
             await ReplyResultAsync("Daaaamn OK then, I have reversed the waves of love (just for a bit) and revoked the achievement!");
+        }
+
+        [Command("updaterules")]
+        [RequireGyn]
+        [Summary("Updates the rules channel from my cached dialogue.")]
+        public async Task UpdateRules()
+        {
+            await announcementService.UpdateRulesAsync(Context.Guild);
+            await ReplyResultAsync("Done!");
         }
 
         [Command("say")]

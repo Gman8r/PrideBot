@@ -75,7 +75,7 @@ namespace PrideBot.Modules
                     .ToList();
                 for (int i = allUsableCommands.Count - 1; i >= 0; i--)
                 {
-                    if (!(await UserHasPermissionsForCommand(Context, allUsableCommands[i], provider)))
+                    if (!(await ShowCommandInHelp(Context, allUsableCommands[i], provider)))
                         allUsableCommands.RemoveAt(i);
                 }
 
@@ -188,15 +188,12 @@ namespace PrideBot.Modules
             return ValueResult<string>.Success(message);
         }
 
-        static async Task<bool> UserHasPermissionsForCommand(SocketCommandContext context, CommandInfo command, IServiceProvider provider)
+        static async Task<bool> ShowCommandInHelp(SocketCommandContext context, CommandInfo command, IServiceProvider provider)
         {
-            return (await command.CheckPreconditionsAsync(context, provider)).IsSuccess;
+            if (command.Attributes.OfType<HiddenAttribute>().Any() || command.Module.Attributes.OfType<HiddenAttribute>().Any())
+                return false;
 
-            //var sageAttribute = command.Preconditions.FirstOrDefault(a => a.GetType() == typeof(RequireSageAttribute))
-            //    ?? command.Module.Preconditions.FirstOrDefault(a => a.GetType() == typeof(RequireSageAttribute));
-            //if (sageAttribute == null) return true;
-            //var result = await (sageAttribute as RequireSageAttribute).CheckPermissionsAsync(context, command, provider);
-            //return result.IsSuccess;
+            return (await command.CheckPreconditionsAsync(context, provider)).IsSuccess;
         }
 
         [Command("setpings")]

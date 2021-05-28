@@ -2,11 +2,12 @@
 prefixes:
     - '~'
 status: 🏳‍🌈
-eventmonth: 6
+eventmonth: 5
 eventcolor: 0xB00B69 # not sure if used
 firstquizstreakday: 11
 chatsessionmessages: 5
 chatsessionhours: 6
+voiechatminutes: 10
 paths:
     wwwhostpath: http://intile.ddns.net:88/pbotassetsdebug/
     wwwhostpathlocal: \\media\wwwroot\pbotassetsdebug\

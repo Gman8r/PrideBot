@@ -58,7 +58,7 @@ namespace PrideBot
 
         public static string Get(string key, params object[] args) => RollBullshit(GetNoBullshit(key, args));
 
-        public static string RollBullshit(string str, double chance = .05)
+        public static string RollBullshit(string str, double chance = .1)
         {
             var rand = new Random();
 
@@ -101,6 +101,13 @@ namespace PrideBot
                     "Daaaaamn.",
                     "Fuck.",
                     "Lasers!!",
+                    "sus.",
+                    "amogus.",
+                    "01100111 01100001 01111001.",
+                    "eat pant.",
+                    "Skadoosh!",
+                    "",
+                    "Nice hair wow!!",
                     "Home of sexual.",
                     "Gay Gay Homo Sexual Gay."};
 

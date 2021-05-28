@@ -111,5 +111,36 @@ namespace PrideBot.Events
             else
                 return await channel.SendFileAsync(Directory.GetFiles(folder).FirstOrDefault(), content);
         }
+
+        public async Task UpdateRulesAsync(SocketGuild guild)
+        {
+            var rulesChannel = guild.GetChannelFromConfig(config, "ruleschannel") as SocketTextChannel;
+
+
+            var messages = (await rulesChannel.GetMessagesAsync(100).FlattenAsync()).Where(a => a.Author.Id == client.CurrentUser.Id)
+                .OrderBy(a => a.Timestamp)
+                .Select(a => a as IUserMessage)
+                .ToArray();
+
+            var keys = DialogueDict.GetDict().Keys.Where(a => a.StartsWith("RULES_") && a.Length == "RULES_!".Length)
+                .OrderBy(a => a)
+                .ToArray();
+
+            await PostOrEditMessageAsync(messages, 0, DialogueDict.GetNoBullshit("RULES_1", config.GetDefaultPrefix(), 
+                (guild.GetChannelFromConfig(config, "quizchannel") as ITextChannel).Mention));
+            await PostOrEditMessageAsync(messages, 1, DialogueDict.GetNoBullshit("RULES_2"));
+            await PostOrEditMessageAsync(messages, 2, DialogueDict.GetNoBullshit("RULES_3"));
+            await PostOrEditMessageAsync(messages, 3, DialogueDict.GetNoBullshit("RULES_4", config.GetDefaultPrefix(),
+                (guild.GetChannelFromConfig(config, "scorereportchannel") as ITextChannel).Mention));
+
+        }
+
+        async Task PostOrEditMessageAsync(IUserMessage[] messages, int index, string content)
+        {
+            if (index < messages.Length)
+                await messages[index].ModifyAsync(a => a.Content = content);
+            else
+                await messages.FirstOrDefault().Channel.SendMessageAsync(content);
+        }
     }   
 }

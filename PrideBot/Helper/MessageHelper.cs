@@ -189,8 +189,8 @@ namespace PrideBot
             var prefixes = ConfigHelper.GetPrefixes(config)
                 .OrderByDescending(a => a.Length)   // Find largest possible match;
                 .ToList();
-            if (msg.Author.IsOwner())
-                prefixes.Add("oh! ");
+            //if (msg.Author.IsOwner())
+            //    prefixes.Add("oh! ");
             foreach (var prefix in prefixes)
             {
                 if (msg.HasStringPrefix(prefix, ref argPos, StringComparison.OrdinalIgnoreCase))

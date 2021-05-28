@@ -114,7 +114,7 @@ namespace PrideBot
         public static string Queen(this SocketGuildUser user)
         {
             var response = Honorific(user, "Queen", "King", "Bestie");
-            if (user.Id == 181874712375197696 && new Random().Next() % 10 == 0) //  That's right chai you're never safe
+            if (user.Id == 181874712375197696 && new Random().Next() % 5 == 0) //  That's right chai you're never safe
                 response = "Bitch";
             return response;
         }
