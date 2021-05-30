@@ -113,13 +113,13 @@ namespace PrideBot.Registration
                 using var smallHighlight = new MagickImage(await File.ReadAllBytesAsync($"Assets/CharacterSprites/BOXSMALL.png"));
                 image.Composite(smallHighlight, Gravity.Northwest, 1, 4, CompositeOperator.Over);
             }
-            image.Composite(heartImage1, Gravity.Northwest, 1, 5, CompositeOperator.Over);
+            image.Composite(heartImage1, Gravity.Northwest, 5, 5, CompositeOperator.Over);
             if (highlight && highlightHeart == 2)
             {
                 using var smallHighlight = new MagickImage(await File.ReadAllBytesAsync($"Assets/CharacterSprites/BOXSMALL.png"));
                 image.Composite(smallHighlight, Gravity.Northwest, 31, 4, CompositeOperator.Over);
             }
-            image.Composite(heartImage2, Gravity.Northwest, 31, 5, CompositeOperator.Over);
+            image.Composite(heartImage2, Gravity.Northwest, 35, 5, CompositeOperator.Over);
 
 
             return image;
@@ -185,3 +185,4 @@ namespace PrideBot.Registration
         }
     }
 }
+    

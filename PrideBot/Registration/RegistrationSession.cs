@@ -230,20 +230,34 @@ namespace PrideBot.Registration
                 await channel.SendMessageAsync(embed: conirmationEmbed.Build());
             }
 
-            embed = embed.WithDescription(DialogueDict.Get("REGISTRATION_HEART_PROMPT")
-                    + "\n\n" + DialogueDict.Get("REGISTRATION_HEART_CHOOSE", selectedUserShip.Character1First, SkipEmote))
-                .WithImageUrl(await GenerateShipImage(dbUser, dbUserShips, highlightTier: (int)tier, highlightHeart: 1))
-                .WithTitle($"{tier} Pair Heart Setup");
             var heartEmotes = client.GetGuild(796585563166736394).Emotes.Where(a => a.Name.StartsWith("shipheart"))
                 .Select(a => (IEmote)a)
                 .ToList();
+            // Make sure we have heart all emote images
+            foreach (var heartEmote in heartEmotes)
+            {
+                var heartFile = $"Assets/Hearts/{heartEmote.Name}.png";
+                if (!File.Exists(heartFile))
+                {
+                    var data = await WebHelper.DownloadWebFileDataAsync((heartEmote as Emote).Url);
+                    var stream = new FileStream(heartFile, FileMode.Create, FileAccess.Write);
+                    stream.Seek(0, SeekOrigin.Begin);
+                    await stream.WriteAsync(data);
+                    stream.Close();
+                }
+            }
+            var heartChoicesStr = string.Join(" ", heartEmotes);
+            embed = embed.WithDescription(DialogueDict.Get("REGISTRATION_HEART_PROMPT")
+                    + "\n\n" + DialogueDict.Get("REGISTRATION_HEART_CHOOSE", selectedUserShip.Character1First, SkipEmote, heartChoicesStr))
+                .WithImageUrl(await GenerateShipImage(dbUser, dbUserShips, highlightTier: (int)tier, highlightHeart: 1))
+                .WithTitle($"{tier} Pair Heart Setup");
             response = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: heartEmotes, canSkip: true);
             if (!response.IsSkipped)
             {
                 selectedUserShip.Heart1 = ((Emote)response.EmoteResponse).Name;
                 await repo.UpdateUserShipAsync(connection, selectedUserShip);
                 embed = embed
-                    .WithDescription(DialogueDict.Get("REGISTRATION_HEART_CHOOSE", selectedUserShip.Character2First, SkipEmote))
+                    .WithDescription(DialogueDict.Get("REGISTRATION_HEART_CHOOSE", selectedUserShip.Character2First, SkipEmote, heartChoicesStr))
                     .WithImageUrl(await GenerateShipImage(dbUser, dbUserShips, highlightTier: (int)tier, highlightHeart: 2));
                 response = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: heartEmotes, canSkip: true);
                 if (!response.IsSkipped)
@@ -378,11 +392,14 @@ namespace PrideBot.Registration
                 .ToUpper()
                 .Split()
                 .Where(a => a.Any())
-                .Select(a => a.Replace("'", ""))
+                .Select(a => ZeroPunctuation(a))
                 .ToArray();
             return characters
-                .FirstOrDefault(a => !words.Except(a.Name.Replace("'", "").ToUpper().Split()).Any());   // All words in input name appear in character name
+                .FirstOrDefault(a => !words.Except(ZeroPunctuation(a.Name).ToUpper().Split()).Any());   // All words in input name appear in character name
         }
+
+        string ZeroPunctuation(string str)
+            => new string(str.Where(a => !char.IsPunctuation(a)).ToArray());
 
         async Task<EmbedBuilder> GetEmbedWithShipsAsync(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0)
         => GetEmbed()

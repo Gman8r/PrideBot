@@ -51,7 +51,7 @@ namespace PrideBot.Modules
             var guildSettings = await repo.GetOrCreateGuildSettingsAsync(connection, client.GetGyn(config).Id.ToString());
             if (!guildSettings.QuizOpen)
             {
-                throw new CommandException(DialogueDict.Get("QUIZ_CLOSED"));
+                throw new CommandException(DialogueDict.GetNoBrainRot("QUIZ_CLOSED"));
             }
             var quizLog = await repo.GetOrCreateQuizLogAsync(connection, Context.User.Id.ToString(), guildSettings.QuizDay.ToString());
             if (quizLog.Attempted)
@@ -59,11 +59,11 @@ namespace PrideBot.Modules
                 if (Context.User.IsGYNSage(config))
                     await ReplyAsync("I'd yell at you here bc you've taken the quiz but you're a sage so nvm YEET!");
                 else
-                    throw new CommandException(DialogueDict.Get("QUIZ_ATTEMPTED"));
+                    throw new CommandException(DialogueDict.GetNoBrainRot("QUIZ_ATTEMPTED"));
             }
             await connection.CloseAsync();
             await new QuizSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, repo, client,
-                new TimeSpan(0, 5, 0), Context.Message, scoringService, quizLog, guildSettings)
+                new TimeSpan(0, 10, 0), Context.Message, scoringService, quizLog, guildSettings)
                 .PerformSessionAsync();
         }
 

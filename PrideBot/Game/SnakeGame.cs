@@ -39,6 +39,7 @@ namespace PrideBot.Quizzes
     {
         readonly ModelRepository repo;
         readonly IConfigurationRoot config;
+        DiscordSocketClient tsuchiClient;
         readonly DiscordSocketClient mainClient;
         readonly ScoringService scoringService;
         readonly LoggingService loggingService;
@@ -46,7 +47,6 @@ namespace PrideBot.Quizzes
         readonly TokenConfig tokenConfig;
         readonly IServiceProvider provider;
 
-        DiscordSocketClient tsuchiClient;
         SocketVoiceChannel tsuchiConnectedChannel;
         DateTime nextSnakeTime;
 
@@ -60,38 +60,86 @@ namespace PrideBot.Quizzes
             this.userReg = userReg;
             this.tokenConfig = tokenConfig;
 
-            client.Ready += MainClientReady;
+            client.Ready += DoGameLoop;
+            client.UserVoiceStateUpdated += UserVoiceStateUpdated;
             this.provider = provider;
         }
 
-        private Task MainClientReady()
-        {
-            Task.Run(async () =>
-            {
-                tsuchiClient = new DiscordSocketClient();
-                await tsuchiClient.LoginAsync(TokenType.Bot, tokenConfig["tsuchitoken"]);
-                await tsuchiClient.StartAsync();
+        //private Task MainClientReady()
+        //{
+        //    Task.Run(async () =>
+        //    {
+        //        tsuchiClient = new DiscordSocketClient();
+        //        await tsuchiClient.LoginAsync(TokenType.Bot, tokenConfig["tsuchitoken"]);
+        //        await tsuchiClient.StartAsync();
 
-                tsuchiClient.Ready += DoGameLoop;
-                mainClient.UserVoiceStateUpdated += UserVoiceStateUpdated;
-            }).GetAwaiter();
-            return Task.CompletedTask;
-        }
+        //        tsuchiClient.Ready += DoGameLoop;
+        //        mainClient.UserVoiceStateUpdated += UserVoiceStateUpdated;
+        //    }).GetAwaiter();
+        //    return Task.CompletedTask;
+        //}
 
         private Task UserVoiceStateUpdated(SocketUser user, SocketVoiceState before, SocketVoiceState after)
         {
             if (tsuchiConnectedChannel == null || user.IsBot || after.VoiceChannel.Id != tsuchiConnectedChannel.Id)
                 return Task.CompletedTask;
-            var channel = tsuchiConnectedChannel;
             tsuchiConnectedChannel = null;
             Task.Run(async () =>
             {
-                await channel.DisconnectAsync();
                 using var connection = repo.GetDatabaseConnection();
                 await connection.OpenAsync();
                 await scoringService.AddAndDisplayAchievementAsync(connection, user, "SNAKE", tsuchiClient.CurrentUser);
             }).GetAwaiter();
             return Task.CompletedTask;
+        }
+
+        private async Task PerformTsuchiTasks(Random rand)
+        {
+            tsuchiClient = new DiscordSocketClient();
+            await tsuchiClient.LoginAsync(TokenType.Bot, tokenConfig["tsuchitoken"]);
+            await tsuchiClient.StartAsync();
+
+            var ready = false;
+            tsuchiClient.Ready += () => { ready = true; return Task.CompletedTask; };
+            while (!ready)
+            {
+                await Task.Delay(100);
+            }
+
+            var tsuchiChannels = tsuchiClient.GetGyn(config).VoiceChannels
+                .Where(a => !a.Users.Any())
+                .ToArray();
+
+            SocketVoiceChannel channel = null;
+            if (tsuchiChannels.Any())
+            {
+                tsuchiConnectedChannel = tsuchiChannels[rand.Next() % tsuchiChannels.Length];
+                channel = tsuchiConnectedChannel;
+                int tries = 0;
+                while (tries < 5)
+                {
+                    tries++;
+                    try
+                    {
+                        await tsuchiConnectedChannel.ConnectAsync();
+                        break;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Failed try #{tries} to connect Tsuchi to voice.");
+                        if (tries == 5)
+                            Console.WriteLine(e);
+                    }
+                }
+            }
+
+            while (tsuchiConnectedChannel != null)
+            {
+                await Task.Delay(100);
+            }
+            if (channel != null)
+                await channel.DisconnectAsync();
+            await tsuchiClient.LogoutAsync();
         }
 
         Task DoGameLoop()
@@ -124,39 +172,15 @@ namespace PrideBot.Quizzes
                         if (!GameHelper.IsEventOccuring(config))
                             break;
 
-                        var tsuchiChannels = tsuchiClient.GetGyn(config).VoiceChannels
-                            .Where(a => !a.Users.Any())
-                            .ToArray();
-                        if (tsuchiChannels.Any())
-                        {
-                            tsuchiConnectedChannel = tsuchiChannels[rand.Next() % tsuchiChannels.Length];
-                            int tries = 0;
-                            while (tries < 100)
-                            {
-                                tries++;
-                                try
-                                {
-                                    await tsuchiConnectedChannel.ConnectAsync();
-                                    break;
-                                }
-                                catch
-                                {
-                                    Console.WriteLine($"Failed try #{tries} to connect Tsuchi to voice.");
-                                }
-                            }
-                            var endTime = nextSnakeTime.AddMinutes(await GetVoiceMinutesAsync());
-                            while (DateTime.Now < endTime && tsuchiConnectedChannel != null)
-                            {
-                                await Task.Delay(1000);
-                            }
-                            if (tsuchiConnectedChannel != null)
-                            {
-                                var channel = tsuchiConnectedChannel;
-                                tsuchiConnectedChannel = null;
-                                await channel.DisconnectAsync();
-                            }
+                        PerformTsuchiTasks(rand).GetAwaiter();
 
+                        var endTime = nextSnakeTime.AddMinutes(await GetVoiceMinutesAsync());
+                        while (DateTime.Now < endTime && tsuchiConnectedChannel != null)
+                        {
+                            await Task.Delay(100);
                         }
+                        tsuchiConnectedChannel = null;
+
 
                         await SetLastSnakeDayAsync(DateTime.Now.Day);
                         nextSnakeTime = GetSnakeTime(DateTime.Now.Day + 1,
@@ -215,7 +239,7 @@ namespace PrideBot.Quizzes
                 ? (DateTime.Now.Hour * 60) + DateTime.Now.Minute
                 : 0;
             var minuteMax = (24 * 60) - (minutesOnChat + 10);
-            if (currentMinute >= minuteMax)
+            if (currentMinute >= minuteMax) 
                 return DateTime.Now;
             var minuteChosen = currentMinute + (rand.Next() % (minuteMax - currentMinute));
             var dt = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).AddDays(day - 1).AddMinutes(minuteChosen);
@@ -224,7 +248,7 @@ namespace PrideBot.Quizzes
 
             // For debuggin
             //dt = DateTime.Now;//.AddDays(dt.Day - DateTime.Now.Day);
-            //dt = dt.AddSeconds(30);
+            //dt = dt.AddMinutes(1);
 
             return dt;
         }

@@ -82,10 +82,10 @@ namespace PrideBot.Events
                 typing.Dispose();
 
 
-                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBullshit("RULES_1", config.GetDefaultPrefix(), guild.GetChannelFromConfig(config, "quizchannel")));
-                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBullshit("RULES_2"));
-                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBullshit("RULES_3"));
-                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBullshit("RULES_4", config.GetDefaultPrefix(), guild.GetChannelFromConfig(config, "scorereportchannel")));
+                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBrainRot("RULES_1", config.GetDefaultPrefix(), guild.GetChannelFromConfig(config, "quizchannel")));
+                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBrainRot("RULES_2"));
+                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBrainRot("RULES_3"));
+                await rulesChannel.SendMessageAsync(DialogueDict.GetNoBrainRot("RULES_4", config.GetDefaultPrefix(), guild.GetChannelFromConfig(config, "scorereportchannel")));
             }
             catch (Exception e)
             {
@@ -104,7 +104,7 @@ namespace PrideBot.Events
         async Task<IMessage> PostAnnouncementMessageAsync(ITextChannel channel, string announcementId, int messageIndex, bool bullshit, params object[] dialogueArgs)
         {
             var key = $"ANNOUNCEMENT_{announcementId}_{messageIndex}";
-            var content = bullshit ? DialogueDict.Get(key, dialogueArgs) : DialogueDict.GetNoBullshit(key, dialogueArgs);
+            var content = bullshit ? DialogueDict.Get(key, dialogueArgs) : DialogueDict.GetNoBrainRot(key, dialogueArgs);
             var folder = $"Assets/AnnouncementFiles/{key}/";
             if (!Directory.Exists(folder))
                 return await channel.SendMessageAsync(content);
@@ -126,11 +126,11 @@ namespace PrideBot.Events
                 .OrderBy(a => a)
                 .ToArray();
 
-            await PostOrEditMessageAsync(messages, 0, DialogueDict.GetNoBullshit("RULES_1", config.GetDefaultPrefix(), 
+            await PostOrEditMessageAsync(messages, 0, DialogueDict.GetNoBrainRot("RULES_1", config.GetDefaultPrefix(), 
                 (guild.GetChannelFromConfig(config, "quizchannel") as ITextChannel).Mention));
-            await PostOrEditMessageAsync(messages, 1, DialogueDict.GetNoBullshit("RULES_2"));
-            await PostOrEditMessageAsync(messages, 2, DialogueDict.GetNoBullshit("RULES_3"));
-            await PostOrEditMessageAsync(messages, 3, DialogueDict.GetNoBullshit("RULES_4", config.GetDefaultPrefix(),
+            await PostOrEditMessageAsync(messages, 1, DialogueDict.GetNoBrainRot("RULES_2"));
+            await PostOrEditMessageAsync(messages, 2, DialogueDict.GetNoBrainRot("RULES_3"));
+            await PostOrEditMessageAsync(messages, 3, DialogueDict.GetNoBrainRot("RULES_4", config.GetDefaultPrefix(),
                 (guild.GetChannelFromConfig(config, "scorereportchannel") as ITextChannel).Mention));
 
         }

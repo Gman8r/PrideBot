@@ -112,7 +112,7 @@ namespace PrideBot
                 if (errorMessage != null)
                 {
                     await context.Channel.SendMessageAsync(embed:
-                        EmbedHelper.GetEventErrorEmbed(context.User, DialogueDict.RollBullshit(errorMessage), context.Client as DiscordSocketClient).Build());
+                        EmbedHelper.GetEventErrorEmbed(context.User, DialogueDict.RollBrainrot(errorMessage), context.Client as DiscordSocketClient).Build());
                 }
             }
             catch (Exception e)

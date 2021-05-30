@@ -36,7 +36,7 @@ namespace PrideBot
         public static Dictionary<string, string> GetDict() => instance.dict;
 
 
-        public static string GetNoBullshit(string key, params object[] args)
+        public static string GetNoBrainRot(string key, params object[] args)
         {
 
             var variants = instance.dict.Keys
@@ -56,9 +56,9 @@ namespace PrideBot
             return str;
         }
 
-        public static string Get(string key, params object[] args) => RollBullshit(GetNoBullshit(key, args));
+        public static string Get(string key, params object[] args) => RollBrainrot(GetNoBrainRot(key, args));
 
-        public static string RollBullshit(string str, double chance = .1)
+        public static string RollBrainrot(string str, double chance = .1)
         {
             var rand = new Random();
 
@@ -105,8 +105,8 @@ namespace PrideBot
                     "amogus.",
                     "01100111 01100001 01111001.",
                     "eat pant.",
+                    "Mom holy fuck!",
                     "Skadoosh!",
-                    "",
                     "Nice hair wow!!",
                     "Home of sexual.",
                     "Gay Gay Homo Sexual Gay."};
@@ -118,7 +118,7 @@ namespace PrideBot
                 if (str.Last() == '!' && phrase.Last() == '.')
                     phrase = phrase.Substring(0, phrase.Length - 1) + "!";
                 str += " " + phrase;
-                str = RollBullshit(str, .25);    // Double up baby
+                str = RollBrainrot(str, .25);    // Double up baby
             }
             return str;
         }

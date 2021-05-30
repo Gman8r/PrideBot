@@ -98,7 +98,7 @@ namespace PrideBot.Modules
         [Summary("Relays a message.")]
         public async Task Echo([Remainder] string message)
         {
-            await ReplyAsync(DialogueDict.RollBullshit(message));
+            await ReplyAsync(DialogueDict.RollBrainrot(message));
         }
 
         [Command("say")]
@@ -107,7 +107,7 @@ namespace PrideBot.Modules
         [Summary("Relays a message in the specified chat channel.")]
         public async Task Echo(SocketTextChannel channel, [Remainder] string message)
         {
-            await channel.SendMessageAsync(DialogueDict.RollBullshit(message));
+            await channel.SendMessageAsync(DialogueDict.RollBrainrot(message));
             await ReplyResultAsync("Done!");
         }
     }

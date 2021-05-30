@@ -52,7 +52,7 @@ namespace PrideBot.Modules
         public async Task Register()
         {
             await new RegistrationSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, shipImageGenerator, repo, client,
-                new TimeSpan(0, 5, 0), Context.Message, scoringService, userReg)
+                new TimeSpan(0, 10, 0), Context.Message, scoringService, userReg)
                 .PerformSessionAsync();
         }
 
@@ -78,7 +78,7 @@ namespace PrideBot.Modules
             {
                 var fileCount = Directory.GetFiles("Assets/Backgrounds").Length;
                 if (bgIndex <= 0 || bgIndex > fileCount)
-                    throw new CommandException(DialogueDict.Get("SET_BACKGROUND_ERROR"));
+                    throw new CommandException(DialogueDict.GetNoBrainRot("SET_BACKGROUND_ERROR"));
                 dbUser.CardBackground = bgIndex;
                 await repo.UpdateUserAsync(connection, dbUser);
 

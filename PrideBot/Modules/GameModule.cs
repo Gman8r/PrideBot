@@ -77,12 +77,15 @@ namespace PrideBot.Modules
             var dbShips = await repo.GetUserShipsAsync(connection, dbUser);
 
             var imagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips);
-            var embed = EmbedHelper.GetEventEmbed(user, config, userInThumbnail: true)
+            var embed = EmbedHelper.GetEventEmbed(Context.User, config)
                 .WithImageUrl(config.GetRelativeHostPathWeb(imagePath))
-                .WithTitle($"Overview for {(user as IGuildUser)?.Nickname ?? user.Username}")
+                .WithThumbnailUrl(user.GetAvatarUrlOrDefault())
+                .WithTitle($"User Overview")
                 .WithDescription(isSelf ? "Here's who you're supporting!" : $"Here's who {user.Mention} is supporting!")
                 .WithFooter(new EmbedFooterBuilder()
                     .WithText(user.Id.ToString()));
+            //if (user.Id == Context.User.Id)
+            //    embed.Author = null;
             embed.AddField("Ships Supported:",
                 string.Join("\n", Enumerable.Range(0, 3)
                 .Select(a => (UserShipTier)a)
