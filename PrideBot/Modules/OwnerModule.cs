@@ -19,6 +19,7 @@ using Microsoft.Data.SqlClient;
 using PrideBot.Models;
 using PrideBot.Repository;
 using PrideBot.Events;
+using PrideBot.Game;
 
 namespace PrideBot.Modules
 {
@@ -28,11 +29,15 @@ namespace PrideBot.Modules
     {
         readonly ModelRepository modelRepository;
         readonly AnnouncementService announcementService;
+        readonly LeaderboardImageGenerator leaderboardImageGenerator;
+        readonly IConfigurationRoot config;
 
-        public OwnerModule(ModelRepository modelRepository, AnnouncementService announcementService)
+        public OwnerModule(ModelRepository modelRepository, AnnouncementService announcementService, LeaderboardImageGenerator leaderboardImageGenerator, IConfigurationRoot config)
         {
             this.modelRepository = modelRepository;
             this.announcementService = announcementService;
+            this.leaderboardImageGenerator = leaderboardImageGenerator;
+            this.config = config;
         }
 
         [Command("announceintro")]
@@ -40,6 +45,15 @@ namespace PrideBot.Modules
         public async Task AnnounceIntro()
         {
             await announcementService.IntroAnnouncementAsync(Context.Guild);
+        }
+
+        [Command("leaderboard")]
+        public async Task Leaderboard()
+        {
+            var imagePath = await leaderboardImageGenerator.WriteLeaderboardAsync();
+            var embed = EmbedHelper.GetEventEmbed(Context.User, config)
+                .WithImageUrl(config.GetRelativeHostPathWeb(imagePath));
+            await ReplyAsync(embed: embed.Build());
         }
     }
 }

@@ -12,5 +12,6 @@ namespace PrideBot.Models
         public bool QuizOpen { get; set; }
         public int LastSnakeDay { get; set; }
         public int SnakeMinutes { get; set; }
+        public bool LeaderboardAvailable { get; set; }
     }
 }

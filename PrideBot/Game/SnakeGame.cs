@@ -173,6 +173,7 @@ namespace PrideBot.Quizzes
                             break;
 
                         PerformTsuchiTasks(rand).GetAwaiter();
+                        mainClient.GetUser(ulong.Parse(config["ids:owner"])).AttemptSendDMAsync(provider, $"Tsuchi in da house.").GetAwaiter();
 
                         var endTime = nextSnakeTime.AddMinutes(await GetVoiceMinutesAsync());
                         while (DateTime.Now < endTime && tsuchiConnectedChannel != null)

@@ -85,10 +85,15 @@ namespace PrideBot.Game
                     var connection = repo.GetDatabaseConnection();
                     await connection.OpenAsync();
                     var achievement = await repo.GetAchievementAsync(connection, "CHAT");
+                    // Check last score for potential cooldown
+                    var lastScore = await repo.GetLastScoreFromUserAndAchievementAsync(connection, user.Id.ToString(), "CHAT");
+                    // If user hasn't scored within the cooldown time, just null the score
+                    if (lastScore != null && DateTime.Now > lastScore.TimeStamp.AddHours(achievement.CooldownHours))
+                        lastScore = null;
                     ChatData[user.Id] = new UserChatData()
                     {
                         Id = user.Id,
-                        expires = DateTime.Now.AddHours(achievement.CooldownHours).AddMinutes(1)
+                        expires = (lastScore?.TimeStamp ?? DateTime.Now).AddHours(achievement.CooldownHours)
                     };
                 }
                 

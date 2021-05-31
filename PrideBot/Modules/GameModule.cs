@@ -49,7 +49,7 @@ namespace PrideBot.Modules
 
         [Command("ships")]
         [Alias("pairings")]
-        [Summary("Views your chosen pairings.")]
+        [Summary("Views your chosen pairings, or someone else's if you specify a user!")]
         public async Task Ships(SocketUser user = null)
         {
             user ??= Context.User;
@@ -84,8 +84,7 @@ namespace PrideBot.Modules
                 .WithDescription(isSelf ? "Here's who you're supporting!" : $"Here's who {user.Mention} is supporting!")
                 .WithFooter(new EmbedFooterBuilder()
                     .WithText(user.Id.ToString()));
-            //if (user.Id == Context.User.Id)
-            //    embed.Author = null;
+
             embed.AddField("Ships Supported:",
                 string.Join("\n", Enumerable.Range(0, 3)
                 .Select(a => (UserShipTier)a)
@@ -93,6 +92,74 @@ namespace PrideBot.Modules
                 .Select(a => $"{EmoteHelper.GetShipTierEmoji(a)} **{a}** Pairing: **{dbShips.Get(a)?.GetDisplayName() ?? "None"}**" +
                     $" {((dbShips.Get(a).ScoreRatio == 1m || !dbShips.Has(a)) ? "" : $" ({GameHelper.GetPointPercent(dbShips.Get(a).ScoreRatio)}% SP)")}")));
 
+            await ReplyAsync(embed: embed.Build());
+        }
+
+        [Command("scores")]
+        [Alias("score")]
+        [RequireRegistration]
+        [Summary("Views your ships and how well they're doing!")]
+        public async Task SCore()
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var dbUser = await repo.GetUserAsync(connection, Context.User.Id.ToString());
+            var username = (Context.User as SocketGuildUser)?.Nickname ?? Context.User.Username;
+            var dbShips = await repo.GetUserShipsAsync(connection, dbUser);
+
+            var embed = EmbedHelper.GetEventEmbed(Context.User, config)
+                .WithThumbnailUrl(Context.User.GetAvatarUrlOrDefault())
+                .WithTitle($"Score Overview")
+                .WithDescription("Here's some stats on how your ships are doing!")
+                .WithFooter(new EmbedFooterBuilder()
+                    .WithText(Context.User.Id.ToString()));
+            var spEmote = EmoteHelper.SPEmote;
+
+            var guildSettings = await repo.GetGuildSettings(connection, config["ids:gyn"]);
+            var leaderboardRevealed = guildSettings.LeaderboardAvailable;
+            if (!leaderboardRevealed)
+                embed.Description += " But HMM I can only see so much right now, it'll take some time before I can get you the full picture!";
+
+            //foreach (var ship in dbShips)
+            //{
+            //    embed.AddField($"__**{ship.GetDisplayName()}:**__",
+            //        $"\n**#{(scoreboardRevealed ? ship.Place.ToString() : "??")}**" +
+            //        $" with **{(ship.PointsEarned)} {spEmote}**" +
+            //        $" (**{ship.PointsEarnedByUser}** from you)", true);
+            //}
+
+            //embed.AddField("\u200B",
+            //    string.Join("\n\n", Enumerable.Range(0, 3)
+            //    .Select(a => (UserShipTier)a)
+            //    .Where(a => dbShips.Has(a))
+            //    .Select(a => $"__**{dbShips.Get(a)?.GetDisplayName() ?? "None"}:**__" +
+            //        $"\n**#{(scoreboardRevealed ? dbShips.Get(a).Place.ToString() : "??")}**" +
+            //        $" with **{(dbShips.Get(a).PointsEarned)} {spEmote}**" +
+            //        $" (**{dbShips.Get(a).PointsEarnedByUser}** from you)")), false);
+
+            foreach (var ship in dbShips)
+            {
+                embed.AddField($"__**{ship.GetDisplayName()}:**__",
+                    $"Sitting at **#{(leaderboardRevealed ? ship.Place.ToString() : "??")}**" +
+                    $" with **{(leaderboardRevealed ? ship.PointsEarned.ToString() : "???")} {spEmote}**" +
+                    $" (**{ship.PointsEarnedByUser}** from you)");
+            }
+
+            var recentScores = await repo.GetRecentScoresForUserAsync(connection, dbUser.UserId);
+            if (recentScores.Any())
+                embed.AddField("Your Recent Achievements (Last 24 Hours):",
+                    string.Join("\n", recentScores
+                    .Select(a => $"- {(a.Count > 1 ? $"**{a.Count}x**" : "")} {a.Description}")), true);
+
+            var scoreStrs = Enumerable.Range(0, 3)
+                .Select(a => !dbShips.Has((UserShipTier)a)
+                    ? null 
+                    : (leaderboardRevealed 
+                        ? "#" + dbShips.Get((UserShipTier)a).Place.ToString()
+                        : "#??"))
+                .ToArray();
+            var imagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips, scoreTexts: scoreStrs);
+            embed.ImageUrl = config.GetRelativeHostPathWeb(imagePath);
             await ReplyAsync(embed: embed.Build());
         }
     }

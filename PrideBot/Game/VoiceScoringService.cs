@@ -66,6 +66,8 @@ namespace PrideBot.Quizzes
             return Task.CompletedTask;
         }
 
+        DateTime GetNow() => DateTime.Now;  // For debugging
+
         async Task DoCheckLoop()
         {
             try
@@ -87,19 +89,14 @@ namespace PrideBot.Quizzes
                     if (!GameHelper.IsEventOccuring(config))
                         break;
 
-                    //Console.WriteLine();
-                    //foreach (var uvt in UserVoiceTimes)
-                    //{
-                    //    Console.WriteLine($"{uvt.Key} {uvt.Value.TotalSeconds}");
-                    //}
-
-                    if (DateTime.Now.Day != currentDay)
+                    if (GetNow().Day != currentDay)
                     {
-                        foreach (var key in UserVoiceTimes.Keys)
+                        var keys = UserVoiceTimes.Keys.ToArray();    // Why do I have to do this to say it's not modifying the collection?
+                        foreach (var key in keys)
                         {
                             UserVoiceTimes[key] = TimeSpan.FromMinutes(0);
                         }
-                        currentDay = DateTime.Now.Day;
+                        currentDay = GetNow().Day;
                     }
 
                     var currentLoopTime = DateTime.Now;

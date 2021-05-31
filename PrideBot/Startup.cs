@@ -124,6 +124,7 @@ namespace PrideBot
                 .AddSingleton<VoiceScoringService>()
                 .AddSingleton<TokenConfig>()
                 .AddSingleton<SnakeGame>()
+                .AddSingleton<LeaderboardImageGenerator>()
                 .AddSingleton<AnnouncementService>();
                 //.AddSingleton<PlayStatusService>();
             }

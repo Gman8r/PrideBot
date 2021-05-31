@@ -15,6 +15,9 @@ namespace PrideBot.Repository
         public async Task<Score> GetScoreAsync(SqlConnection conn, string scoreId)
         => (await new SqlCommand($"select * from VI_SCORES where SCORE_ID = '{scoreId}'", conn).ExecuteReaderAsync()).As<Score>().FirstOrDefault();
 
+        public async Task<IEnumerable<RecentScore>> GetRecentScoresForUserAsync(SqlConnection conn, string userId)
+        => (await new SqlCommand($"select * from dbo.fnRecentScoresForUser('{userId}') order by LAST_TIME desc", conn).ExecuteReaderAsync()).As<RecentScore>();
+
         public async Task<Score> GetLastScoreFromUserAndAchievementAsync(SqlConnection conn, string userId, string achievementId)
         => (await new SqlCommand($"select top 1 * from VI_SCORES where USER_ID = '{userId}' and ACHIEVEMENT_ID = '{achievementId}'" +
             $" order by TIMESTAMP desc", conn).ExecuteReaderAsync()).As<Score>().FirstOrDefault();

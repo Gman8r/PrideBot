@@ -112,10 +112,10 @@ namespace PrideBot.Game
                     embed.AddField($"You feel your bond with your community grow stronger...\nYou've earned {EmoteHelper.SPEmote} !", scoreStr.Trim());
 
                     var scores = Enumerable.Range(0, 3)
-                        .Select(a => dbShipScores
-                            .FirstOrDefault(aa => ((int)aa.Tier) == a)?.PointsEarned ?? 0)
+                        .Select(a => "+" + (dbShipScores
+                            .FirstOrDefault(aa => ((int)aa.Tier) == a)?.PointsEarned ?? 0).ToString())
                         .ToArray();
-                    var imagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbUserShips, scores: scores);
+                    var imagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbUserShips, scoreTexts: scores);
                     embed.ImageUrl = config.GetRelativeHostPathWeb(imagePath);
                     break;
 
