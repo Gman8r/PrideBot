@@ -46,7 +46,20 @@ namespace PrideBot.Quizzes
         readonly UserRegisteredCache userReg;
 
         int currentDay;
-        Dictionary<ulong, TimeSpan> UserVoiceTimes;
+        Dictionary<ulong, UserVoiceData> voiceData;
+        public class UserVoiceData
+        {
+            public ulong Id;
+            public Optional<IVoiceState> voiceState;
+            public TimeSpan voiceTime;
+            public TimeSpan streamTime;
+
+            public UserVoiceData(ulong id, Optional<IVoiceState> voiceState)
+            {
+                Id = id;
+                this.voiceState = voiceState;
+            }
+        }
 
         public VoiceScoringService(ModelRepository repo, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, LoggingService loggingService, UserRegisteredCache userReg)
         {
@@ -57,7 +70,38 @@ namespace PrideBot.Quizzes
             this.loggingService = loggingService;
             this.userReg = userReg;
 
+            voiceData = new Dictionary<ulong, UserVoiceData>();
             client.Ready += ClientReady;
+            client.UserVoiceStateUpdated += VoiceStateUpdated;
+        }
+
+        private async Task VoiceStateUpdated(SocketUser user, SocketVoiceState before, SocketVoiceState after)
+        {
+            if ((after.VoiceChannel?.Guild?.Id ?? (ulong)0) != ulong.Parse(config["ids:gyn"]))
+                return;
+
+            if (!voiceData.ContainsKey(user.Id))
+                await AddUserDataAsync(user, new Optional<IVoiceState>(after as IVoiceState));
+            else
+                voiceData[user.Id].voiceState = after;
+        }
+
+        private async Task AddUserDataAsync(SocketUser user, Optional<IVoiceState> state)
+        {
+            voiceData[user.Id] = new UserVoiceData(user.Id, state);
+
+            // Check if they've already gotten either achievement today
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var lastVoiceScore = await repo.GetLastScoreFromUserAndAchievementAsync(connection, user.Id.ToString(), "VOICE");
+            var lastStreamScore = await repo.GetLastScoreFromUserAndAchievementAsync(connection, user.Id.ToString(), "STREAM");
+            var minMInutes = int.Parse(config["voiechatminutes"]);
+
+            // If so, just give em the required minutes x2 so they defo dont get the achievement
+            if (lastVoiceScore != null && lastVoiceScore.TimeStamp.Day == currentDay)
+                voiceData[user.Id].voiceTime = TimeSpan.FromMinutes(minMInutes * 2);
+            if (lastStreamScore != null && lastStreamScore.TimeStamp.Day == currentDay)
+                voiceData[user.Id].streamTime = TimeSpan.FromMinutes(minMInutes * 2);
         }
 
         private Task ClientReady()
@@ -79,10 +123,9 @@ namespace PrideBot.Quizzes
 
                 if (currentDay == 0)
                     currentDay = DateTime.Now.Day;
-                UserVoiceTimes ??= new Dictionary<ulong, TimeSpan>();
 
                 var guild = client.GetGyn(config);
-                var minMInutes = int.Parse(config["voiechatminutes"]);
+                var minMinutes = int.Parse(config["voiechatminutes"]);
                 var lastLoopTime = DateTime.Now;
                 while (true)
                 {
@@ -91,10 +134,11 @@ namespace PrideBot.Quizzes
 
                     if (GetNow().Day != currentDay)
                     {
-                        var keys = UserVoiceTimes.Keys.ToArray();    // Why do I have to do this to say it's not modifying the collection?
+                        var keys = voiceData.Keys.ToArray();    // Why do I have to do this to say it's not modifying the collection?
                         foreach (var key in keys)
                         {
-                            UserVoiceTimes[key] = TimeSpan.FromMinutes(0);
+                            voiceData[key].voiceTime = TimeSpan.FromMinutes(0);
+                            voiceData[key].streamTime = TimeSpan.FromMinutes(0);
                         }
                         currentDay = GetNow().Day;
                     }
@@ -107,35 +151,42 @@ namespace PrideBot.Quizzes
                         {
                             foreach (var user in users)
                             {
-                                // User is not registered, just move on
+                                // If user is not registered, just move on
                                 if (!(await userReg.GetOrDownloadAsync(user.Id.ToString())))
                                     continue;
-                                // FIrst time we've seen the user in a voice chat this runtime
-                                else if (!UserVoiceTimes.ContainsKey(user.Id))
-                                {
-                                    // Check if they've already gotten the achievement today
-                                    using var connection = repo.GetDatabaseConnection();
-                                    await connection.OpenAsync();
-                                    var lastScore = await repo.GetLastScoreFromUserAndAchievementAsync(connection, user.Id.ToString(), "VOICE");
 
-                                    // If so, just give em the required minutes x2 so they def dont get the achievement
-                                    if (lastScore != null && lastScore.TimeStamp.Day == currentDay)
-                                        UserVoiceTimes[user.Id] = TimeSpan.FromMinutes(minMInutes * 2);
-                                    else
-                                        UserVoiceTimes[user.Id] = TimeSpan.FromMinutes(0);
-                                }
+                                // Create user if necessary, maybe the bot started up mid-call
+                                if (!voiceData.ContainsKey(user.Id))
+                                    await AddUserDataAsync(user, Optional<IVoiceState>.Unspecified);
+
                                 // If they have more than the required amount of minutes we've already given the achievement to them today
-                                if (UserVoiceTimes[user.Id].TotalMinutes >= minMInutes)
-                                    continue;
-
-                                // Now add however much time has passed and see if it's time to give the achievmeent
-                                UserVoiceTimes[user.Id] += currentLoopTime - lastLoopTime;
-                                if (UserVoiceTimes[user.Id].TotalMinutes >= minMInutes)
+                                if (voiceData[user.Id].voiceTime.TotalMinutes < minMinutes)
                                 {
-                                    using var connection = repo.GetDatabaseConnection();
-                                    await connection.OpenAsync();
-                                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "VOICE", client.CurrentUser);
+                                    // Now add however much time has passed and see if it's time to give the achievmeent
+                                    voiceData[user.Id].voiceTime += currentLoopTime - lastLoopTime;
+                                    if (voiceData[user.Id].voiceTime.TotalMinutes >= minMinutes)
+                                    {
+                                        using var connection = repo.GetDatabaseConnection();
+                                        await connection.OpenAsync();
+                                        await scoringService.AddAndDisplayAchievementAsync(connection, user, "VOICE", client.CurrentUser);
+                                    }
                                 }
+
+                                // Repeat with stream if they're streaming
+                                if (voiceData[user.Id].voiceState.IsSpecified
+                                    && voiceData[user.Id].voiceState.Value.IsStreaming
+                                    && voiceData[user.Id].streamTime.TotalMinutes < minMinutes)
+                                {
+                                    // Now add however much time has passed and see if it's time to give the achievmeent
+                                    voiceData[user.Id].streamTime += currentLoopTime - lastLoopTime;
+                                    if (voiceData[user.Id].streamTime.TotalMinutes >= minMinutes)
+                                    {
+                                        using var connection = repo.GetDatabaseConnection();
+                                        await connection.OpenAsync();
+                                        await scoringService.AddAndDisplayAchievementAsync(connection, user, "STREAM", client.CurrentUser);
+                                    }
+                                }
+
                             }
                         }
                     }
