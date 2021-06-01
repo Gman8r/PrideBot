@@ -212,10 +212,17 @@ namespace PrideBot.Quizzes
             var quizOpenedMessage = (await quizChannel.GetPinnedMessagesAsync()).FirstOrDefault();
             var quizOpenedUrl = quizOpenedMessage?.GetJumpUrl();
 
-            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, titleUrl: quizOpenedUrl);
+            var overridePoints = 0;
+            if (quizLog.Correct && user.IsGYNSage(config))
+            {
+                var pAchievement = await repo.GetAchievementAsync(connection, "QUIZ_PARTICIPATE");
+                overridePoints = pAchievement.DefaultScore;
+            }
+
+            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, titleUrl: quizOpenedUrl, overridePoints: overridePoints);
             var previousLog = await repo.GetLastQuizLogForUserAsync(connection, user.Id.ToString(), quizLog.Day.ToString());
             // Streak bonus
-            if (quizLog.Correct && quizLog.Guesses == 1 && quizLog.Day >= int.Parse(config["firstquizstreakday"]))
+            if (quizLog.Correct && !user.IsGYNSage(config) && quizLog.Guesses == 1 && quizLog.Day >= int.Parse(config["firstquizstreakday"]))
             {
                 if (previousLog != null && previousLog.Correct && previousLog.Guesses == 1)
                     await scoringService.AddAndDisplayAchievementAsync(connection, user, "QUIZ_STREAK", client.CurrentUser, titleUrl: quizOpenedUrl);

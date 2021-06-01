@@ -182,6 +182,10 @@ namespace PrideBot.Quizzes
                         }
                         tsuchiConnectedChannel = null;
 
+                        if (DateTime.Now >= endTime)
+                            await AddSnakeMinutes(5);
+                        else
+                            await SetSnakeMinutes(5);
 
                         await SetLastSnakeDayAsync(DateTime.Now.Day);
                         nextSnakeTime = GetSnakeTime(DateTime.Now.Day + 1,
@@ -216,6 +220,24 @@ namespace PrideBot.Quizzes
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             return (await repo.GetGynGuildSettings(connection, config)).LastSnakeDay;
+        }
+
+        public async Task SetSnakeMinutes(int minutes)
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var settings = await repo.GetGynGuildSettings(connection, config);
+            settings.SnakeMinutes = minutes;
+            await repo.UpdateGuildSettingsAsync(connection, settings);
+        }
+
+        public async Task AddSnakeMinutes(int minutes)
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var settings = await repo.GetGynGuildSettings(connection, config);
+            settings.SnakeMinutes += minutes;
+            await repo.UpdateGuildSettingsAsync(connection, settings);
         }
 
         public async Task SetLastSnakeDayAsync(int day)

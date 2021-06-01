@@ -58,7 +58,7 @@ namespace PrideBot
 
         public static string Get(string key, params object[] args) => RollBrainrot(GetNoBrainRot(key, args));
 
-        public static string RollBrainrot(string str, double chance = .1, Random rand = null, bool isRecursing = false)
+        public static string RollBrainrot(string str, double chance = 1.0/17.0, Random rand = null, bool isRecursing = false)
         {
             rand ??= new Random();
 
@@ -111,9 +111,7 @@ namespace PrideBot
                     "Home of sexual.",
                     "Gay Gay Homo Sexual Gay."};
 
-            var r = rand.NextDouble();
-            Console.WriteLine(r);
-            var roll = r < chance;
+            var roll = rand.NextDouble() < chance;
             if (str.Length > 0 && char.IsPunctuation(str.Last()) && roll)
             {
                 var phrase = bullshitPhrases[rand.Next() % bullshitPhrases.Count];
