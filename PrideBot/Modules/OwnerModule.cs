@@ -47,6 +47,13 @@ namespace PrideBot.Modules
             await announcementService.IntroAnnouncementAsync(Context.Guild);
         }
 
+        [Command("announcestart")]
+        [RequireContext(ContextType.Guild)]
+        public async Task AnnounceStart()
+        {
+            await announcementService.StartAnnouncementAsync(Context.Guild);
+        }
+
         [Command("leaderboard")]
         public async Task Leaderboard()
         {

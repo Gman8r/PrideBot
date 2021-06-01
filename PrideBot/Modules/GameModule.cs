@@ -140,7 +140,7 @@ namespace PrideBot.Modules
             foreach (var ship in dbShips)
             {
                 embed.AddField($"__**{ship.GetDisplayName()}:**__",
-                    $"Sitting at **#{(leaderboardRevealed ? ship.Place.ToString() : "??")}**" +
+                    $"Currently **{(leaderboardRevealed ? (ship.Place.ToString() + GetPlacePrefix((int)ship.Place)) : "??th")}**" +
                     $" with **{(leaderboardRevealed ? ship.PointsEarned.ToString() : "???")} {spEmote}**" +
                     $" (**{ship.PointsEarnedByUser}** from you)");
             }
@@ -161,6 +161,26 @@ namespace PrideBot.Modules
             var imagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips, scoreTexts: scoreStrs);
             embed.ImageUrl = config.GetRelativeHostPathWeb(imagePath);
             await ReplyAsync(embed: embed.Build());
+        }
+
+        string GetPlacePrefix(int num)
+        {
+            num %= 100;
+            switch(num)
+            {
+                case (0):
+                    return "th";
+                case (1):
+                    return "st";
+                case (2):
+                    return "nd";
+                case (3):
+                    return "rd";
+            }
+            if (num <= 20)
+                return "th";
+            return GetPlacePrefix(num % 10);
+
         }
     }
 }

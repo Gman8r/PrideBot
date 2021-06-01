@@ -23,10 +23,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Assets\AnnouncementFiles\ANNOUNCEMENT_START_4\Heyyyyy.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\AnnouncementFiles\ANNOUNCEMENT_START_3\LikeAndCommentPleasePleasePlease.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Assets\AnnouncementFiles\ANNOUNCEMENT_INTRO_3\GaysInSpace.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\AnnouncementFiles\ANNOUNCEMENT_INTRO_2\LikeAndSubscribe.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\AnnouncementFiles\ANNOUNCEMENT_START_1\OMGFaceReveal.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\Backgrounds\shipbg3.png">
@@ -516,6 +525,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\CharacterSprites\YUYUKO.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Character\CharacterFace.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Character\yurikoheadshot.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\NumberSprites\#.png">

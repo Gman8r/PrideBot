@@ -37,6 +37,23 @@ namespace PrideBot.Events
             this.loggingService = loggingService;
 
             client.JoinedGuild += JoinedGuild;
+            client.Ready += Ready;
+        }
+
+        private Task Ready()
+        {
+            Task.Run(async () =>
+            {
+                //if (GameHelper.GetEventPeriod(config) == EventPeriod.BeforeEvent)
+                //{
+                //    while (!GameHelper.IsEventOccuring(config))
+                //    {
+                //        await Task.Delay(100);
+                //    }
+                //    await StartAnnouncementAsync(client.GetGyn(config));
+                //}
+            }).GetAwaiter();
+            return Task.CompletedTask;
         }
 
         private Task JoinedGuild(SocketGuild guild)
@@ -95,7 +112,54 @@ namespace PrideBot.Events
                 await modChannel.SendMessageAsync(embed: embed.Build());
 
                 var announcementsChannel = guild.GetChannelFromConfig(config, "announcementschannel") as SocketTextChannel;
-                embed = EmbedHelper.GetEventErrorEmbed(null, "OH NOOO did I really get an internal error during my grand intro? Ahaha, em-BARRASSING right? Isn't public speaking like, the hardest thing? Hold on juuuust a bit for me~" , client, showUser: false);
+                embed = EmbedHelper.GetEventErrorEmbed(null, "OH NOOO did I really get an internal error during my grand intro? Ahaha, em-BARRASSING right? Isn't public speaking like, the hardest thing? Hold on juuuust a bit for me~", client, showUser: false);
+                await announcementsChannel.SendMessageAsync(embed: embed.Build());
+                throw e;
+            }
+        }
+
+        public async Task StartAnnouncementAsync(SocketGuild guild)
+        {
+            try
+            {
+                if (guild.Id != client.GetGyn(config).Id)
+                    return;
+
+                var announcementsChannel = guild.GetChannelFromConfig(config, "announcementschannel") as SocketTextChannel;
+                var announcementId = "START";
+
+                var urlData = await WebHelper.DownloadWebFileDataAsync("https://cdn.discordapp.com/attachments/372232942820261898/849084684548964392/unknown.png");
+
+                // Fuckin avatar time (nah nvm)
+                //await client.CurrentUser.ModifyAsync(a => a.Avatar = new Image(new MemoryStream(urlData)));
+
+                //await Task.Delay(20000);
+
+                await PostAnnouncementMessageAsync(announcementsChannel, announcementId, 1, false,
+                    (guild.GetChannelFromConfig(config, "ruleschannel") as ITextChannel).Mention);
+                using var typing = announcementsChannel.EnterTypingState();
+
+                await Task.Delay(55000);
+                await PostAnnouncementMessageAsync(announcementsChannel, announcementId, 2, false,
+                    (guild.GetChannelFromConfig(config, "quizchannel") as ITextChannel).Mention);
+
+                await Task.Delay(55000);
+                await PostAnnouncementMessageAsync(announcementsChannel, announcementId, 3, false,
+                    (guild.GetChannelFromConfig(config, "ruleschannel") as ITextChannel).Mention,
+                    (guild.GetChannelFromConfig(config, "scorereportchannel") as ITextChannel).Mention);
+
+                await Task.Delay(55000);
+                await PostAnnouncementMessageAsync(announcementsChannel, announcementId, 4, false);
+            }
+            catch (Exception e)
+            {
+                await loggingService.OnLogAsync(new LogMessage(LogSeverity.Error, this.GetType().Name, e.Message, e));
+                var embed = EmbedHelper.GetEventErrorEmbed(null, DialogueDict.Get("EXCEPTION"), client, showUser: false);
+                var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
+                await modChannel.SendMessageAsync(embed: embed.Build());
+
+                var announcementsChannel = guild.GetChannelFromConfig(config, "announcementschannel") as SocketTextChannel;
+                embed = EmbedHelper.GetEventErrorEmbed(null, "OH NOOO did I really get an internal error during my big moment? Ahaha, em-BARRASSING right? Isn't public speaking like, the hardest thing? Hold on juuuust a bit for me~", client, showUser: false);
                 await announcementsChannel.SendMessageAsync(embed: embed.Build());
                 throw e;
             }
