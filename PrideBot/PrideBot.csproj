@@ -533,6 +533,12 @@
     <None Update="Assets\Character\yurikoheadshot.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Assets\Leaderboard\Bottom.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Leaderboard\Top.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Assets\NumberSprites\#.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -89,6 +89,7 @@ namespace PrideBot.Quizzes
                 using var connection = repo.GetDatabaseConnection();
                 await connection.OpenAsync();
                 await scoringService.AddAndDisplayAchievementAsync(connection, user, "SNAKE", tsuchiClient.CurrentUser);
+                loggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "SnakeGame", $"Snake caught by {user.Username}")).GetAwaiter();
             }).GetAwaiter();
             return Task.CompletedTask;
         }
@@ -137,6 +138,7 @@ namespace PrideBot.Quizzes
             {
                 await Task.Delay(100);
             }
+            loggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "SnakeGame", $"Disconnecting snake.")).GetAwaiter();
             if (channel != null)
                 await channel.DisconnectAsync();
             await tsuchiClient.LogoutAsync();
@@ -176,6 +178,8 @@ namespace PrideBot.Quizzes
                         mainClient.GetUser(ulong.Parse(config["ids:owner"])).AttemptSendDMAsync(provider, $"Tsuchi in da house.").GetAwaiter();
 
                         var endTime = nextSnakeTime.AddMinutes(await GetVoiceMinutesAsync());
+                        loggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "SnakeGame", $"Unleashed snake for " +
+                            $"{(endTime - nextSnakeTime).TotalMinutes} minutes (at {endTime}).")).GetAwaiter();
                         while (DateTime.Now < endTime && tsuchiConnectedChannel != null)
                         {
                             await Task.Delay(100);
@@ -183,7 +187,10 @@ namespace PrideBot.Quizzes
                         tsuchiConnectedChannel = null;
 
                         if (DateTime.Now >= endTime)
+                        {
+                            loggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "SnakeGame", $"Snake not caught today.")).GetAwaiter();
                             await AddSnakeMinutes(5);
+                        }
                         else
                             await SetSnakeMinutes(5);
 

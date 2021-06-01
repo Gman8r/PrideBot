@@ -29,13 +29,40 @@ namespace PrideBot.Game
 
         public async Task<MagickImageCollection> GenerateLeaderboardAsync()
         {
-            return await GenerateBackgroundGifAsync();
+            return await CreateYurikoGifAsync();
         }
 
         class Star
         {
             public int x;
             public int y;
+        }
+
+        public async Task<MagickImageCollection> CreateYurikoGifAsync()
+        {
+            MagickImage image = null;
+            var collection = new MagickImageCollection();
+            var frameCount = 2;
+            for (int i = 0; i < frameCount; i++)
+            {
+                if (image == null)
+                    image = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Bottom.png"));
+                else
+                    image = new MagickImage(image);
+                var pp = image.GetPixels().Cast<IPixel<byte>>()
+                    .Select(a => new Pixel(a.X, a.Y, ShiftHue(a.ToColor(), (double)i / (double)frameCount).ToByteArray()));
+                image.GetPixels().SetPixel(pp);
+                image.GifDisposeMethod = GifDisposeMethod.Background;
+                collection.Add(image);
+            }
+            return collection;
+        }
+
+        IMagickColor<byte> ShiftHue(IMagickColor<byte> color, double amount)
+        {
+            var hColor = ColorHSV.FromMagickColor(color);
+            hColor.Hue += amount;
+            return hColor.ToMagickColor();
         }
 
         public async Task<MagickImageCollection> GenerateBackgroundGifAsync()
@@ -75,6 +102,14 @@ namespace PrideBot.Game
             {
                 image.Composite(starImage, Gravity.Northwest, star.x, star.y, CompositeOperator.Over);
             }
+            var h = image.GetPixels().FirstOrDefault();
+            //image.TransformColorSpace()
+
+            //var pp = image.GetPixels().Cast<IPixel<byte>>()
+            //    .Select(a => new Pixel(a.X, a.Y, ShiftHue(a.ToColor()).ToByteArray()));
+            //image.GetPixels().SetPixel(pp);
+
+
             image.InterpolativeResize(1920, 1080, PixelInterpolateMethod.Nearest);
             return new MagickImageCollection(new List<MagickImage>() { image });
         }
