@@ -29,7 +29,7 @@ namespace PrideBot.Repository
 
         public SqlConnection GetDatabaseConnection()
             => new SqlConnection(GetConnectionString());
-        public SqlConnection GetAltDatabaseConnecction()
+        public SqlConnection GetAltDatabaseConnection()
             => new SqlConnection(GetAltConnectionString());
     }
 }

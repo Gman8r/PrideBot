@@ -14,6 +14,9 @@ namespace PrideBot.Repository
         public async Task<IEnumerable<Ship>> GetAllShipsAsync(SqlConnection conn)
         => (await new SqlCommand($"select * from VI_SHIPS", conn).ExecuteReaderAsync()).As<Ship>();
 
+        public async Task<IEnumerable<Ship>> GetAllActiveShipsAsync(SqlConnection conn)
+        => (await new SqlCommand($"select * from VI_SHIPS where POINTS_EARNED > 0 or SUPPORTERS > 0", conn).ExecuteReaderAsync()).As<Ship>();
+
         public async Task<Ship> GetShipAsync(SqlConnection conn, string shipId)
         => (await new SqlCommand($"select * from VI_SHIPS where SHIP_ID = '{shipId}'", conn).ExecuteReaderAsync()).As<Ship>().FirstOrDefault();
 

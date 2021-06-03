@@ -37,8 +37,9 @@ namespace PrideBot.Modules
         readonly UserRegisteredCache regCache;
         readonly ChatScoringService chatScoringService;
         readonly AnnouncementService announcementService;
+        readonly IConfigurationRoot config;
 
-        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService, DialogueDict dialogueDict, ModelRepository repo, UserRegisteredCache regCache, ChatScoringService chatScoringService, AnnouncementService announcementService)
+        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService, DialogueDict dialogueDict, ModelRepository repo, UserRegisteredCache regCache, ChatScoringService chatScoringService, AnnouncementService announcementService, IConfigurationRoot config)
         {
             this.modelRepository = modelRepository;
             this.sheetsService = sheetsService;
@@ -47,6 +48,7 @@ namespace PrideBot.Modules
             this.regCache = regCache;
             this.chatScoringService = chatScoringService;
             this.announcementService = announcementService;
+            this.config = config;
         }
 
         [Command("updatetable")]
@@ -57,29 +59,24 @@ namespace PrideBot.Modules
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var mainRowsAffected = await PushSheetAsync(url, tableName, connection);
-            if (!string.IsNullOrWhiteSpace(repo.GetAltConnectionString()))
-            {
-                using var altConnection = repo.GetAltDatabaseConnecction();
-                await altConnection.OpenAsync();
-                var altRowsAffected = await PushSheetAsync(url, tableName, altConnection);
-                if (altRowsAffected == -1 && mainRowsAffected == -1)
-                    await ReplyResultAsync($"No rows need changing or adding.");
-                else
-                {
-                    altRowsAffected = Math.Max(altRowsAffected, 0);
-                    mainRowsAffected = Math.Max(mainRowsAffected, 0);
-                    await ReplyResultAsync($"Done! {mainRowsAffected} row(s) affected in my database, {altRowsAffected} row(s) in the other database.");
-                }
-                return;
-            }
 
             if (mainRowsAffected == -1)
-                await ReplyResultAsync($"No rows need changing or adding.");
+                await ReplyResultAsync($"No rows need changing or adding in my database.");
             else
+                await ReplyResultAsync($"{mainRowsAffected} row(s) affected in my database.");
+
+            if (!string.IsNullOrWhiteSpace(repo.GetAltConnectionString()))
             {
-                mainRowsAffected = Math.Max(mainRowsAffected, 0);
-                await ReplyResultAsync($"Done! {mainRowsAffected} row(s) affected.");
+                using var altConnection = repo.GetAltDatabaseConnection();
+                await altConnection.OpenAsync();
+                var altRowsAffected = await PushSheetAsync(url, tableName, altConnection);
+                if (altRowsAffected == -1)
+                    await ReplyResultAsync($"No rows need changing or adding in the other database.");
+                else
+                    await ReplyResultAsync($"{altRowsAffected} row(s) affected in the other database.");
             }
+            
+            await ReplyResultAsync($"Done!");
         }
 
         public async Task<int> PushSheetAsync(string url, string tableName, SqlConnection connection)
@@ -354,6 +351,25 @@ namespace PrideBot.Modules
             chatScoringService.ChatData.Clear();
             await dialogueDict.PullDialogueAsync();
             await ReplyResultAsync("Done!");
+        }
+
+        [Command("setannouncementtimes")]
+        public async Task SetBullshitTimes()
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var bullshits = await repo.GetAllBullshitsAsync(connection);
+            var rand = new Random();
+            var startTime = DateTime.Now.AddHours(1);
+            var totalMinutes = (int)(new DateTime(DateTime.Now.Year, int.Parse(config["eventmonth"]) + 1, 1)
+                - startTime).TotalMinutes;
+            foreach (var bullshit in bullshits.Where(a => !a.Announced && (a.AnnounceTime == null || a.AnnounceTime < DateTime.Now.AddMonths(-1))))
+            {
+                var minutes = rand.Next(totalMinutes);
+                bullshit.AnnounceTime = startTime.AddMinutes(minutes);
+                await repo.UpdateBullshitAsync(connection, bullshit);
+            }
+            await ReplyAsync("Done!");
         }
     }
 }

@@ -30,12 +30,20 @@ namespace PrideBot.Registration
             return path;
         }
 
+        public async Task<string> WriteShipImageAsync(Ship ship)
+        {
+            var path =
+                await (await GenerateShipImageAsync(ship))
+                .WriteToWebFileAsync(config, "ships");
+            return path;
+        }
+
         public async Task<MagickImage> GenerateUserCardAsync(User dbUser, UserShipCollection userShips, int highlightTier = -1, int highlightHeart = 0, string[] scoreTexts = null)
         {
             scoreTexts ??= new string[3];
             var image = new MagickImage(await File.ReadAllBytesAsync($"Assets/Backgrounds/shipbg{dbUser.CardBackground}.png"));
             //var image = new MagickImage(MagickColors.Transparent, 288, 192);
-            using var primaryShipImage = await GenerateShipImageAsync(userShips.PrimaryShip, highlightTier == 0, highlightHeart);
+            using var primaryShipImage = await GenerateUserShipImageAsync(userShips.PrimaryShip, highlightTier == 0, highlightHeart);
             var yLevel = !string.IsNullOrWhiteSpace(scoreTexts[0]) ? 96 : 106;
             primaryShipImage.InterpolativeResize(128, 128, PixelInterpolateMethod.Nearest);
             //if (ships[1].IsEmpty() && ships[2].IsEmpty())
@@ -48,7 +56,7 @@ namespace PrideBot.Registration
                 if (userShips.HasSecondaryShip || highlightTier == 1)
                 {
                     //var yLevel = scores[1] > 0 ? 90 : 90;
-                    using var ship2Image = await GenerateShipImageAsync(userShips.SecondaryShip, highlightTier == 1, highlightHeart);
+                    using var ship2Image = await GenerateUserShipImageAsync(userShips.SecondaryShip, highlightTier == 1, highlightHeart);
                     image.Composite(ship2Image, Gravity.Northwest, 8, yLevel, CompositeOperator.Over);
                     if (!string.IsNullOrWhiteSpace(scoreTexts[1]))
                     {
@@ -59,7 +67,7 @@ namespace PrideBot.Registration
                 }
                 if (userShips.HasTertiaryShip || highlightTier == 2)
                 {
-                    using var ship3Image = await GenerateShipImageAsync(userShips.TertiaryShip, highlightTier == 2, highlightHeart);
+                    using var ship3Image = await GenerateUserShipImageAsync(userShips.TertiaryShip, highlightTier == 2, highlightHeart);
                     image.Composite(ship3Image, Gravity.Northwest, 216, yLevel, CompositeOperator.Over);
                     if (!string.IsNullOrWhiteSpace(scoreTexts[2]))
                     {
@@ -81,33 +89,21 @@ namespace PrideBot.Registration
             return image;
         }
 
-        public async Task<MagickImage> GenerateShipImageAsync(UserShip ship, bool highlight, int highlightHeart)
+        public async Task<MagickImage> GenerateUserShipImageAsync(UserShip ship, bool highlight, int highlightHeart)
         {
             ship ??= new UserShip();
             var image = new MagickImage(MagickColors.Transparent, 64, 64);
             if (highlight && highlightHeart <= 0)
                 image.Composite(new MagickImage(await File.ReadAllBytesAsync($"Assets/CharacterSprites/BOX.png")), Gravity.Northwest, 0, 0, CompositeOperator.Over);
-            var file1 = $"Assets/CharacterSprites/{ship.CharacterId1}.png";
-            var file2 = $"Assets/CharacterSprites/{ship.CharacterId2}.png";
-            if (!File.Exists(file1))
-                file1 = $"Assets/CharacterSprites/DEFAULT.png";
-            if (!File.Exists(file2))
-                file2 = $"Assets/CharacterSprites/DEFAULT.png";
 
             ship.Heart1 = string.IsNullOrWhiteSpace(ship.Heart1) ? "shipheart" : ship.Heart1;
             ship.Heart2 = string.IsNullOrWhiteSpace(ship.Heart2) ? "shipheart" : ship.Heart2;
             using var heartImage1 = new MagickImage(await File.ReadAllBytesAsync($"Assets/Hearts/{ship.Heart1}.png"));
             using var heartImage2 = new MagickImage(await File.ReadAllBytesAsync($"Assets/Hearts/{ship.Heart2}.png"));
-            using var char1Image = new MagickImage(await File.ReadAllBytesAsync(file1));
-            using var char2Image = new MagickImage(await File.ReadAllBytesAsync(file2));
 
-            //char1Image.InterpolativeResize(32, 32, PixelInterpolateMethod.Nearest);
-            //char2Image.InterpolativeResize(32, 32, PixelInterpolateMethod.Nearest);
-            char2Image.Flop();
-            //heartImage2.InterpolativeResize(32, 32, PixelInterpolateMethod.Nearest);
+            using var shipImage = await GenerateShipImageAsync(ship as Ship);
+            image.Composite(shipImage, Gravity.Northwest, 0, 30, CompositeOperator.Over);
 
-            image.Composite(char1Image, Gravity.Northwest, 1, 30, CompositeOperator.Over);
-            image.Composite(char2Image, Gravity.Northwest, 31, 30, CompositeOperator.Over);
             if (highlight && highlightHeart == 1)
             {
                 using var smallHighlight = new MagickImage(await File.ReadAllBytesAsync($"Assets/CharacterSprites/BOXSMALL.png"));
@@ -124,6 +120,28 @@ namespace PrideBot.Registration
 
             return image;
         }
+
+        public async Task<MagickImage> GenerateShipImageAsync(Ship ship)
+        {
+            var image = new MagickImage(MagickColors.Transparent, 64, 32);
+            var file1 = $"Assets/CharacterSprites/{ship.CharacterId1}.png";
+            var file2 = $"Assets/CharacterSprites/{ship.CharacterId2}.png";
+            if (!File.Exists(file1))
+
+                file1 = $"Assets/CharacterSprites/DEFAULT.png";
+            if (!File.Exists(file2))
+                file2 = $"Assets/CharacterSprites/DEFAULT.png";
+
+            using var char1Image = new MagickImage(await File.ReadAllBytesAsync(file1));
+            using var char2Image = new MagickImage(await File.ReadAllBytesAsync(file2));
+
+            char2Image.Flop();
+
+            image.Composite(char1Image, Gravity.Northwest, 1, 0, CompositeOperator.Over);
+            image.Composite(char2Image, Gravity.Northwest, 31, 0, CompositeOperator.Over);
+            return image;
+        }
+
         public async Task<string> GenerateBackgroundChoicesAsync(User dbUser)
         {
             var backgroundFiles = Directory.GetFiles("Assets/Backgrounds");

@@ -44,14 +44,16 @@ namespace PrideBot.Quizzes
         readonly DiscordSocketClient client;
         readonly ScoringService scoringService;
         readonly LoggingService loggingService;
+        readonly IServiceProvider provider;
 
-        public StarboardScoringService(ModelRepository repo, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, LoggingService loggingService)
+        public StarboardScoringService(ModelRepository repo, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, LoggingService loggingService, IServiceProvider provider)
         {
             this.repo = repo;
             this.config = config;
             this.client = client;
             this.scoringService = scoringService;
             this.loggingService = loggingService;
+            this.provider = provider;
 
             client.MessageReceived += MessageReceived;
         }
@@ -88,7 +90,7 @@ namespace PrideBot.Quizzes
                 IUser user;
                 if (userMessage.Author.IsWebhook && await userMessage.IsFromPkUserAsync(config))
                 {
-                    user = await userMessage.GetPkUserAsync(config);
+                    user = await userMessage.GetPkUserAsync(config, provider);
                 }
                 else if (!userMessage.Author.IsBot)
                 {

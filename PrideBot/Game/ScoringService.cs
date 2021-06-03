@@ -20,8 +20,9 @@ namespace PrideBot.Game
         readonly ShipImageGenerator shipImageGenerator;
         readonly IConfigurationRoot config;
         readonly LoggingService loggingService;
+        readonly IServiceProvider provider;
 
-        public ScoringService(ModelRepository repo, DiscordSocketClient client, ShipImageGenerator shipImageGenerator, IConfigurationRoot config, LoggingService loggingService)
+        public ScoringService(ModelRepository repo, DiscordSocketClient client, ShipImageGenerator shipImageGenerator, IConfigurationRoot config, LoggingService loggingService, IServiceProvider provider)
         {
             this.repo = repo;
             this.client = client;
@@ -30,16 +31,17 @@ namespace PrideBot.Game
             client.ReactionAdded += ReactionAddedAsync;
             this.shipImageGenerator = shipImageGenerator;
             this.config = config;
+            this.provider = provider;
         }
 
-        public async Task<bool> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, int overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, ITextChannel overrideChannel = null, bool ignoreCooldown = false)
+        public async Task<bool> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, int overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, ITextChannel overrideChannel = null, bool ignoreCooldown = false, bool dontPing = false)
         {
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
-            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, overridePoints, titleUrl, ignoreIfNotRegistered, overrideChannel, ignoreCooldown);
+            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, overridePoints, titleUrl, ignoreIfNotRegistered, overrideChannel, ignoreCooldown, dontPing);
         }
 
         // Returns True if score was applied in some way
-        public async Task<bool> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, int overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, ITextChannel overrideChannel = null, bool ignoreCooldown  = false)
+        public async Task<bool> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, int overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, ITextChannel overrideChannel = null, bool ignoreCooldown  = false, bool dontPing = false)
         {
             if (overridePoints > 999)
                 throw new CommandException("Max score for an achievement is 999, WHY ARE YOU EVEN DOING THIS??");
@@ -65,7 +67,7 @@ namespace PrideBot.Game
 
                 if (errorCode == ModelRepository.AddScoreError.CooldownViolated)
                     text = user.Mention + ((user is SocketUser sUser) ? $" Hold Up { sUser.Queen(client)}!" : " Hold Up!");
-                if (!achievement.Ping || !dbUser.PingForAchievements)
+                if (dontPing || !achievement.Ping || !dbUser.PingForAchievements)
                 {
                     text = null;
                     //embed.Author ??= new EmbedAuthorBuilder();
@@ -86,6 +88,19 @@ namespace PrideBot.Game
                     await repo.UpdateScoreAsync(connection, score);
                 }
             }
+
+            if (approver != null && errorCode != ModelRepository.AddScoreError.CooldownViolated && achievement.AchievementId.ToLower().StartsWith("1cc"))
+            {
+                try
+                {
+                    await (await approver.GetOrCreateDMChannelAsync()).SendMessageAsync("Heyyy! Just making sure you fill in the value on the 1CC table for that achievement, 'kayyy?\n https://docs.google.com/spreadsheets/d/1vdAQ1QvBsuJViY8pftYxZXfEP8HWkCzzIf0IhSJCJcY/edit#gid=0");
+                }
+                catch
+                {
+
+                }
+            }
+
             return errorCode == ModelRepository.AddScoreError.None || errorCode == ModelRepository.AddScoreError.UserNotRegistered;
         }
 
@@ -157,13 +172,14 @@ namespace PrideBot.Game
                     return;
 
                 var message = await msg.GetOrDownloadAsync();
-                if (message.Reactions[reaction.Emote].IsMe) return;
+                if (message.Reactions[reaction.Emote].IsMe)
+                    return;
 
-                // Determine user or PK uer
+                // Determine user or PK user
                 IUser user;
                 if (message.Author.IsWebhook && await message.IsFromPkUserAsync(config))
                 {
-                    user = await message.GetPkUserAsync(config);
+                    user = await message.GetPkUserAsync(config, provider);
                 }
                 else if (!message.Author.IsBot)
                 {

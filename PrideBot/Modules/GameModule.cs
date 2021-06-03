@@ -99,7 +99,7 @@ namespace PrideBot.Modules
         [Alias("score")]
         [RequireRegistration]
         [Summary("Views your ships and how well they're doing!")]
-        public async Task SCore()
+        public async Task Score()
         {
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
@@ -110,7 +110,7 @@ namespace PrideBot.Modules
             var embed = EmbedHelper.GetEventEmbed(Context.User, config)
                 .WithThumbnailUrl(Context.User.GetAvatarUrlOrDefault())
                 .WithTitle($"Score Overview")
-                .WithDescription("Here's some stats on how your ships are doing!")
+                .WithDescription("Heyyy, I pulled some cosmic data about how your pairings are doing!")
                 .WithFooter(new EmbedFooterBuilder()
                     .WithText(Context.User.Id.ToString()));
             var spEmote = EmoteHelper.SPEmote;
@@ -137,10 +137,10 @@ namespace PrideBot.Modules
             //        $" with **{(dbShips.Get(a).PointsEarned)} {spEmote}**" +
             //        $" (**{dbShips.Get(a).PointsEarnedByUser}** from you)")), false);
 
-            foreach (var ship in dbShips)
+            foreach (var ship in dbShips.OrderBy(a => a.Tier))
             {
                 embed.AddField($"__**{ship.GetDisplayName()}:**__",
-                    $"Currently **{(leaderboardRevealed ? (ship.Place.ToString() + GetPlacePrefix((int)ship.Place)) : "??th")}**" +
+                    $"Currently **{(leaderboardRevealed ? (ship.Place.ToString() + MathHelper.GetPlacePrefix((int)ship.Place)) : "??th")}**" +
                     $" with **{(leaderboardRevealed ? ship.PointsEarned.ToString() : "???")} {spEmote}**" +
                     $" (**{ship.PointsEarnedByUser}** from you)");
             }
@@ -153,8 +153,8 @@ namespace PrideBot.Modules
 
             var scoreStrs = Enumerable.Range(0, 3)
                 .Select(a => !dbShips.Has((UserShipTier)a)
-                    ? null 
-                    : (leaderboardRevealed 
+                    ? null
+                    : (leaderboardRevealed
                         ? "#" + dbShips.Get((UserShipTier)a).Place.ToString()
                         : "#??"))
                 .ToArray();
@@ -163,24 +163,40 @@ namespace PrideBot.Modules
             await ReplyAsync(embed: embed.Build());
         }
 
-        string GetPlacePrefix(int num)
+        [Command("shipscore")]
+        [Alias("shipscores")]
+        [RequireRegistration]
+        [Summary("Views the place and SP count of a particular pairing!")]
+        public async Task ShipScore([Remainder] string shipName)
         {
-            num %= 100;
-            switch(num)
-            {
-                case (0):
-                    return "th";
-                case (1):
-                    return "st";
-                case (2):
-                    return "nd";
-                case (3):
-                    return "rd";
-            }
-            if (num <= 20)
-                return "th";
-            return GetPlacePrefix(num % 10);
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var guildSettings = await repo.GetGynGuildSettings(connection, config);
+            if (!guildSettings.LeaderboardAvailable && !Context.User.IsGYNSage(config))
+                throw new CommandException(DialogueDict.Get("SHIP_SCORES_EARLY"));
 
+            var dbCharacters = await repo.GetAllCharactersAsync(connection);
+            var shipResult = await RegistrationSession.ParseShipAsync(connection, repo, shipName, dbCharacters);
+            if (!shipResult.IsSuccess)
+                throw new CommandException(shipResult.ErrorMessage);
+            var ship = shipResult.Value;
+            var validationResult = await RegistrationSession.ValidateShipAsync(connection, shipResult.Value, dbCharacters);
+            if (!validationResult.IsSuccess)
+                throw new CommandException(DialogueDict.Get("SHIP_SCORES_INVALID"));
+
+            var desc = (ship.Supporters > 0 || ship.PointsEarned > 0)
+                ? DialogueDict.Get("SHIP_SCORES_DESC", ship.GetDisplayName(),
+                    ((int)ship.Place).ToString() + MathHelper.GetPlacePrefix((int)ship.Place).ToString(), ship.PointsEarned)
+                : DialogueDict.Get("SHIP_SCORES_NO_POINTS");
+
+
+            var shipImagePath = await shipImageGenerator.WriteShipImageAsync(ship);
+            var embed = EmbedHelper.GetEventEmbed(Context.User, config)
+                .WithThumbnailUrl(config.GetRelativeHostPathWeb(shipImagePath))
+                .WithTitle($"Ship Overview: {ship.GetDisplayName()}")
+                .WithDescription(desc);
+
+            await ReplyAsync(embed: embed.Build());
         }
     }
 }

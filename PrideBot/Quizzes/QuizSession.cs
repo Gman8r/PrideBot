@@ -189,21 +189,22 @@ namespace PrideBot.Quizzes
             quizLog.Guesses = guesses;
             await repo.UpdateQuizLogAsync(connection, quizLog);
 
+            var achievementId = quizLog.Correct ? $"QUIZ_CORRECT_{quizLog.Guesses}" : "QUIZ_PARTICIPATE";
+            var achievement = await repo.GetAchievementAsync(connection, achievementId);
+
             embed = GetEmbed();
             embed.Title = correct ? $"✅ Kuh-rect!! ({new List<string>() { "Zeroth", "First", "Second", "Third" }[guesses]} Attempt)" : "❌ Incorrect";
             if (correct)
-                embed.Description = DialogueDict.Get($"QUIZ_CORRECT_{guesses}");
+                embed.Description = DialogueDict.Get($"QUIZ_CORRECT_{guesses}", achievement.DefaultScore);
             else
-                embed.Description = DialogueDict.Get($"QUIZ_INCORRECT", correctChoice, user.Queen(client));
+                embed.Description = DialogueDict.Get($"QUIZ_INCORRECT", correctChoice, user.Queen(client), achievement.DefaultScore);
             embed.Description += "\n\n" + DialogueDict.Get("QUIZ_CLOSING");
             await channel.SendMessageAsync(embed: embed.Build());
-            await AddScoreAndFinish(connection);
+            await AddScoreAndFinish(connection, achievement);   
         }
 
-        async Task AddScoreAndFinish(SqlConnection connection)
+        async Task AddScoreAndFinish(SqlConnection connection, Achievement achievement)
         {
-            var achievementId = quizLog.Correct ? $"QUIZ_CORRECT_{quizLog.Guesses}" : "QUIZ_PARTICIPATE";
-            var achievement = await repo.GetAchievementAsync(connection, achievementId);
 
             var gyn = client.GetGyn(config);
             var discussionChannel = gyn.GetChannelFromConfig(config, "quizdiscussionchannel") as SocketTextChannel;
@@ -236,9 +237,9 @@ namespace PrideBot.Quizzes
                 var msgText = DialogueDict.Get("DAILY_QUIZ_DISCUSSION_WELCOME", user.Mention);
                 if (availableQuizzes.Count > 1)
                     msgText += "\n" + DialogueDict.Get("DAILY_QUIZ_DISCUSSION_CHOICE", chosenQuizIndex + 1, availableQuizzes[chosenQuizIndex].Category);
-                if (previousLog == null)
-                    msgText += "\n" + DialogueDict.Get("DAILY_QUIZ_DISCUSSION_REMINDER");
-                await discussionChannel.SendMessageAsync(msgText, allowedMentions: previousLog == null ? AllowedMentions.All : AllowedMentions.None);
+                //if (previousLog == null)
+                //    msgText += "\n" + DialogueDict.Get("DAILY_QUIZ_DISCUSSION_REMINDER");
+                await discussionChannel.SendMessageAsync(msgText);//, allowedMentions: previousLog == null ? AllowedMentions.All : AllowedMentions.None);
             }
         }
 
@@ -261,16 +262,18 @@ namespace PrideBot.Quizzes
                 await Task.Delay(50);
             if (!sessionComplete)
             {
-                Cancel(DialogueDict.Get("QUIZ_TIMEOUT", correctChoice, user.Queen(client))
-                    + "\n\n" + DialogueDict.Get("QUIZ_CLOSING"));
 
                 quizLog.Guesses = 3;
                 using var connection = repo.GetDatabaseConnection();
                 await connection.OpenAsync();
                 await repo.UpdateQuizLogAsync(connection, quizLog);
 
+                var achievement = await repo.GetAchievementAsync(connection, "QUIZ_PARTICIPATE");
+                Cancel(DialogueDict.Get("QUIZ_TIMEOUT", correctChoice, user.Queen(client), achievement.DefaultScore)
+                    + "\n\n" + DialogueDict.Get("QUIZ_CLOSING"));
+
                 await Task.Delay(500);
-                await AddScoreAndFinish(connection);
+                await AddScoreAndFinish(connection, achievement);
             }
         }
     }

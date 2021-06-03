@@ -39,7 +39,7 @@ namespace PrideBot
             return false;
         }
 
-        public static async Task<IUser> GetPkUserAsync(this IMessage message, IConfigurationRoot config)
+        public static async Task<IUser> GetPkUserAsync(this IMessage message, IConfigurationRoot config, IServiceProvider provider)
         {
             var channel = message.Channel as IGuildChannel;
             if (message == null)
@@ -55,6 +55,8 @@ namespace PrideBot
                 if (string.IsNullOrWhiteSpace(idText))
                     continue;
                 ulong id;
+
+                Console.WriteLine(idText);
                 if (ulong.TryParse(idText, out id) && id == message.Id)
                 {
                     try
@@ -64,12 +66,14 @@ namespace PrideBot
                         var userId = ulong.Parse(userIdStr);
                         return await channel.Guild.GetUserAsync(userId);
                     }
-                    catch
+                    catch (Exception e)
                     {
+                        await provider.GetService<LoggingService>().OnLogAsync(new LogMessage(LogSeverity.Warning, "PK", $"Exception trying to get PKUser in {message.GetJumpUrl()}", e));
                         continue;
                     }
                 }
             }
+            await provider.GetService<LoggingService>().OnLogAsync(new LogMessage(LogSeverity.Warning, "PK", $"Failed to find PKUser for {message.GetJumpUrl()}"));
             return null;
         }
     }

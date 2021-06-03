@@ -68,19 +68,20 @@ namespace PrideBot.Modules
         }
 
         [Command("takequizday")]
-        [Summary("Mod function to test a quiz on a particular day")]
+        [Summary("Mod function to take the quiz for a particular day for the month, for yourself or someone else.")]
         [RequireRegistration]
         [RequireUserPermission(GuildPermission.Administrator)]
         [RequireSingleSession]
         [RequireSage]
-        public async Task TakeQuizDay(int day)
+        public async Task TakeQuizDay(int day, SocketUser user = null)
         {
+            user ??= Context.User;
             var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var guildSettings = await repo.GetOrCreateGuildSettingsAsync(connection, client.GetGyn(config).Id.ToString());
-            var quizLog = await repo.GetOrCreateQuizLogAsync(connection, Context.User.Id.ToString(), day.ToString());
+            var quizLog = await repo.GetOrCreateQuizLogAsync(connection, user.Id.ToString(), day.ToString());
             await connection.CloseAsync();
-            await new QuizSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, repo, client,
+            await new QuizSession(await user.GetOrCreateDMChannelAsync(), user, config, repo, client,
                 new TimeSpan(0, 5, 0), Context.Message, scoringService, quizLog, guildSettings)
                 .PerformSessionAsync();
         }

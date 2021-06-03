@@ -273,11 +273,11 @@ namespace PrideBot.Registration
 
         async Task<Result> ProcessPairingInputAsync(SqlConnection connection, string shipStr, UserShipTier tier)
         {
-            if (shipStr.ToLower().Contains("drop table"))
+            if (shipStr.ToLower().Contains("drop table") || shipStr.Contains(";--"))
                 return Result.Error("HAHAHAHA THAT'S SO FUNNY I HOPE YOU KNOW HOW FUNNY YOU ARE !!!");
             using var typingState = channel.EnterTypingState();
             var dbCharacters = await repo.GetAllCharactersAsync(connection);
-            var parseResult = await ParseShipAsync(connection, shipStr, dbCharacters);
+            var parseResult = await ParseShipAsync(connection, repo, shipStr, dbCharacters);
             if (!parseResult.IsSuccess)
                 return parseResult.ToResult();
             var ship = parseResult.Value;
@@ -305,9 +305,8 @@ namespace PrideBot.Registration
             return Result.Success();
         }
 
-        async Task<ValueResult<Ship>> ParseShipAsync(SqlConnection connection, string shipStr, IEnumerable<Character> dbCharacters)
+        public static async Task<ValueResult<Ship>> ParseShipAsync(SqlConnection connection, ModelRepository repo, string shipStr, IEnumerable<Character> dbCharacters)
         {
-            using var typingState = channel.EnterTypingState();
             var split = shipStr.Replace(" x ", " X ").Split(" X ");
             if (split.Length != 2)
                 return ValueResult<Ship>.Error(DialogueDict.Get("REGISTRATION_ERROR_FORMAT"));
@@ -324,7 +323,7 @@ namespace PrideBot.Registration
             return ValueResult<Ship>.Success(await repo.GetShipAsync(connection, shipKey));
         }
 
-        async Task<Result> ValidateShipAsync(SqlConnection connection, Ship ship, IEnumerable<Character> dbCharacters)
+        public static async Task<Result> ValidateShipAsync(SqlConnection connection, Ship ship, IEnumerable<Character> dbCharacters)
         {
             var char1 = dbCharacters
                 .FirstOrDefault(a => a.CharacterId == ship.CharacterId1);
@@ -333,9 +332,9 @@ namespace PrideBot.Registration
 
             if (ship.CharacterId1.Equals("YURIKO") || ship.CharacterId2.Equals("YURIKO"))
             {
-                if (ship.CharacterId1.Equals("JOON") || ship.CharacterId2.Equals("JOON"))
-                    return Result.Error("DAMN 💦💦 ok she's Got It but I still can't, RIIIPP.");
-                else
+                //if (ship.CharacterId1.Equals("JOON") || ship.CharacterId2.Equals("JOON"))
+                //    return Result.Error("HAha, what? Noo, no I can't just. Please we're like so uh, different, in ways, y'know? 💦 I'm married to my work, yknow? Can't just do that haha... (Damn)");
+                //else
                     return Result.Error(DialogueDict.Get("REGISTRATION_ERROR_YURIKO"));
             }
             if (char1.CharacterId.Equals(char2.CharacterId) && !char1.CharacterId.Equals("TSUCHINOKO"))
@@ -386,7 +385,7 @@ namespace PrideBot.Registration
                 return ValueResult<bool>.Error("");
         }
 
-        Character FindMatch(string inputName, IEnumerable<Character> characters)
+        static Character FindMatch(string inputName, IEnumerable<Character> characters)
         {
             var words = inputName
                 .ToUpper()
@@ -398,7 +397,7 @@ namespace PrideBot.Registration
                 .FirstOrDefault(a => !words.Except(ZeroPunctuation(a.Name).ToUpper().Split()).Any());   // All words in input name appear in character name
         }
 
-        string ZeroPunctuation(string str)
+        static string ZeroPunctuation(string str)
             => new string(str.Where(a => !char.IsPunctuation(a)).ToArray());
 
         async Task<EmbedBuilder> GetEmbedWithShipsAsync(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0)
