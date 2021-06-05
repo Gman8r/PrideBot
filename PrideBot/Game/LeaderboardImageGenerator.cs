@@ -24,38 +24,69 @@ namespace PrideBot.Game
             this.shipImageGenerator = shipImageGenerator;
         }
 
-        public async Task<string> WriteLeaderboardAsync(List<Ship> topShips, List<Ship> topRareShips)
+        public async Task<string> WriteLeaderboardImageAsync(List<Ship> topShips, List<Ship> topRareShips)
         {
             var path =
                 await (await GenerateLeaderboardAsync(topShips, topRareShips))
                 .WriteToWebFileAsync(config, "leaderboard");
             return path;
         }
-        
+
+
+        public void CompositeSine(IMagickImage<byte> baseImage, IMagickImage<byte> overlayImage, int xOffset, int xAmplitude, int yOffset, int yAmplitude, double sineT)
+        {
+            var x = (int)(sineT * (double)xAmplitude);
+            var y = (int)(sineT * (double)yAmplitude);
+            baseImage.Composite(overlayImage, Gravity.Northwest, xOffset + x, yOffset + y, CompositeOperator.Over);
+        }
+
+        void WhitenImage(IMagickImage<byte> image)
+        {
+            var pp = image.GetPixels().Cast<IPixel<byte>>()
+                .Select(a => new Pixel(a.X, a.Y, MakeWhite(a.ToColor()).ToByteArray()));
+            image.GetPixels().SetPixel(pp);
+        }
+
+        IMagickColor<byte> MakeWhite(IMagickColor<byte> color)
+        {
+            color.R = color.G = color.B = MagickColors.White.R;
+            return color;
+        }
+
         public async Task<MagickImageCollection> GenerateLeaderboardAsync(List<Ship> topShips, List<Ship> topRareShips)
         {
             var rand = new Random();
-            var bg = await GenerateBackgroundGifAsync(rand);
+            var bgCollection = await GenerateBackgroundGifAsync(rand);
             var yurikoFiles = Directory.GetFiles("Assets/Leaderboard/Yurikos/").ToArray();
             var chosenYurikoFile = yurikoFiles[rand.Next(yurikoFiles.Length)];
             using var yurikoImage = new MagickImageCollection(await File.ReadAllBytesAsync(chosenYurikoFile));
-            using var overlayImage = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Overlay.png"));
+            using var textOverlay = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Overlays/Text.png"));
+            using var bottomRightOverlay = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Overlays/BottomRight.png"));
+            using var bottomLeftOverlay = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Overlays/BottomLeft.png"));
+            using var topLeftOverlay = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Overlays/TopLeft.png"));
 
-            var yurikoHeight = (double)bg.First().Height * 3.75 / 5.0;
+            var yurikoHeight = (double)bgCollection.First().Height * 4 / 5.0;
             var sineAmplitude = 30;
             var sineMult = 1.0;
 
-            for (int i = 0; i < bg.Count; i++)
+            for (int i = 0; i < bgCollection.Count; i++)
             {
-                var bgFrame = bg[i];
+                var bgFrame = bgCollection[i];
+                var sineT = -Math.Sin(((double)i * 2.0 * Math.PI) / (double)FrameCount) * sineMult;
+                sineT = Math.Clamp(sineT, -1.0, 1.0);
+
+                // Composite string images
+                CompositeSine(bgFrame, bottomRightOverlay, 8, -4, 30, -7, sineT);
+                CompositeSine(bgFrame, topLeftOverlay, -10, 3, -20, 4, sineT);
+                CompositeSine(bgFrame, bottomLeftOverlay, -90, -3, 20, 4, sineT);
+
+                // Composite yuriko
                 var yurikoFrame = yurikoImage[i % yurikoImage.Count];
                 var p = 100.0 * yurikoHeight / (double)yurikoFrame.Height;
-                var sineHeight = -Math.Sin(((double)i * 2.0 * Math.PI) / (double)FrameCount) * sineAmplitude * sineMult;
-                sineHeight = Math.Clamp(sineHeight, -sineAmplitude, sineAmplitude);
                 yurikoFrame.Resize(new Percentage(p));
                 bgFrame.Composite(yurikoFrame, Gravity.Northwest,
                     (bgFrame.Width - yurikoFrame.Width) / 2,
-                    ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)sineHeight,
+                    ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude),
                     CompositeOperator.Over);
 
                 // Add ship images
@@ -67,6 +98,12 @@ namespace PrideBot.Game
                         break;
                     using var shipImage = await shipImageGenerator.GenerateShipImageAsync(topShips[j]);
                     shipImage.InterpolativeResize(shipImage.Width * 2, shipImage.Height * 2, PixelInterpolateMethod.Nearest);
+                    //using var whiteImage = new MagickImage(shipImage);
+                    //WhitenImage(whiteImage);
+                    //bgFrame.Composite(whiteImage, Gravity.Northwest, x - 1, y, CompositeOperator.Over);
+                    //bgFrame.Composite(whiteImage, Gravity.Northwest, x + 1, y, CompositeOperator.Over);
+                    //bgFrame.Composite(whiteImage, Gravity.Northwest, x, y - 1, CompositeOperator.Over);
+                    //bgFrame.Composite(whiteImage, Gravity.Northwest, x, y + 1, CompositeOperator.Over);
                     bgFrame.Composite(shipImage, Gravity.Northwest, x, y, CompositeOperator.Over);
                 }
 
@@ -82,10 +119,10 @@ namespace PrideBot.Game
                     bgFrame.Composite(shipImage, Gravity.Northwest, x, y, CompositeOperator.Over);
                 }
 
-                bgFrame.Composite(overlayImage, Gravity.Northwest, 0, 0, CompositeOperator.Over);
+                bgFrame.Composite(textOverlay, Gravity.Northwest, 0, 0, CompositeOperator.Over);
             }
 
-            return bg;
+            return bgCollection;
         }
 
         class Star
@@ -177,9 +214,10 @@ namespace PrideBot.Game
                     {
                         var starFrame = MathHelper.TrueMod(i - star.sparkleOffset, FrameCount);
                         if (starFrame < starCollection.Count)
-                            frame = starFrame;
+                            image.Composite(starCollection[starFrame], Gravity.Northwest, star.x, star.y, CompositeOperator.Over);
                     }
-                    image.Composite(starCollection[frame], Gravity.Northwest, star.x, star.y, CompositeOperator.Over);
+                    else
+                        image.Composite(starCollection[frame], Gravity.Northwest, star.x, star.y, CompositeOperator.Over);
                 }
                 //image.InterpolativeResize((int)(1920.0 /1.5), (int)(1080.0/1.5), PixelInterpolateMethod.Nearest);
                 image.InterpolativeResize(width * 2, height * 2, PixelInterpolateMethod.Nearest);

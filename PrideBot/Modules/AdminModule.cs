@@ -63,7 +63,8 @@ namespace PrideBot.Modules
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
             if (achievement == null)
                 throw new CommandException("Nope nuh-uh, I couldn't find that achievement like Anywheeeere, sorry! Make sure the Achievement Id matches the one in the sheet!");
-            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, Context.User, score, ignoreCooldown: ignoreCooldown);
+            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, Context.User, score, ignoreCooldown: ignoreCooldown,
+                reportChannel: Context.Channel);
             //if (Context.Client.GetGyn(config).GetChannelfromConfig(config, "achievementschannel").Id != Context.Channel.Id)
             await ReplyResultAsync("Done!");
         }

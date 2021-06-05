@@ -29,6 +29,21 @@ namespace PrideBot.Repository
         public async Task<int> UpdateScoreAsync(SqlConnection conn, Score value)
             => await DatabaseHelper.GetUpdateCommand(conn, value, "SCORES").ExecuteNonQueryAsync();
 
+
+        public class AddScoreResult
+        {
+            public string ScoreId { get; }
+            public AddScoreError errorCode { get; }
+            public DateTime CooldownExpires { get; }
+
+            public AddScoreResult(string scoreId, AddScoreError errorCode, DateTime cooldownExpires)
+            {
+                this.ScoreId = scoreId;
+                this.errorCode = errorCode;
+                this.CooldownExpires = cooldownExpires;
+            }
+        }
+
         public enum AddScoreError
         {
             None = 0,
@@ -36,7 +51,7 @@ namespace PrideBot.Repository
             CooldownViolated = 2
         }
 
-        public async Task<(string, AddScoreError)> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, int pointsEarned, string approverId, bool ignoreCooldown)
+        public async Task<AddScoreResult> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, int pointsEarned, string approverId, bool ignoreCooldown)
         {
             var command = new SqlCommand("SP_ADD_SCORE", conn);
             command.CommandType = CommandType.StoredProcedure;
@@ -55,8 +70,14 @@ namespace PrideBot.Repository
             errorCodeParam.Direction = ParameterDirection.Output;
             errorCodeParam.DbType = DbType.Int32;
             command.Parameters.Add(errorCodeParam);
+            var cooldownExpiresParam = new SqlParameter();
+            cooldownExpiresParam.ParameterName = "@COOLDOWN_EXPIRES";
+            cooldownExpiresParam.Direction = ParameterDirection.Output;
+            cooldownExpiresParam.DbType = DbType.Date;
+            command.Parameters.Add(cooldownExpiresParam);
             await command.ExecuteNonQueryAsync();
-            return (scoreIdParam.Value.ToString(), (AddScoreError)errorCodeParam.Value);
+            return new AddScoreResult(scoreIdParam.Value.ToString(), (AddScoreError)errorCodeParam.Value,
+                cooldownExpiresParam.Value is DBNull nullCdParam ? DateTime.Now : (DateTime)cooldownExpiresParam.Value);
         }
 
         public async Task<int> DeleteScoreAsync(SqlConnection conn, string scoreId)

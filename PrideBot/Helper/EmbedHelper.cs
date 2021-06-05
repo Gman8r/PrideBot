@@ -20,7 +20,7 @@ namespace PrideBot
                 .WithText(id));
             if (showDate)
                 embed = embed.WithCurrentTimestamp();
-            if (showUser)
+            if (showUser && user != null)
                 embed = embed.WithAuthor(new EmbedAuthorBuilder()
                     .WithIconUrl(user.GetAvatarUrlOrDefault().Split('?')[0])
                     .WithName((user as IGuildUser)?.Nickname ?? user.Username));

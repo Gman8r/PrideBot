@@ -140,7 +140,7 @@ namespace PrideBot.Quizzes
                         Console.WriteLine(e);
                 }
             }
-            await mainClient.GetUser(ulong.Parse(config["ids:owner"])).AttemptSendDMAsync(provider, $"Tsuchi in da house.");
+            //await mainClient.GetUser(ulong.Parse(config["ids:owner"])).AttemptSendDMAsync(provider, $"Tsuchi in da house.");
         }
         
         private async Task TsuchiLogOffAsync(SocketVoiceChannel channel)

@@ -18,7 +18,7 @@ namespace PrideBot
 
         public static bool IsEventOccuring(IConfigurationRoot config) => DateTime.Now.Month == int.Parse(config["eventmonth"]);
 
-        public static EventPeriod GetEventPeriod(IConfigurationRoot config) => !IsEventOccuring(config) ? EventPeriod.DuringEvent
+        public static EventPeriod GetEventPeriod(IConfigurationRoot config) => IsEventOccuring(config) ? EventPeriod.DuringEvent
             : (DateTime.Now.Month > int.Parse(config["eventmonth"]) ? EventPeriod.AfterEvent : EventPeriod.BeforeEvent);
 
         public static int GetQuizDay(DateTime atTime) => atTime.Day;
