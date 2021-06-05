@@ -28,7 +28,7 @@ namespace PrideBot.Game
         {
             var path =
                 await (await GenerateLeaderboardAsync(topShips, topRareShips))
-                .WriteToWebFileAsync(config, "leaderboard");
+                .WriteToWebFileAsync(config, "leaderboard", overrideName: DateTime.Now.ToString("MMddHHmmss"));
             return path;
         }
 

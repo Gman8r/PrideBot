@@ -57,9 +57,9 @@ namespace PrideBot
             }
         }
 
-        public static async Task<string> WriteToWebFileAsync(this IMagickImageCollection<byte> collection, IConfigurationRoot config, string relativeFolderPath)
+        public static async Task<string> WriteToWebFileAsync(this IMagickImageCollection<byte> collection, IConfigurationRoot config, string relativeFolderPath, string overrideName = null)
         {
-            var hash = Math.Abs(collection.GetHashCode());
+            var hash = overrideName ?? Math.Abs(collection.GetHashCode()).ToString();
             var path = $"/{relativeFolderPath}/{hash}.gif";
             path = path.Replace("//", "/").Substring(1);
             var fullPath = config.GetRelativeHostPathLocal(path);
