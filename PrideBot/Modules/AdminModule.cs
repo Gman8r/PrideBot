@@ -139,14 +139,14 @@ namespace PrideBot.Modules
         [Summary("Relays a message.")]
         public async Task File(string url, [Remainder] string message)
         {
-            await File(url, Context.Channel as SocketTextChannel, message);
+            await File(Context.Channel as SocketTextChannel, url, message);
         }
 
         [Command("attachment")]
         [Alias("attach", "file")]
         [Priority(1)]
         [Summary("Relays a message in the specified chat channel.")]
-        public async Task File(string url, SocketTextChannel channel, [Remainder] string message)
+        public async Task File(SocketTextChannel channel, string url, [Remainder] string message)
         {
             byte[] attachBytes;
             try
