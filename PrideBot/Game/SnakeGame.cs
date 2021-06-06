@@ -86,6 +86,12 @@ namespace PrideBot.Quizzes
             Task.Run(async () =>
             {
                 await tsuchiConnectedChannel.DisconnectAsync();
+                //if (!after.VoiceChannel.Name.ToLower().Contains("snakes"))
+                if (!(await userReg.GetOrDownloadAsync(user.Id.ToString())))
+                {
+                    await TsuhiConnectRandomAsync(new Random());
+                    return;
+                }
                 tsuchiConnectedChannel = null;
                 await loggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "SnakeGame", $"Snake caught by {user.Username}"));
                 using var connection = repo.GetDatabaseConnection();
@@ -97,7 +103,7 @@ namespace PrideBot.Quizzes
                     var achievementChannel = mainClient.GetGyn(config).GetChannelFromConfig(config, "achievementschannel") as ITextChannel;
                     var embed = EmbedHelper.GetEventErrorEmbed(user, "UHHH hmm that's not right, Tsuchi should be asleep still! Please contact a mod, 'kaysies?", mainClient);
                     await achievementChannel.SendMessageAsync(user.Mention, embed: embed.Build());
-                    await mainClient.GetUser(ulong.Parse(config["ids:owner"])).AttemptSendDMAsync(provider, $"UH OH too  soon for more tsuchi. Check the logs!!");
+                    await mainClient.GetUser(ulong.Parse(config["ids:owner"])).AttemptSendDMAsync(provider, $"UH OH too soon for more tsuchi. Check the logs!!");
                 }
                 else
                     await scoringService.AddAndDisplayAchievementAsync(connection, user, "SNAKE", tsuchiClient.CurrentUser);
@@ -121,24 +127,37 @@ namespace PrideBot.Quizzes
         }
 
 
-        private async Task TsuchiVoiceConnectAsync(SocketVoiceChannel channel)
+        private async Task TsuhiConnectRandomAsync(Random rand)
         {
-            channel = tsuchiConnectedChannel;
-            int tries = 0;
-            while (tries < 5)
+            var tsuchiChannels = tsuchiClient.GetGyn(config).VoiceChannels
+                .Where(a => !a.Users.Any())
+                .ToArray();
+
+            if (tsuchiChannels.Any())
             {
-                tries++;
-                try
+                tsuchiConnectedChannel = tsuchiChannels[rand.Next() % tsuchiChannels.Length];
+                int tries = 0;
+                while (tries < 5)
                 {
-                    await tsuchiConnectedChannel.ConnectAsync();
-                    break;
+                    tries++;
+                    try
+                    {
+                        await tsuchiConnectedChannel.ConnectAsync();
+                        break;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Failed try #{tries} to connect Tsuchi to voice.");
+                        tsuchiConnectedChannel = null;
+                        if (tries == 5)
+                            Console.WriteLine(e);
+                    }
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Failed try #{tries} to connect Tsuchi to voice.");
-                    if (tries == 5)
-                        Console.WriteLine(e);
-                }
+            }
+            else
+            {
+                tsuchiConnectedChannel = null;
+                await loggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "SnakeGame", $"No snake channels :("));
             }
             //await mainClient.GetUser(ulong.Parse(config["ids:owner"])).AttemptSendDMAsync(provider, $"Tsuchi in da house.");
         }
@@ -185,19 +204,8 @@ namespace PrideBot.Quizzes
 
                         await TsuchiStartupAsync();
 
-                        var tsuchiChannels = tsuchiClient.GetGyn(config).VoiceChannels
-                            .Where(a => !a.Users.Any())
-                            .ToArray();
 
-                        if (tsuchiChannels.Any())
-                        {
-                            tsuchiConnectedChannel = tsuchiChannels[rand.Next() % tsuchiChannels.Length];
-                            await TsuchiVoiceConnectAsync(tsuchiConnectedChannel);
-                        }
-                        else
-                        {
-                            await loggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "SnakeGame", $"No snake channels :("));
-                        }
+                        await TsuhiConnectRandomAsync(rand);
 
                         var endTime = DateTime.Now.AddMinutes(await GetVoiceMinutesAsync());
                         await loggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "SnakeGame", $"Unleashed snake for " +
@@ -306,11 +314,12 @@ namespace PrideBot.Quizzes
             var dt = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).AddDays(day - 1).AddMinutes(minuteChosen);
             //mainClient.GetUser(ulong.Parse(config["ids:owner"])).AttemptSendDMAsync(provider, $"Scheduled snake in {mainClient.GetGyn(config)} at {dt}.").GetAwaiter();
 
+
             ////For debuggin
             //if (!cheated)
             //{
-            //    dt = DateTime.Now;//.adddays(dt.day - datetime.now.day);
-            //    dt = dt.AddMinutes(1);
+                //dt = DateTime.Now;//.adddays(dt.day - datetime.now.day);
+                //dt = dt.AddSeconds(15);
             //    //cheated = true;
             //}
             //else

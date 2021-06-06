@@ -54,6 +54,7 @@ namespace PrideBot.Modules
         [Command("giveachievement")]
         [Alias("grantachievement")]
         [Summary("Gives a user an achievement, same as adding reactions.")]
+        [Priority(0)]
         [RequireGyn]
         [RequireContext(ContextType.Guild)]
         public async Task GiveAchievement(IUser user, string achievementId, bool ignoreCooldown = false, [DefaultValueName("achievement default")] int score = 0)
@@ -66,6 +67,26 @@ namespace PrideBot.Modules
             await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, Context.User, score, ignoreCooldown: ignoreCooldown,
                 reportChannel: Context.Channel);
             //if (Context.Client.GetGyn(config).GetChannelfromConfig(config, "achievementschannel").Id != Context.Channel.Id)
+            await ReplyResultAsync("Done!");
+        }
+
+        [Command("giveachievement")]
+        [Alias("grantachievement")]
+        [Summary("Gives multiple users an achievement, same as adding reactions.")]
+        [Priority(1)]
+        [RequireGyn]
+        [RequireContext(ContextType.Guild)]
+        public async Task GiveAchievement(string achievementId, params SocketUser[] users)
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var achievement = await repo.GetAchievementAsync(connection, achievementId);
+            if (achievement == null)
+                throw new CommandException("Nope nuh-uh, I couldn't find that achievement like Anywheeeere, sorry! Make sure the Achievement Id matches the one in the sheet!");
+            foreach (var user in users)
+            {
+                await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, Context.User, reportChannel: Context.Channel);
+            }
             await ReplyResultAsync("Done!");
         }
 
@@ -110,6 +131,36 @@ namespace PrideBot.Modules
         {
             await channel.SendMessageAsync(DialogueDict.RollBrainrot(message));
             await ReplyResultAsync("Done!");
+        }
+
+        [Command("attachment")]
+        [Alias("attach", "file")]
+        [Priority(0)]
+        [Summary("Relays a message.")]
+        public async Task File(string url, [Remainder] string message)
+        {
+            await File(url, Context.Channel as SocketTextChannel, message);
+        }
+
+        [Command("attachment")]
+        [Alias("attach", "file")]
+        [Priority(1)]
+        [Summary("Relays a message in the specified chat channel.")]
+        public async Task File(string url, SocketTextChannel channel, [Remainder] string message)
+        {
+            byte[] attachBytes;
+            try
+            {
+                attachBytes = await WebHelper.DownloadWebFileDataAsync(url);
+            }
+            catch (Exception e)
+            {
+                throw new CommandException("UH OH i couldn't download that urlss!");
+            }
+            var attachStream = new MemoryStream(attachBytes);
+            await channel.SendFileAsync(attachStream, "content" + Path.GetExtension(url), message);
+            if (channel != Context.Channel as SocketTextChannel)
+                await ReplyResultAsync("Done!");
         }
     }
 }

@@ -34,9 +34,10 @@ namespace PrideBot.Modules
         private readonly ShipImageGenerator shipImageGenerator;
         private readonly DiscordSocketClient client;
         private readonly ScoringService scoringService;
+        private readonly UserRegisteredCache userReg;
 
 
-        public GameModule(CommandService service, IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService)
+        public GameModule(CommandService service, IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService, UserRegisteredCache userReg)
         {
             this.service = service;
             this.config = config;
@@ -45,6 +46,7 @@ namespace PrideBot.Modules
             this.shipImageGenerator = shipImageGenerator;
             this.client = client;
             this.scoringService = scoringService;
+            this.userReg = userReg;
         }
 
         [Command("ships")]
@@ -99,20 +101,36 @@ namespace PrideBot.Modules
         [Alias("score")]
         [RequireRegistration]
         [Summary("Views your ships and how well they're doing!")]
+        [Priority(1)]
         public async Task Score()
         {
+            await Score(Context.User);
+        }
+
+        [Command("scores")]
+        [Alias("score")]
+        [RequireRegistration]
+        [RequireSage]
+        [Summary("Mod command to view another user's ships scores.")]
+        [Priority(0)]
+        public async Task Score(SocketUser user)
+        {
+            if (!(await userReg.GetOrDownloadAsync(user.Id.ToString())))
+                throw new CommandException("That user isn't registered for this event!");
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
-            var dbUser = await repo.GetUserAsync(connection, Context.User.Id.ToString());
-            var username = (Context.User as SocketGuildUser)?.Nickname ?? Context.User.Username;
+            var dbUser = await repo.GetUserAsync(connection, user.Id.ToString());
+            var username = (user as SocketGuildUser)?.Nickname ?? user.Username;
             var dbShips = await repo.GetUserShipsAsync(connection, dbUser);
 
-            var embed = EmbedHelper.GetEventEmbed(Context.User, config)
-                .WithThumbnailUrl(Context.User.GetAvatarUrlOrDefault())
+            var embed = EmbedHelper.GetEventEmbed(user, config)
+                .WithThumbnailUrl(user.GetAvatarUrlOrDefault())
                 .WithTitle($"Score Overview")
-                .WithDescription("Heyyy, I pulled some cosmic data about how your pairings are doing!")
+                .WithDescription(user == Context.User
+                ? "Heyyy, I pulled some cosmic data about how your pairings are doing!"
+                : $"'Kayy, here's how {(user as SocketGuildUser)?.Nickname ?? user.Username}'s pairings are doing!")
                 .WithFooter(new EmbedFooterBuilder()
-                    .WithText(Context.User.Id.ToString()));
+                    .WithText(user.Id.ToString()));
             var spEmote = EmoteHelper.SPEmote;
 
             var guildSettings = await repo.GetGuildSettings(connection, config["ids:gyn"]);
@@ -186,7 +204,7 @@ namespace PrideBot.Modules
 
             var desc = (ship.Supporters > 0 || ship.PointsEarned > 0)
                 ? DialogueDict.Get("SHIP_SCORES_DESC", ship.GetDisplayName(),
-                    ((int)ship.Place).ToString() + MathHelper.GetPlacePrefix((int)ship.Place).ToString(), ship.PointsEarned)
+                    ((int)ship.Place).ToString() + MathHelper.GetPlacePrefix((int)ship.Place).ToString(), ship.PointsEarned, ship.Supporters)
                 : DialogueDict.Get("SHIP_SCORES_NO_POINTS");
 
 

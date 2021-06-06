@@ -126,6 +126,7 @@ namespace PrideBot.Game
             var imagePath = await leaderboardImageGenerator.WriteLeaderboardImageAsync(topShips, topRareShips);
             var embed = EmbedHelper.GetEventEmbed(null, config)
                 .WithDescription(DialogueDict.Get("LEADERBOARD_DESCRIPTION"))
+                .WithTitle("**The red string connects us all!**")
                 .WithImageUrl(config.GetRelativeHostPathWeb(imagePath));
             embed.Fields = new List<EmbedFieldBuilder>();
             embed.Fields.AddRange(GetEmbedFieldsForLeaderboard(topShips, "Champions of Love:"));
