@@ -189,9 +189,9 @@ namespace PrideBot.Modules
         {
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
-            //var guildSettings = await repo.GetGynGuildSettings(connection, config);
-            //if (!guildSettings.LeaderboardAvailable && !Context.User.IsGYNSage(config))
-            //    throw new CommandException(DialogueDict.Get("SHIP_SCORES_EARLY"));
+            var guildSettings = await repo.GetGynGuildSettings(connection, config);
+            if (!guildSettings.LeaderboardAvailable && !Context.User.IsGYNSage(config))
+                throw new CommandException(DialogueDict.Get("SHIP_SCORES_EARLY"));
 
             var dbCharacters = await repo.GetAllCharactersAsync(connection);
             var shipResult = await RegistrationSession.ParseShipAsync(connection, repo, shipName, dbCharacters);
@@ -202,9 +202,17 @@ namespace PrideBot.Modules
             if (!validationResult.IsSuccess)
                 throw new CommandException(DialogueDict.Get("SHIP_SCORES_INVALID"));
 
+            var gyn = Context.Client.GetGyn(config);
+            var supporterLines = (await repo.GetUserShipsForShipAsync(connection, ship.ShipId))
+                .Where(a => gyn.GetUser(ulong.Parse(a.UserId)) != null)
+                .OrderByDescending(a => a.PointsEarnedByUser)
+                .Select(a => $"{gyn.GetUser(ulong.Parse(a.UserId)).Mention} ({(UserShipTier)a.Tier})")
+                .ToList();
+            //$", **{a.PointsEarnedByUser} {EmoteHelper.SPEmote}** earned for them");
+
             var desc = (ship.Supporters > 0 || ship.PointsEarned > 0)
                 ? DialogueDict.Get("SHIP_SCORES_DESC", ship.GetDisplayName(),
-                    ((int)ship.Place).ToString() + MathHelper.GetPlacePrefix((int)ship.Place).ToString(), ship.PointsEarned, ship.Supporters)
+                    ((int)ship.Place).ToString() + MathHelper.GetPlacePrefix((int)ship.Place).ToString(), ship.PointsEarned, supporterLines.Count())
                 : DialogueDict.Get("SHIP_SCORES_NO_POINTS");
 
 
@@ -214,15 +222,8 @@ namespace PrideBot.Modules
                 .WithTitle($"Ship Overview: {ship.GetDisplayName()}")
                 .WithDescription(desc);
 
-            if (ship.Supporters > 0)
+            if (supporterLines.Any())
             {
-                var gyn = Context.Client.GetGyn(config);
-                var supporterLines = (await repo.GetUserShipsForShipAsync(connection, ship.ShipId))
-                    .Where(a => gyn.GetUser(ulong.Parse(a.UserId)) != null)
-                    .OrderByDescending(a => a.PointsEarnedByUser)
-                    .Select(a => $"{gyn.GetUser(ulong.Parse(a.UserId)).Mention} ({(UserShipTier)a.Tier})")
-                    .ToList();
-                //$", **{a.PointsEarnedByUser} {EmoteHelper.SPEmote}** earned for them");z
 
                 var fieldValues = new List<string>();
                 fieldValues.Add("");
