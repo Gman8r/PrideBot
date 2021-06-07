@@ -189,9 +189,9 @@ namespace PrideBot.Modules
         {
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
-            var guildSettings = await repo.GetGynGuildSettings(connection, config);
-            if (!guildSettings.LeaderboardAvailable && !Context.User.IsGYNSage(config))
-                throw new CommandException(DialogueDict.Get("SHIP_SCORES_EARLY"));
+            //var guildSettings = await repo.GetGynGuildSettings(connection, config);
+            //if (!guildSettings.LeaderboardAvailable && !Context.User.IsGYNSage(config))
+            //    throw new CommandException(DialogueDict.Get("SHIP_SCORES_EARLY"));
 
             var dbCharacters = await repo.GetAllCharactersAsync(connection);
             var shipResult = await RegistrationSession.ParseShipAsync(connection, repo, shipName, dbCharacters);
@@ -213,6 +213,35 @@ namespace PrideBot.Modules
                 .WithThumbnailUrl(config.GetRelativeHostPathWeb(shipImagePath))
                 .WithTitle($"Ship Overview: {ship.GetDisplayName()}")
                 .WithDescription(desc);
+
+            if (ship.Supporters > 0)
+            {
+                var gyn = Context.Client.GetGyn(config);
+                var supporterLines = (await repo.GetUserShipsForShipAsync(connection, ship.ShipId))
+                    .Where(a => gyn.GetUser(ulong.Parse(a.UserId)) != null)
+                    .OrderByDescending(a => a.PointsEarnedByUser)
+                    .Select(a => $"{gyn.GetUser(ulong.Parse(a.UserId)).Mention} ({(UserShipTier)a.Tier})")
+                    .ToList();
+                //$", **{a.PointsEarnedByUser} {EmoteHelper.SPEmote}** earned for them");z
+
+                var fieldValues = new List<string>();
+                fieldValues.Add("");
+                for (int i = 0; i < supporterLines.Count(); i++)
+                {
+                    var supporterLine = "\n" + supporterLines[i];
+                    var valueIndex = fieldValues.Count - 1;
+                    if ((fieldValues[valueIndex] + supporterLine).Length > 1000)
+                        fieldValues.Add(supporterLine);
+                    else
+                        fieldValues[valueIndex] += supporterLine;
+                }
+
+                embed.AddField($"{ship.GetDisplayName()}'s Current Active Supporters:", string.Join("\n", fieldValues[0]), true);
+                for (int i = 1; i < fieldValues.Count; i++)
+                {
+                    embed.AddField("\u200B", string.Join("\n", fieldValues[i]), true);
+                }
+            }
 
             await ReplyAsync(embed: embed.Build());
         }

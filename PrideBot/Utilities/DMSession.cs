@@ -124,8 +124,10 @@ namespace PrideBot
                     .WithDescription(cancellationMessage);
                 await channel.SendMessageAsync(embed: embed.Build());
             }
-            catch
+            catch (Exception e)
             {
+                if (e.Message.Contains("50007"))
+                    throw new CommandException("HMM I can't seem to send you any DM's. Do you accept messages from people on this server?");
                 var errorEmbed = EmbedHelper.GetEventErrorEmbed(user, DialogueDict.Get("SESSION_EXCEPTION"), client, showUser: false);
                 await channel.SendMessageAsync(embed: errorEmbed.Build());
                 throw;

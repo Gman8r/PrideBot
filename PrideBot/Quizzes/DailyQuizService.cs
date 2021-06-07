@@ -35,10 +35,10 @@ namespace PrideBot.Quizzes
         readonly ScoringService scoringService;
         readonly LoggingService loggingService;
 
-        GuildSettings guildSettings;
         SocketTextChannel quizChannel;
         SocketTextChannel quizDiscussionChannel;
         SocketRole quizTakenRole;
+        QuizSettings quizSettings;
 
         public DailyQuizService(ModelRepository repo, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, LoggingService loggingService)
         {
@@ -57,14 +57,17 @@ namespace PrideBot.Quizzes
             return Task.CompletedTask;
         }
 
+        private class QuizSettings
+        {
+            public int day;
+            public bool open;
+        }
+
         async Task DoQuizLoop()
         {
             try
             {
-                using var connection = repo.GetDatabaseConnection();
-                await connection.OpenAsync();
-                guildSettings = await GetGuildSettingsAsync(connection);
-                await connection.CloseAsync();
+                quizSettings = await GetQuizSettingsAsync();
                 var gyn = await client.AwaitGyn(config);
                 quizChannel = gyn.GetChannelFromConfig(config, "quizchannel") as SocketTextChannel;
                 quizDiscussionChannel = gyn.GetChannelFromConfig(config, "quizdiscussionchannel") as SocketTextChannel;
@@ -79,22 +82,18 @@ namespace PrideBot.Quizzes
                     // last 15 minutes of day, quiz should be closed
                     var isEndOfDay = GameHelper.GetQuizDay(DateTime.Now.AddMinutes(QuizCancelBufferMinutes)) != GameHelper.GetQuizDay();
 
-                    if (guildSettings.QuizOpen && (isEndOfDay || guildSettings.QuizDay != GameHelper.GetQuizDay()))
+                    if (quizSettings.open && (isEndOfDay || quizSettings.day != GameHelper.GetQuizDay()))
                     {
-                        if (guildSettings.QuizOpen)
+                        if (quizSettings.open)
                         {
-                            await connection.OpenAsync();
-                            await CloseQuizAsync(connection, guildSettings.QuizDay);
-                            await connection.CloseAsync();
+                            await CloseQuizAsync(quizSettings.day);
                         }
                     }
-                    if (!guildSettings.QuizOpen && !isEndOfDay)
+                    if (!quizSettings.open && !isEndOfDay)
                     {
-                        if (!guildSettings.QuizOpen)
+                        if (!quizSettings.open)
                         {
-                            await connection.OpenAsync();
-                            await OpenQuizAsync(connection, GameHelper.GetQuizDay());
-                            await connection.CloseAsync();
+                            await OpenQuizAsync(GameHelper.GetQuizDay());
                         }
                     }
                 }
@@ -108,31 +107,53 @@ namespace PrideBot.Quizzes
             }
         }
 
-        public bool IsQuizOpen => guildSettings.QuizOpen;
-
-        public int ActiveQuiz => guildSettings.QuizDay;
-
-        async Task CloseQuizAsync(SqlConnection connection, int day)
+        async Task<QuizSettings> GetQuizSettingsAsync()
         {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var guildSettings = await GetGuildSettingsAsync(connection);
+            return new QuizSettings()
+            {
+                day = guildSettings.QuizDay,
+                open = guildSettings.QuizOpen
+            };
+        }
+
+        async Task UpdateQuizSettingsAsync(QuizSettings value)
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var guildSettings = await GetGuildSettingsAsync(connection);
+            guildSettings.QuizDay = value.day;
+            guildSettings.QuizOpen = value.open;
+            await repo.UpdateGuildSettingsAsync(connection, guildSettings);
+        }
+
+        public bool IsQuizOpen => quizSettings.open;
+
+        public int ActiveQuiz => quizSettings.day;
+
+        async Task CloseQuizAsync(int day)
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
             var quizzes = await repo.GetQuizzesForDayAsync(connection, day.ToString());
             var embed = GetQuizReviewEmbed(quizzes.ToList())
                 .WithTitle("Daily Quiz Closed")
                 .WithDescription(DialogueDict.Get("DAILY_QUIZ_CLOSED", day));
 
-            guildSettings.QuizOpen = false;
-            await repo.UpdateGuildSettingsAsync(connection, guildSettings);
+            quizSettings.open = false;
+            await UpdateQuizSettingsAsync(quizSettings);
 
             await quizChannel.SendMessageAsync(embed: embed.Build());
-
-            //foreach (var member in quizTakenRole.Members)
-            //{
-            //    await member.RemoveRoleAsync(quizTakenRole);
-            //}
         }
 
 
-        async Task OpenQuizAsync(SqlConnection connection, int day)
+        async Task OpenQuizAsync(int day)
         {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+
             foreach (var member in quizTakenRole.Members)
             {
                 await member.RemoveRoleAsync(quizTakenRole);
@@ -175,9 +196,9 @@ namespace PrideBot.Quizzes
             }
             embed.AddField(categoryField);
 
-            guildSettings.QuizDay = day;
-            guildSettings.QuizOpen = true;
-            await repo.UpdateGuildSettingsAsync(connection, guildSettings);
+            quizSettings.day = day;
+            quizSettings.open = true;
+            await UpdateQuizSettingsAsync(quizSettings);
 
             var quizMsg = await quizChannel.SendMessageAsync(embed: embed.Build());
             await quizMsg.PinAsync();
