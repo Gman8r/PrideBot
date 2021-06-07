@@ -205,7 +205,7 @@ namespace PrideBot.Modules
             var gyn = Context.Client.GetGyn(config);
             var supporterLines = (await repo.GetUserShipsForShipAsync(connection, ship.ShipId))
                 .Where(a => gyn.GetUser(ulong.Parse(a.UserId)) != null)
-                .OrderByDescending(a => a.PointsEarnedByUser)
+                .OrderBy(a => a.Tier)
                 .Select(a => $"{gyn.GetUser(ulong.Parse(a.UserId)).Mention} ({(UserShipTier)a.Tier})")
                 .ToList();
             //$", **{a.PointsEarnedByUser} {EmoteHelper.SPEmote}** earned for them");
