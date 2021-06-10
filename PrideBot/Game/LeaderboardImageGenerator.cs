@@ -133,25 +133,37 @@ namespace PrideBot.Game
             public int sparkleOffset;
         }
 
-        public async Task<MagickImageCollection> CreateYurikoGifAsync()
+        public async Task<MagickImageCollection> CreateYurikoGifAsync(string frontImageUrl, string backGifUrl)
         {
-            using var frontImage = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Top.png"));
-            var collection = new MagickImageCollection();
-            for (int i = 0; i < FrameCount; i++)
+            using var frontImage = new MagickImage(await WebHelper.DownloadWebFileDataAsync(frontImageUrl));
+            var collection = new MagickImageCollection(await WebHelper.DownloadWebFileDataAsync(backGifUrl));
+            collection.Coalesce();
+            foreach (var image in collection)
             {
-                var image = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Bottom.png"));
-                if (i != 0)
-                {
-                    var pp = image.GetPixels().Cast<IPixel<byte>>()
-                        .Select(a => new Pixel(a.X, a.Y, ShiftHue(a.ToColor(), -(double)i / (double)FrameCount).ToByteArray()));
-                    image.GetPixels().SetPixel(pp);
-                }
-                image.GifDisposeMethod = GifDisposeMethod.Background;
                 image.Composite(frontImage, Gravity.Northwest, 0, 0, CompositeOperator.Over);
-                collection.Add(image);
             }
             return collection;
         }
+
+        //public async Task<MagickImageCollection> CreateYurikoGifAsync(string frontImageUrl, string backImageUrl)
+        //{
+        //    using var frontImage = new MagickImage(await WebHelper.DownloadWebFileDataAsync(frontImageUrl));
+        //    var collection = new MagickImageCollection();
+        //    for (int i = 0; i < 2; i++)
+        //    {
+        //        var image = new MagickImage(await WebHelper.DownloadWebFileDataAsync(frontImageUrl));
+        //        if (i != 0)
+        //        {
+        //            var pp = image.GetPixels().Cast<IPixel<byte>>()
+        //                .Select(a => new Pixel(a.X, a.Y, ShiftHue(a.ToColor(), -(double)i / (double)FrameCount).ToByteArray()));
+        //            image.GetPixels().SetPixel(pp);
+        //        }
+        //        image.GifDisposeMethod = GifDisposeMethod.Background;
+        //        image.Composite(frontImage, Gravity.Northwest, 0, 0, CompositeOperator.Over);
+        //        collection.Add(image);
+        //    }
+        //    return collection;
+        //}
 
         IMagickColor<byte> ShiftHue(IMagickColor<byte> color, double amount)
         {

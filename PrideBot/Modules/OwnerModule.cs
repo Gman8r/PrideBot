@@ -31,13 +31,15 @@ namespace PrideBot.Modules
         readonly AnnouncementService announcementService;
         readonly LeaderboardService leaderboardService;
         readonly IConfigurationRoot config;
+        readonly LeaderboardImageGenerator leaderboardImageGenerator;
 
-        public OwnerModule(ModelRepository repo, AnnouncementService announcementService, LeaderboardService leaderboardService, IConfigurationRoot config)
+        public OwnerModule(ModelRepository repo, AnnouncementService announcementService, LeaderboardService leaderboardService, IConfigurationRoot config, LeaderboardImageGenerator leaderboardImageGenerator)
         {
             this.repo = repo;
             this.announcementService = announcementService;
             this.leaderboardService = leaderboardService;
             this.config = config;
+            this.leaderboardImageGenerator = leaderboardImageGenerator;
         }
 
         [Command("announceintro")]
@@ -52,6 +54,15 @@ namespace PrideBot.Modules
         public async Task AnnounceStart()
         {
             await announcementService.StartAnnouncementAsync(Context.Guild);
+        }
+        [Command("yurikogif")]
+        [Alias("createyurikogif")]
+        public async Task CreateYurikoGifAsync(string frontUrl, string backUrl)
+        {
+            using var typing = Context.Channel.EnterTypingState();
+            using var collection = await leaderboardImageGenerator.CreateYurikoGifAsync(frontUrl, backUrl);
+            using var stream = (await collection.WriteToMemoryFileAsync("yuriko")).Stream;
+            await Context.Channel.SendFileAsync(stream, "yuriko.gif");
         }
 
         [Command("refreshleaderboard")]
