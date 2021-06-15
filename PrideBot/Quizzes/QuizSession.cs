@@ -109,11 +109,12 @@ namespace PrideBot.Quizzes
                 chosenQuizIndex = selection - 1;
             }
 
+            var quiz = availableQuizzes[chosenQuizIndex];
             quizLog.Attempted = true;
             quizLog.Correct = false;
-            var b = await repo.UpdateQuizLogAsync(connection, quizLog);
+            quizLog.QuizId = quiz.QuizId;
+            await repo.UpdateQuizLogAsync(connection, quizLog);
 
-            var quiz = availableQuizzes[chosenQuizIndex];
             var rand = new Random();
             correctChoice = quiz.Correct.Split('\n')[rand.Next() % quiz.Correct.Split('\n').Length];
             var incorrectChoicePool = quiz.Incorrect.Split('\n').ToList();
