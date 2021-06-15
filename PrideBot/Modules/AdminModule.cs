@@ -54,10 +54,10 @@ namespace PrideBot.Modules
         [Command("giveachievement")]
         [Alias("grantachievement")]
         [Summary("Gives a user an achievement, same as adding reactions.")]
-        [Priority(0)]
+        [Priority(1)]
         [RequireGyn]
         [RequireContext(ContextType.Guild)]
-        public async Task GiveAchievement(IUser user, string achievementId, bool ignoreCooldown = false, [DefaultValueName("achievement default")] int score = 0)
+        public async Task GiveAchievement(SocketUser user, string achievementId, bool ignoreCooldown = false, [DefaultValueName("achievement default")] int score = 0)
         {
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
@@ -73,7 +73,7 @@ namespace PrideBot.Modules
         [Command("giveachievement")]
         [Alias("grantachievement")]
         [Summary("Gives multiple users an achievement, same as adding reactions.")]
-        [Priority(1)]
+        [Priority(0)]
         [RequireGyn]
         [RequireContext(ContextType.Guild)]
         public async Task GiveAchievement(string achievementId, params SocketUser[] users)
