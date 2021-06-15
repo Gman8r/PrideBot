@@ -69,6 +69,13 @@ namespace PrideBot.Game
             var sineAmplitude = 30;
             var sineMult = 1.0;
 
+            // resize yuriko
+            foreach (var yFrame in yurikoImage)
+            {
+                var p = 100.0 * yurikoHeight / (double)yFrame.Height;
+                yFrame.Resize(new Percentage(p));
+            }
+
             for (int i = 0; i < bgCollection.Count; i++)
             {
                 var bgFrame = bgCollection[i];
@@ -82,8 +89,6 @@ namespace PrideBot.Game
 
                 // Composite yuriko
                 var yurikoFrame = yurikoImage[i % yurikoImage.Count];
-                var p = 100.0 * yurikoHeight / (double)yurikoFrame.Height;
-                yurikoFrame.Resize(new Percentage(p));
                 bgFrame.Composite(yurikoFrame, Gravity.Northwest,
                     (bgFrame.Width - yurikoFrame.Width) / 2,
                     ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude),
