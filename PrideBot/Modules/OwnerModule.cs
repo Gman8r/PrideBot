@@ -32,14 +32,16 @@ namespace PrideBot.Modules
         readonly LeaderboardService leaderboardService;
         readonly IConfigurationRoot config;
         readonly LeaderboardImageGenerator leaderboardImageGenerator;
+        readonly SceneDialogueService sceneDialogueService;
 
-        public OwnerModule(ModelRepository repo, AnnouncementService announcementService, LeaderboardService leaderboardService, IConfigurationRoot config, LeaderboardImageGenerator leaderboardImageGenerator)
+        public OwnerModule(ModelRepository repo, AnnouncementService announcementService, LeaderboardService leaderboardService, IConfigurationRoot config, LeaderboardImageGenerator leaderboardImageGenerator, SceneDialogueService sceneDialogueService)
         {
             this.repo = repo;
             this.announcementService = announcementService;
             this.leaderboardService = leaderboardService;
             this.config = config;
             this.leaderboardImageGenerator = leaderboardImageGenerator;
+            this.sceneDialogueService = sceneDialogueService;
         }
 
         [Command("announceintro")]
@@ -72,6 +74,12 @@ namespace PrideBot.Modules
             using var typing = Context.Channel.EnterTypingState();
             await leaderboardService.UpdateLoaderboardAsync();
             await ReplyResultAsync("Done!");
+        }
+
+        [Command("runscene")]
+        public async Task RunScene(string sceneId)
+        {
+            await sceneDialogueService.PerformCutscene(sceneId);
         }
     }
 }

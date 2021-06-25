@@ -47,7 +47,7 @@ namespace PrideBot
             if (!config.ParseBoolField("stealthmode"))
                 await commands.AddModulesAsync(Assembly.GetEntryAssembly(), provider);     // Load commands and modules into the command service
             else
-                await commands.AddModuleAsync<GameModule>(provider);  // Only load stealth module modules
+                await commands.AddModuleAsync<SecretStealthModule>(provider);  // Only load stealth module modules
 
             // Initialize helper fields
             var appData = await discord.GetApplicationInfoAsync();

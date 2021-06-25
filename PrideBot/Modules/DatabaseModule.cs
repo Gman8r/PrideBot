@@ -53,12 +53,12 @@ namespace PrideBot.Modules
 
         [Command("updatetable")]
         [Alias("updatesheet", "pushtable", "pushsheet")]
-        public async Task UploadSheet(string url, string tableName)
+        public async Task UploadSheet(string url, string tableName, bool clearContentsFirst = false)
 
         {
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
-            var mainRowsAffected = await PushSheetAsync(url, tableName, connection);
+            var mainRowsAffected = await PushSheetAsync(url, tableName, connection, clearContentsFirst);
 
             if (mainRowsAffected == -1)
                 await ReplyResultAsync($"No rows need changing or adding in my database.");
@@ -69,18 +69,21 @@ namespace PrideBot.Modules
             {
                 using var altConnection = repo.GetAltDatabaseConnection();
                 await altConnection.OpenAsync();
-                var altRowsAffected = await PushSheetAsync(url, tableName, altConnection);
+                var altRowsAffected = await PushSheetAsync(url, tableName, altConnection, clearContentsFirst);
                 if (altRowsAffected == -1)
                     await ReplyResultAsync($"No rows need changing or adding in the other database.");
                 else
                     await ReplyResultAsync($"{altRowsAffected} row(s) affected in the other database.");
             }
-            
+
             await ReplyResultAsync($"Done!");
         }
 
-        public async Task<int> PushSheetAsync(string url, string tableName, SqlConnection connection)
+        public async Task<int> PushSheetAsync(string url, string tableName, SqlConnection connection, bool clearFirst)
         {
+            if (clearFirst)
+                await new SqlCommand($"delete from {tableName};", connection).ExecuteNonQueryAsync();
+
             var idPattern = "\\/d\\/(.*?)\\/(|$)";
             var idMatch = new Regex(idPattern).Match(url);
             var groups = idMatch.Groups.Cast<Group>();
@@ -89,6 +92,7 @@ namespace PrideBot.Modules
             var sheetsResult = await sheetsService.ReadSheetDataAsync(sheetId, "A1:Y1001");
             var fieldsRow = sheetsResult.Values.FirstOrDefault();
             var fieldDict = new Dictionary<string, Type>();
+
 
             // Remove () columns
             var notesColumns = fieldsRow
@@ -186,8 +190,16 @@ namespace PrideBot.Modules
                         continue;
                     var row = reader[0].ToString();
                     var b = reader[i].ToString();
+                    try
+                    {
                     if (!fieldMatch.ToString().Equals(reader[i].ToString()))
                         changes[fieldName] = Convert.ChangeType(fieldMatch, fieldDict[fieldName]);
+
+                    }
+                    catch
+                    {
+
+                    }
                 }
 
                 // Apply changes to update statement
@@ -243,7 +255,7 @@ namespace PrideBot.Modules
             {
                 return -1;
             }
-            
+
             // Now push!!
             var command = new SqlCommand(query, connection);
             foreach (var param in parameterDict.Reverse())

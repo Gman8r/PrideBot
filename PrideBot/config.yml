@@ -1,4 +1,4 @@
-﻿stealthmode: False
+﻿stealthmode: True
 prefixes:
     - 'y.'
     - 'p.'

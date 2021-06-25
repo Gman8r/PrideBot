@@ -33,6 +33,13 @@ namespace PrideBot.Modules
             this.config = config;
         }
 
+        //[Command("lambda")]
+        //public static async Task Haha(SocketTextChannel channel, [Remainder]string content)
+        //{
+        // var msg =    await channel.SendMessageAsync(content);
+        //    await msg.PinAsync();
+        //}
+
 
 
         //[Command("hook")]

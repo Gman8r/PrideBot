@@ -69,9 +69,7 @@ namespace PrideBot.Modules
 
         [Command("takequizday")]
         [Summary("Mod function to take the quiz for a particular day for the month, for yourself or someone else.")]
-        [RequireRegistration]
         [RequireUserPermission(GuildPermission.Administrator)]
-        [RequireSingleSession]
         [RequireSage]
         public async Task TakeQuizDay(int day, SocketUser user = null)
         {
