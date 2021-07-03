@@ -22,10 +22,11 @@ namespace PrideBot.Registration
         public string GetShipAvatarPath(User user, IConfigurationRoot config)
             => config.GetRelativeHostPathLocal("ships/" + user.UserId + ".png");
 
-        public async Task<string> WriteUserCardAsync(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0, string[] scoreTexts = null)
+        public async Task<string> WriteUserCardAsync(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0, string[] scoreTexts = null,
+            bool blackOutHeartRight = false)
         {
             var path =
-                await (await GenerateUserCardAsync(dbUser, dbShips, highlightTier, highlightHeart, scoreTexts))
+                await (await GenerateUserCardAsync(dbUser, dbShips, highlightTier, highlightHeart, scoreTexts, blackOutHeartRight))
                 .WriteToWebFileAsync(config, "ships");
             return path;
         }
@@ -38,12 +39,12 @@ namespace PrideBot.Registration
             return path;
         }
 
-        public async Task<MagickImage> GenerateUserCardAsync(User dbUser, UserShipCollection userShips, int highlightTier = -1, int highlightHeart = 0, string[] scoreTexts = null)
+        public async Task<MagickImage> GenerateUserCardAsync(User dbUser, UserShipCollection userShips, int highlightTier = -1, int highlightHeart = 0, string[] scoreTexts = null, bool blackOutHeartRight = false)
         {
             scoreTexts ??= new string[3];
             var image = new MagickImage(await File.ReadAllBytesAsync($"Assets/Backgrounds/shipbg{dbUser.CardBackground}.png"));
             //var image = new MagickImage(MagickColors.Transparent, 288, 192);
-            using var primaryShipImage = await GenerateUserShipImageAsync(userShips.PrimaryShip, highlightTier == 0, highlightHeart);
+            using var primaryShipImage = await GenerateUserShipImageAsync(userShips.PrimaryShip, highlightTier == 0, highlightHeart, blackOutHeartRight);
             var yLevel = !string.IsNullOrWhiteSpace(scoreTexts[0]) ? 96 : 106;
             primaryShipImage.InterpolativeResize(128, 128, PixelInterpolateMethod.Nearest);
             //if (ships[1].IsEmpty() && ships[2].IsEmpty())
@@ -56,7 +57,7 @@ namespace PrideBot.Registration
                 if (userShips.HasSecondaryShip || highlightTier == 1)
                 {
                     //var yLevel = scores[1] > 0 ? 90 : 90;
-                    using var ship2Image = await GenerateUserShipImageAsync(userShips.SecondaryShip, highlightTier == 1, highlightHeart);
+                    using var ship2Image = await GenerateUserShipImageAsync(userShips.SecondaryShip, highlightTier == 1, highlightHeart, blackOutHeartRight);
                     image.Composite(ship2Image, Gravity.Northwest, 8, yLevel, CompositeOperator.Over);
                     if (!string.IsNullOrWhiteSpace(scoreTexts[1]))
                     {
@@ -67,7 +68,7 @@ namespace PrideBot.Registration
                 }
                 if (userShips.HasTertiaryShip || highlightTier == 2)
                 {
-                    using var ship3Image = await GenerateUserShipImageAsync(userShips.TertiaryShip, highlightTier == 2, highlightHeart);
+                    using var ship3Image = await GenerateUserShipImageAsync(userShips.TertiaryShip, highlightTier == 2, highlightHeart, blackOutHeartRight);
                     image.Composite(ship3Image, Gravity.Northwest, 216, yLevel, CompositeOperator.Over);
                     if (!string.IsNullOrWhiteSpace(scoreTexts[2]))
                     {
@@ -89,7 +90,7 @@ namespace PrideBot.Registration
             return image;
         }
 
-        public async Task<MagickImage> GenerateUserShipImageAsync(UserShip ship, bool highlight, int highlightHeart)
+        public async Task<MagickImage> GenerateUserShipImageAsync(UserShip ship, bool highlight, int highlightHeart, bool blackOutHeartRight)
         {
             ship ??= new UserShip();
             var image = new MagickImage(MagickColors.Transparent, 64, 64);
@@ -98,8 +99,8 @@ namespace PrideBot.Registration
 
             ship.Heart1 = string.IsNullOrWhiteSpace(ship.Heart1) ? "shipheart" : ship.Heart1;
             ship.Heart2 = string.IsNullOrWhiteSpace(ship.Heart2) ? "shipheart" : ship.Heart2;
-            using var heartImage1 = new MagickImage(await File.ReadAllBytesAsync($"Assets/Hearts/{ship.Heart1}.png"));
-            using var heartImage2 = new MagickImage(await File.ReadAllBytesAsync($"Assets/Hearts/{ship.Heart2}.png"));
+            using var heartImage1 = await GenerateHeartImageAsync(ship, 1, blackOutHeartRight && highlightHeart == 1);
+            using var heartImage2 = await GenerateHeartImageAsync(ship, 2, blackOutHeartRight && highlightHeart == 2);
 
             using var shipImage = await GenerateShipImageAsync(ship as Ship);
             image.Composite(shipImage, Gravity.Northwest, 0, 30, CompositeOperator.Over);
@@ -121,13 +122,33 @@ namespace PrideBot.Registration
             return image;
         }
 
+        public async Task<MagickImage> GenerateHeartImageAsync(UserShip userShip, int heartIndex, bool blackOutRight)
+        {
+            var heart = heartIndex == 1 ? userShip.Heart1 : userShip.Heart2;
+            heart = string.IsNullOrWhiteSpace(heart) ? "shipheart" :  heart;
+            var baseHeartImage = new MagickImage(await File.ReadAllBytesAsync($"Assets/Hearts/{heart}.png"));
+
+            var heartRight = heartIndex == 1 ? userShip.Heart1Right : userShip.Heart2Right;
+            if (blackOutRight)
+                heartRight = "shipheartblack";
+            if (!string.IsNullOrWhiteSpace(heartRight) )
+            {
+                using var rightHeartImage = new MagickImage(await File.ReadAllBytesAsync($"Assets/Hearts/{heartRight}.png"));
+                var cropGeo = new MagickGeometry(rightHeartImage.Width / 2, 0, rightHeartImage.Width / 2, 0);
+                rightHeartImage.Crop(cropGeo);
+                rightHeartImage.RePage();
+                baseHeartImage.Composite(rightHeartImage, Gravity.Northwest, baseHeartImage.Width / 2, 0, CompositeOperator.Over);
+            }
+
+            return baseHeartImage;
+        }
+
         public async Task<MagickImage> GenerateShipImageAsync(Ship ship)
         {
             var image = new MagickImage(MagickColors.Transparent, 64, 32);
             var file1 = $"Assets/CharacterSprites/{ship.CharacterId1}.png";
             var file2 = $"Assets/CharacterSprites/{ship.CharacterId2}.png";
             if (!File.Exists(file1))
-
                 file1 = $"Assets/CharacterSprites/DEFAULT.png";
             if (!File.Exists(file2))
                 file2 = $"Assets/CharacterSprites/DEFAULT.png";

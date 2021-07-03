@@ -48,7 +48,7 @@ namespace PrideBot
             else if (instance.dict.ContainsKey(key))
                 chosenKey = key;
             else
-                return "(MISSING DIALOGUE OH NO MY BRAIN)";
+                return $"MISSING DIALOGUE OH NO MY BRAIN ({key})";
 
             var str = string.Format(instance.dict[chosenKey]
                 .Replace("{SP}", EmoteHelper.SPEmote.ToString())

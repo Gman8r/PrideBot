@@ -133,8 +133,8 @@ namespace PrideBot.Modules
                     .WithText(user.Id.ToString()));
             var spEmote = EmoteHelper.SPEmote;
 
-            var guildSettings = await repo.GetGuildSettings(connection, config["ids:gyn"]);
-            var leaderboardRevealed = guildSettings.LeaderboardAvailable;
+            //var guildSettings = await repo.GetGuildSettings(connection, config["ids:gyn"]);
+            var leaderboardRevealed = true;
             if (!leaderboardRevealed)
                 embed.Description += " But HMM I can only see so much right now, it'll take some time before I can get you the full picture!";
 
@@ -162,6 +162,10 @@ namespace PrideBot.Modules
                     $" with **{(leaderboardRevealed ? ship.PointsEarned.ToString() : "???")} {spEmote}**" +
                     $" (**{ship.PointsEarnedByUser}** from you)");
             }
+
+            embed.AddField($"Your {EmoteHelper.SPEmote} Totals for This Event:",
+                $"From Combined Achievements: **{dbUser.PointsEarned} {EmoteHelper.SPEmote}**" +
+                $"\nTotal Contributed to Pairings: **{dbUser.PointsGivenToShips} {EmoteHelper.SPEmote}**");
 
             var recentScores = await repo.GetRecentScoresForUserAsync(connection, dbUser.UserId);
             if (recentScores.Any())

@@ -31,6 +31,12 @@ namespace PrideBot.Models
         public int Supporters { get; set; }
         [DontPushToDatabase]
         public long Place { get; set; }
+        [DontPushToDatabase]
+        public long UnderdogPlace { get; set; }
+        [DontPushToDatabase]
+        public long SoloPlace { get; set; }
+        [DontPushToDatabase]
+        public string TopSupporter { get; set; }
 
         public bool IsEmpty() => string.IsNullOrWhiteSpace(CharacterId1) || string.IsNullOrWhiteSpace(CharacterId2);
 

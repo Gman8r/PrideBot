@@ -55,7 +55,7 @@ namespace PrideBot
             return r;
         }
 
-        public static string ToPercent(decimal d) => (d * 100).ToString();
+        public static string ToPercent(decimal d) => ((int)(d * 100)).ToString();
 
         public static string GetPlacePrefix(int num)
         {

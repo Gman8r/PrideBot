@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace PrideBot
@@ -30,7 +31,7 @@ namespace PrideBot
                 //embed.Author = null;
             }
             return embed;
-    }
+        }
 
 
         public static EmbedBuilder GetEventErrorEmbed(IUser user, string description, DiscordSocketClient client, bool showUser = true)
@@ -48,6 +49,25 @@ namespace PrideBot
                     .WithName((user as IGuildUser)?.Nickname ?? user.Username)
                     .WithIconUrl(user.GetAvatarUrlOrDefault().Split('?')[0]));
             return embed;
+        }
+
+        public static List<EmbedFieldBuilder> GetOverflowFields(IEnumerable<string> values, string separator, string title, string subsequentTitle = "\u200B")
+        {
+            var embeds = new List<EmbedFieldBuilder>();
+            var str = "";
+            foreach (var value in values)
+            {
+                if ((str + separator + value).Length >= 1024)
+                {
+                    embeds.Add(new EmbedFieldBuilder().WithName(subsequentTitle).WithValue(str));
+                    str = "";
+                }
+                str += separator + value;
+            }
+            if (!string.IsNullOrWhiteSpace(str))
+                embeds.Add(new EmbedFieldBuilder().WithName(subsequentTitle).WithValue(str));
+            embeds.FirstOrDefault().Name = title;
+            return embeds;
         }
     }
 }

@@ -13,10 +13,18 @@ namespace PrideBot.Repository
     {
         public async Task<UserShipCollection> GetUserShipsAsync(SqlConnection conn, User user)
         => new UserShipCollection((await new SqlCommand($"select * from VI_USER_SHIPS where USER_ID = '{user.UserId}'", conn).ExecuteReaderAsync()).As<UserShip>());
+
         public async Task<UserShipCollection> GetUserShipsAsync(SqlConnection conn, string userId)
         => new UserShipCollection((await new SqlCommand($"select * from VI_USER_SHIPS where USER_ID = '{userId}'", conn).ExecuteReaderAsync()).As<UserShip>());
-        public async Task<UserShipCollection> GetUserShipsForShipAsync(SqlConnection conn, string shipId)
-        => new UserShipCollection((await new SqlCommand($"select * from VI_USER_SHIPS where SHIP_ID = '{shipId}' and POINTS_EARNED > 0", conn).ExecuteReaderAsync()).As<UserShip>());
+
+        public async Task<IEnumerable<UserShip>> GetUserShipsHistoricalAsync(SqlConnection conn, string userId)
+        => (await new SqlCommand($"select * from VI_USER_SHIPS_HISTORICAL where USER_ID = '{userId}'", conn).ExecuteReaderAsync()).As<UserShip>();
+
+        public async Task<IEnumerable<UserShip>> GetUserShipsForShipAsync(SqlConnection conn, string shipId)
+        => (await new SqlCommand($"select * from VI_USER_SHIPS where SHIP_ID = '{shipId}' and POINTS_EARNED > 0", conn).ExecuteReaderAsync()).As<UserShip>();
+
+        public async Task<IEnumerable<UserShip>> GetUserShipsForShipHistoricalAsync(SqlConnection conn, string shipId)
+        => (await new SqlCommand($"select * from VI_USER_SHIPS_HISTORICAL where SHIP_ID = '{shipId}' and POINTS_EARNED > 0", conn).ExecuteReaderAsync()).As<UserShip>();
 
         public async Task<UserShip> GetUserShipAsync(SqlConnection conn, string userId, int tier)
         => (await new SqlCommand($"select * from VI_USER_SHIPS where USER_ID = '{userId}' and TIER = {tier}", conn).ExecuteReaderAsync()).As<UserShip>().FirstOrDefault();

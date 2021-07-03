@@ -131,13 +131,21 @@ namespace PrideBot.Game
             embed.Fields = new List<EmbedFieldBuilder>();
             embed.Fields.AddRange(GetEmbedFieldsForLeaderboard(topShips, "Champions of Love:"));
             embed.Fields.AddRange(GetEmbedFieldsForLeaderboard(topRareShips, "Our Beloved Underdogs:"));
+
             return embed;
         }
 
-        List<EmbedFieldBuilder> GetEmbedFieldsForLeaderboard(List<Ship> ships, string name)
+        public string GetShipPlacementString(Ship ship, int place, bool includeTopContributor = false)
+            => $"__#{place}: **{ship.GetDisplayName()}**__"
+            + $"\n**{ship.PointsEarned} {EmoteHelper.SPEmote}**"
+            + ((includeTopContributor && !string.IsNullOrEmpty(ship.TopSupporter))
+                ? $" ({client.GetGyn(config).GetUser(ulong.Parse(ship.TopSupporter))?.Mention ?? "Unknown User"})"
+            : "");
+
+        public List<EmbedFieldBuilder> GetEmbedFieldsForLeaderboard(List<Ship> ships, string name, bool includeTopContributor = false)
         {
             var namesList = ships.Select(a =>
-                $"__#{ships.IndexOf(a) + 1}: **{a.GetDisplayName()}**__\n**{a.PointsEarned} {EmoteHelper.SPEmote}**\n").ToList();
+                GetShipPlacementString(a, ships.IndexOf(a) + 1, includeTopContributor) + "\n").ToList();
             var maxLength = 10;
             var lengths = new int[1];
             lengths[0] = Math.Min((int)Math.Ceiling((double)namesList.Count / 1.0), maxLength);

@@ -130,7 +130,8 @@ namespace PrideBot
                 .AddSingleton<BullshitService>()
                 .AddSingleton<LeaderboardService>()
                 .AddSingleton<SceneDialogueService>()
-                .AddSingleton<AnnouncementService>();
+                .AddSingleton<AnnouncementService>()
+                .AddSingleton<ScoreReviewService>();
                 //.AddSingleton<PlayStatusService>();
             }
         }

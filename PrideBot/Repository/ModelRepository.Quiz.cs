@@ -35,5 +35,8 @@ namespace PrideBot.Repository
 
         public async Task<QuizLog> GetLastQuizLogForUserAsync(SqlConnection conn, string userId, string beforeDay)
         => (await new SqlCommand($"select top 1 * from VI_USER_QUIZ_LOGS where USER_ID = '{userId}' and DAY < '{beforeDay}' order by DAY desc", conn).ExecuteReaderAsync()).As<QuizLog>().FirstOrDefault();
+
+        public async Task<IEnumerable<QuizLog>> GetQuizLogsForUserAsync(SqlConnection conn, string userId)
+        => (await new SqlCommand($"select * from VI_USER_QUIZ_LOGS where USER_ID = '{userId}'", conn).ExecuteReaderAsync()).As<QuizLog>();
     }
 }

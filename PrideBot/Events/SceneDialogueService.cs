@@ -27,7 +27,7 @@ namespace PrideBot.Events
     public class SceneDialogueService
     {
         readonly DiscordSocketClient client;
-        readonly DiscordSocketClient[] rpClients;
+        public readonly DiscordSocketClient[] rpClients;
         readonly IConfigurationRoot config;
         readonly TokenConfig tokenConfig;
         readonly ModelRepository repo;
@@ -50,6 +50,15 @@ namespace PrideBot.Events
                 rpClients[i] = new DiscordSocketClient();
                 StartupClient(rpClients[i], rpTokens[i]).GetAwaiter();
             }
+        }
+
+        public async Task SpeakAs(IUser user, IChannel channel, string content)
+        {
+            var rpClient = rpClients.FirstOrDefault(a => a.CurrentUser.Id == user.Id);
+            if (rpClient == null)
+                throw new CommandException("HMMM nope that's not a valid RP bot!");
+
+            await rpClient.GetGyn(config).GetTextChannel(channel.Id).SendMessageAsync(content);
         }
 
         public async Task PerformCutscene(string sceneId)

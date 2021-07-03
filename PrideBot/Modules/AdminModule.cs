@@ -37,9 +37,11 @@ namespace PrideBot.Modules
         private readonly DiscordSocketClient client;
         private readonly ScoringService scoringService;
         readonly AnnouncementService announcementService;
+        private readonly SceneDialogueService sceneDialogueService;
+        private readonly ScoreReviewService scoreReviewService;
+        private readonly LoggingService loggingService;
 
-
-        public AdminModule(CommandService service, IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService, AnnouncementService announcementService)
+        public AdminModule(CommandService service, IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService, AnnouncementService announcementService, SceneDialogueService sceneDialogueService, ScoreReviewService scoreReviewService, LoggingService loggingService)
         {
             this.service = service;
             this.config = config;
@@ -49,6 +51,9 @@ namespace PrideBot.Modules
             this.client = client;
             this.scoringService = scoringService;
             this.announcementService = announcementService;
+            this.sceneDialogueService = sceneDialogueService;
+            this.scoreReviewService = scoreReviewService;
+            this.loggingService = loggingService;
         }
 
         [Command("giveachievement")]
@@ -133,6 +138,15 @@ namespace PrideBot.Modules
             await ReplyResultAsync("Done!");
         }
 
+        [Command("sayas")]
+        [Alias("echo")]
+        [Summary("Relays a message in the specified chat channel using an RP bot.")]
+        public async Task Echo(SocketUser user, SocketTextChannel channel, [Remainder] string message)
+        {
+            await sceneDialogueService.SpeakAs(user, channel, message);
+            await ReplyResultAsync("Done!");
+        }
+
         [Command("attachment")]
         [Alias("attach", "file")]
         [Priority(0)]
@@ -155,12 +169,124 @@ namespace PrideBot.Modules
             }
             catch (Exception e)
             {
-                throw new CommandException("UH OH i couldn't download that urlss!");
+                throw new CommandException("UH OH i couldn't download that url!");
             }
             var attachStream = new MemoryStream(attachBytes);
             await channel.SendFileAsync(attachStream, "content" + Path.GetExtension(url), message);
             if (channel != Context.Channel as SocketTextChannel)
                 await ReplyResultAsync("Done!");
         }
+
+        [Command("userreview")]
+        [Priority(0)]
+        [Summary("Shows a review embed for a given user.")]
+        public async Task UserReview(string userId)
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var embed = await scoreReviewService.GetUserReviewEmbed(connection, userId);
+            await ReplyAsync(embed: embed.Build());
+        }
+
+        [Command("userreview")]
+        [Priority(1)]
+        [Summary("Shows a review embed for a given user.")]
+        public async Task UserReview(IUser user = null)
+        {
+            user ??= Context.User;
+            await UserReview(user.Id.ToString());
+        }
+
+
+        [Command("closingannouncement")]
+        [Summary("Displays the closing announcement in this channel.")]
+        public async Task ClosingAnnouncement(IUser user = null)
+        {
+            using var typing = Context.Channel.EnterTypingState();
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var embed = await scoreReviewService.GetClosingAnnouncementEmbed(connection);
+            await ReplyAsync(embed: embed.Build());
+        }
+
+
+        [Command("testfinalemessages")]
+        [Alias("testfinale")]
+        [Summary("Tests all user result messages.")]
+        public async Task FinaleTest()
+        {
+            using var typing = Context.Channel.EnterTypingState();
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var dbUsers = await repo.GetAllRegisteredUsersAsync(connection);
+            foreach (var user in dbUsers)
+            {
+                var embed = await scoreReviewService.GetUserReviewEmbed(connection, user.UserId);
+                await ReplyAsync(embed: embed.Build());
+            }
+        }
+
+
+        [Command("finale")]
+        [Summary("Buh-bye, so long!")]
+        public async Task Finale()
+        {
+            var typing = Context.Channel.EnterTypingState();
+            Dictionary<string, EmbedBuilder> userEmbeds = null;
+            try
+            {
+                using var connection = repo.GetDatabaseConnection();
+                await connection.OpenAsync();
+                var dbUsers = await repo.GetAllRegisteredUsersAsync(connection);
+                userEmbeds = new Dictionary<string, EmbedBuilder>();
+                foreach (var user in dbUsers)
+                {
+                    userEmbeds[user.UserId] = await scoreReviewService.GetUserReviewEmbed(connection, user.UserId);
+                }
+
+                var finaleEmbed = await scoreReviewService.GetClosingAnnouncementEmbed(connection);
+                await ReplyAsync(Context.Client.GetGyn(config).GetRoleFromConfig(config, "registeredrole").Mention ,embed: finaleEmbed.Build());
+            }
+            finally
+            {
+                typing.Dispose();
+            }
+
+            var rpClient = sceneDialogueService.rpClients.FirstOrDefault(a => a.CurrentUser.Id.Equals(811051848093270027));
+            //foreach (var userEmbed in userEmbeds) 
+            //{
+            //    await Context.Channel.SendMessageAsync(userEmbed.Key, embed: userEmbed.Value.Build());
+            //}
+
+            var SendMessageTasks = new List<Task>();
+            foreach (var userEmbed in userEmbeds)
+            {
+                var user = rpClient.GetGyn(config).GetUser(ulong.Parse(userEmbed.Key));
+                if (user == null)
+                    continue;
+
+                SendMessageTasks.Add(MessageUserAsync(user, userEmbed.Value));
+            }
+            Task.WaitAll(SendMessageTasks.ToArray());
+            Environment.Exit(0);
+        }
+
+        public async Task MessageUserAsync(IUser user, EmbedBuilder embed)
+        {
+            
+            try
+            {
+                await loggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "Finale", $"DM'ing {user.Username} with results"));
+                var dmChannel = await user.GetOrCreateDMChannelAsync();
+                await dmChannel.SendMessageAsync(embed: embed.Build());
+                await loggingService.OnLogAsync(new LogMessage(LogSeverity.Warning, "Finale", $"Sent DM to {user.Username} with results"));
+            }
+            catch
+            {
+                await loggingService.OnLogAsync(new LogMessage(LogSeverity.Warning, "Finale", $"Failed to DM {user.Username} with results"));
+            }
+        }
+
+
     }
 }

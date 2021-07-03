@@ -11,8 +11,11 @@ namespace PrideBot.Repository
 {
     public partial class ModelRepository
     {
-        public async Task<IEnumerable<Character>> GetAllUsersAsync(SqlConnection conn)
-        => (await new SqlCommand($"select * from VI_USERS", conn).ExecuteReaderAsync()).As<Character>();
+        public async Task<IEnumerable<User>> GetAllUsersAsync(SqlConnection conn)
+        => (await new SqlCommand($"select * from VI_USERS", conn).ExecuteReaderAsync()).As<User>();
+
+        public async Task<IEnumerable<User>> GetAllRegisteredUsersAsync(SqlConnection conn)
+        => (await new SqlCommand($"select * from VI_USERS where SHIPS_SELECTED = 'Y'", conn).ExecuteReaderAsync()).As<User>();
 
         public async Task<User> GetUserAsync(SqlConnection conn, string id)
         => (await new SqlCommand($"select * from VI_USERS where USER_ID = '{id.ToString()}'", conn).ExecuteReaderAsync()).As<User>().FirstOrDefault();
