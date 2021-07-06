@@ -1,26 +1,14 @@
 ﻿using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
-using Discord.Webhook;
-using Discord.Audio;
-using Discord.Net;
-using Discord.Rest;
-
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+using PrideBot.Models;
+using PrideBot.Registration;
+using PrideBot.Repository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.IO;
-using System.IO.Compression;
-using Microsoft.Extensions.Configuration;
-using System.Net;
-using Microsoft.Data.SqlClient;
-using PrideBot.Models;
-using PrideBot.Repository;
-using PrideBot.Events;
-using PrideBot.Game;
-using PrideBot.Registration;
 
 namespace PrideBot.Game
 {
@@ -240,7 +228,7 @@ namespace PrideBot.Game
             if (ship.UnderdogPlace > 0)
                 str += $"\n+ **{ship.UnderdogPlace.ToString() + MathHelper.GetPlacePrefix((int)ship.UnderdogPlace)}** in the **underdogs board** (5 or less supporters)";
             if (ship.SoloPlace > 0 && (ship.TopSupporter ?? "").Equals(userId))
-                str += $"\n+ **{ship.UnderdogPlace.ToString() + MathHelper.GetPlacePrefix((int)ship.UnderdogPlace)}** in the **solo board** thanks to you!";
+                str += $"\n+ **{ship.UnderdogPlace.ToString() + MathHelper.GetPlacePrefix((int)ship.SoloPlace)}** in the **solo board** thanks to you!";
             return str;
         }
 
