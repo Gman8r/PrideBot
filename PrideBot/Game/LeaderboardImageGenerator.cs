@@ -118,7 +118,7 @@ namespace PrideBot.Game
 
                 // Composite text
                 //if (i % staticImage.Count >= 7)
-                var glitchFrames = new List<int>() { 4, 5, 7, 9, 10, 11 };
+                var glitchFrames = new List<int>() { 4, 5, 9, 10, 11 };
                 if (glitchFrames.Contains(i % staticImage.Count))
                 {
                     // Glitch bars
