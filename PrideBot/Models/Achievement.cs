@@ -11,6 +11,7 @@ namespace PrideBot.Models
         public string Emoji { get; set; }
         public string Description { get; set; }
         public string Flavor { get; set; }
+        public string Family { get; set; }
         public int DefaultScore { get; set; }
         public int CooldownHours { get; set; }
         public bool Log { get; set; }

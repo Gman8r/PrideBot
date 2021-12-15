@@ -14,6 +14,8 @@ namespace PrideBot.Models
         public string CharacterId2 { get; set; }
         [DontPushToDatabase]
         public string Nickname { get; set; }
+        public int TestPlace { get; set; }
+        public double TestScore { get; set; }
 
         [DontPushToDatabase]
         public bool IsBlacklisted { get; set; }
@@ -29,6 +31,8 @@ namespace PrideBot.Models
         public int PointsEarned { get; set; }
         [DontPushToDatabase]
         public int Supporters { get; set; }
+        [DontPushToDatabase]
+        public double RandomSupporters { get; set; }
         [DontPushToDatabase]
         public long Place { get; set; }
         [DontPushToDatabase]

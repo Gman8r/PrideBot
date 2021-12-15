@@ -98,9 +98,9 @@ namespace PrideBot.Quizzes
             var minMInutes = int.Parse(config["voiechatminutes"]);
 
             // If so, just give em the required minutes x2 so they defo dont get the achievement
-            if (lastVoiceScore != null && lastVoiceScore.TimeStamp.Day == currentDay)
+            if (lastVoiceScore != null && lastVoiceScore.Timestamp.Day == currentDay)
                 voiceData[user.Id].voiceTime = TimeSpan.FromMinutes(minMInutes * 2);
-            if (lastStreamScore != null && lastStreamScore.TimeStamp.Day == currentDay)
+            if (lastStreamScore != null && lastStreamScore.Timestamp.Day == currentDay)
                 voiceData[user.Id].streamTime = TimeSpan.FromMinutes(minMInutes * 2);
         }
 

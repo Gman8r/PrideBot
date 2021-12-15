@@ -21,6 +21,7 @@ using PrideBot.Registration;
 using PrideBot.Models;
 using PrideBot.Game;
 using PrideBot.Quizzes;
+using PrideBot.Sheets;
 
 namespace PrideBot.Modules
 {
@@ -35,9 +36,10 @@ namespace PrideBot.Modules
         private readonly DiscordSocketClient client;
         private readonly ScoringService scoringService;
         private readonly UserRegisteredCache userReg;
+        private readonly GoogleSheetsService sheetsService;
 
 
-        public GameModule(CommandService service, IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService, UserRegisteredCache userReg)
+        public GameModule(CommandService service, IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, ShipImageGenerator shipImageGenerator, DiscordSocketClient client, ScoringService scoringService, UserRegisteredCache userReg, GoogleSheetsService sheetsService)
         {
             this.service = service;
             this.config = config;
@@ -47,6 +49,7 @@ namespace PrideBot.Modules
             this.client = client;
             this.scoringService = scoringService;
             this.userReg = userReg;
+            this.sheetsService = sheetsService;
         }
 
         [Command("ships")]
@@ -96,6 +99,334 @@ namespace PrideBot.Modules
 
             await ReplyAsync(embed: embed.Build());
         }
+
+
+        [Command("users")]
+        public async Task Users()
+        {
+            using var typing = Context.Channel.EnterTypingState();
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var allShips = (await repo.GetAllShipsAsync(connection))
+                .Where(a => a.PointsEarned > 0);
+            var ships = allShips;
+            //.OrderByDescending(a => a.PointsEarned)
+            //.Take(20);
+            var scores = await repo.GetAllShipScoresAsync(connection);
+            var achievements = await repo.GetAllAchievementsAsync(connection);
+
+            var userIds = scores
+                .GroupBy(a => a.UserId)
+                .Select(a => ulong.Parse(a.Key))
+                .OrderBy(a => a);
+            //var users = userIds
+            //    .Select(a => Context.Client.GetGyn(config).GetUser(a));
+
+
+            var chid = 842885896756002816;
+            var ch = await Context.Client.Rest.GetDMChannelAsync(842885896756002816);
+            var sfskf = await Context.Client.GetDMChannelAsync(842885896756002816);
+
+            var data = new List<IList<object>>();
+            var header = new List<object>() { "" };
+            data.Add(header);
+            var gyn = Context.Client.GetGyn(config);
+            var dmChannels = await Context.Client.GetDMChannelsAsync();
+            var dm2 = await Context.Client.Rest.GetDMChannelsAsync();
+            foreach (var id in userIds)
+            {
+                var user = gyn.GetUser(id);
+                var name = user?.Nickname ?? user?.Username ?? "Unknown User";
+                name += $" ({id})";
+                header.Add(name);
+                var dmChannel = dm2
+                    .FirstOrDefault(a => a.Users.Select(a => a.Id).Contains(id));
+                if (dmChannel == null)
+                {
+
+                }
+            }
+
+            foreach (var ship in ships)
+            {
+                var row = new List<object>() { ship.GetDisplayName() };
+                var shipScores = scores.Where(a => a.ShipId.Equals(ship.ShipId));
+                foreach (var uid in userIds)
+                {
+                    var sum = shipScores
+                        .Where(a => a.UserId.Equals(uid.ToString()))
+                        .Sum(a => a.PointsEarned);
+                    row.Add(sum);
+                }
+                data.Add(row);
+            }
+
+            await sheetsService.UpdateDataAsync("1bH24HKQ8Y6qWKbGlDW0YACCVuLreJeN6INCwPnsTQgs", $"A1:YY1001", data as IList<IList<object>>);
+            await ReplyAsync("FUcking DID IT!");
+        }
+
+        [Command("review")]
+        public async Task Review()
+        {
+            using var typing = Context.Channel.EnterTypingState();
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var allShips = (await repo.GetAllShipsAsync(connection))
+                .Where(a => a.PointsEarned > 0);
+            var ships = allShips;
+                //.OrderByDescending(a => a.PointsEarned)
+                //.Take(20);
+            var scores = await repo.GetAllShipScoresAsync(connection);
+            var achievements = await repo.GetAllAchievementsAsync(connection);
+
+
+            //// Randomize ship users
+            //var seed = 1;
+            //var rand = new Random(seed);
+            //var userDict = new Dictionary<string, List<Ship>>();
+            //var userIds = scores.Select(a => a.UserId);
+            //var validShips = ships.Where(a => a.Supporters > 0).ToList();
+            //foreach (var userId in userIds)
+            //{
+            //    var shipList = new List<Ship>();
+            //    var totalShipWeight = ships.Sum(a => a.Supporters);
+            //    for (int i = 0; i < 3; i++)
+            //    {
+            //        var chosenWeight = rand.Next(totalShipWeight);
+            //        var chosenShip = ships.FirstOrDefault();
+            //        for (int j = 0; j < validShips.Count; j++)
+            //        {
+            //            chosenWeight -= validShips[j].Supporters;
+            //            if (chosenWeight < 0)
+            //            {
+            //                chosenShip = validShips[j];
+            //                break;
+            //            }
+            //        }
+            //        shipList.Add(chosenShip);
+            //    }
+            //    userDict[userId] = shipList;
+            //}
+            //foreach (var ship in ships)
+            //{
+            //    var supporters = (double)userDict
+            //        .Select(a => a.Value[0])
+            //        .Count(a => a.ShipId.Equals(ship.ShipId));
+            //    supporters += (double)userDict
+            //        .Select(a => a.Value[1])
+            //        .Count(a => a.ShipId.Equals(ship.ShipId)) * .4;
+            //    supporters += (double)userDict
+            //        .Select(a => a.Value[2])
+            //        .Count(a => a.ShipId.Equals(ship.ShipId)) * .2;
+            //    ship.RandomSupporters = supporters;
+            //}
+            //foreach (var score in scores)
+            //{
+            //    score.ShipId = userDict[score.UserId][score.Tier].ShipId;
+            //}
+
+
+            //// Flatten single achievements
+            //var singleAchievementIds = new List<string>() { "CREATE_ART", "CREATE_MUSIC", "CREATE_FIC", "CREATE_COSPLAY", "CREATE_CRAFT", "CREATE_PRIDE", "CREATE_PAIRS", "SNAKE", "COMMISSION" };
+            //var singleAchievementFamilies = new List<string>() { "Touhou 1CC's" };
+            //var userScoreGroups = scores.GroupBy(a => a.UserId);
+            //foreach (var userScores in userScoreGroups)
+            //{
+            //    foreach (var achievementId in singleAchievementIds)
+            //    {
+            //        var achievementScores = userScores.Where(a => a.AchievementId.Equals(achievementId));
+            //        var achievementScoreIds = achievementScores.Select(a => a.ScoreId).Distinct().Skip(2); // Number allowed
+            //        if (achievementScoreIds.Any())
+            //        {
+            //            achievementScores = achievementScores.Where(a => achievementScoreIds.Contains(a.ScoreId));
+            //            scores = scores.Except(achievementScores);
+            //        }
+            //    }
+            //    foreach (var achievementFamily in singleAchievementFamilies)
+            //    {
+            //        var familyScores = userScores
+            //            .Where(a => achievements.FirstOrDefault(aa => aa.AchievementId.Equals(a.AchievementId)).Family?.Equals(achievementFamily) ?? false);
+            //        var familyScoreIds = familyScores.Select(a => a.ScoreId).Distinct().Skip(2); // Number allowed
+            //        if (familyScoreIds.Any())
+            //        {
+            //            familyScores = familyScores.Where(a => familyScoreIds.Contains(a.ScoreId));
+            //            scores = scores.Except(familyScores);
+            //        }
+            //    }
+            //}
+
+            //// Apply creative mult
+            //foreach (var score in scores.Where(a => singleAchievementIds.Contains(a.AchievementId)
+            //    || singleAchievementFamilies.Contains( achievements.FirstOrDefault(aa => aa.AchievementId.Equals(a.AchievementId) ).Family ?? "")))
+            //{
+            //    score.PointsEarned *= 2;
+            //}
+
+            //// idk remove all of them
+            //var singleAchievementIds = new List<string>() { "CREATE_ART", "CREATE_MUSIC", "CREATE_FIC", "CREATE_COSPLAY", "CREATE_CRAFT", "CREATE_PRIDE", "CREATE_PAIRS", "SNAKE", "COMMISSION", "1CC_EASY", "1CC_NORML", "1CC_HARD", "1CC_LUNATIC", "1CC_EXTRA" };
+            //scores = scores.Where(a => !singleAchievementIds.Contains(a.AchievementId)).ToArray();
+
+
+            var scoreDict = new Dictionary<Ship, double>();
+            foreach (var ship in ships)
+            {
+                scoreDict[ship] = 0;
+            }
+
+            // Google stuff
+            var sheetId = "1he7cmt27xJQsyhiFOZ8ODGuk6UedBfahEsikys2MfTk";
+            var sheetValues = new List<IList<object>>();
+
+            var firstRow = new List<object>();
+            firstRow.Add("Hour");
+            firstRow.AddRange(ships.Select(a => a.GetDisplayName()));
+            sheetValues.Add(firstRow);
+            //File.WriteAllText("shipscores.xls", "hour, " + string.Join(", ", ships.Select(a => a.GetDisplayName())));
+
+            scores = scores.ToArray();
+            // Prereg scores
+            foreach (var score in scores.Where(a => a.Timestamp.Month < 6))
+            {
+                var ship = ships.FirstOrDefault(a => a.ShipId.Equals(score.ShipId));
+                ship.TestPlace = (int)ship.Place;
+                if (ship != null)
+                    scoreDict[ship] += score.PointsEarned;
+            }
+            scores = scores.SkipWhile(a => a.Timestamp.Month < 6);
+            scores = scores.ToArray();
+            var allScores = scores.ToArray();
+
+            var step = 6;
+            var maxSupporters = 0.0;
+            for (int i = 0; i <= 24 * 30; i += step)
+            {
+                var hour = i % 24;
+                var day = (i - (i % 24)) / 24;
+                var beginTimestamp = new DateTime(2021, 6, 1).AddHours(i);
+                var endTimestamp = beginTimestamp.AddHours(step);
+                var hourScores = scores.TakeWhile(a => a.Timestamp < endTimestamp);
+                scores = scores.Skip(hourScores.Count());
+
+
+                foreach (var score in hourScores)
+                {
+                    var ship = ships.FirstOrDefault(a => a.ShipId.Equals(score.ShipId));
+                    var maxScore = scoreDict.Max(a => a.Value);
+
+                    var recentSupporterCountDict = allScores
+                        .Where(a => a.ShipId.Equals(score.ShipId)
+                            && a.Timestamp <= score.Timestamp
+                            && a.Timestamp > score.Timestamp.AddHours(-48))
+                        .GroupBy(a => a.Tier).ToArray()
+                        .Select(a => (a.Key, a
+                            .Select(aa => aa.UserId)
+                            .Distinct()
+                            .Count()))
+                        .ToDictionary(t => t.Key, v => v.Item2);
+                    double recentSupporters = (recentSupporterCountDict.ContainsKey(0) ? (double)recentSupporterCountDict[0] : 0)
+                        + ((double)(recentSupporterCountDict.ContainsKey(1) ? (double)recentSupporterCountDict[1] : 0) * 2.0 / 5.0)
+                        + ((double)(recentSupporterCountDict.ContainsKey(2) ? (double)recentSupporterCountDict[2] : 0) * 1.0 / 5.0);
+
+                    //recentSupporters = Math.Max(recentSupporters, 1);
+
+                    //var recentScores = scores
+                    //    .Where(a => a.ShipId.Equals(score.ShipId)
+                    //        && a.Timestamp < score.Timestamp
+                    //        && a.Timestamp > score.Timestamp.AddHours(-48));
+
+                    //// Finite
+                    //if (recentSupporters > maxSupporters)
+                    //    maxSupporters = recentSupporters;
+
+                    //var lowestSupporterScoreMult = 6.66;
+                    //var highestSupporterScoreMult = 1.0;
+                    //var multPerSupporter = (lowestSupporterScoreMult - highestSupporterScoreMult) / (maxSupporters - 0.2);
+                    //var balanceMult = lowestSupporterScoreMult - (multPerSupporter * (recentSupporters - 0.2));
+                    //if (maxSupporters < 2)
+                    //    balanceMult = 1.0;
+                    //else if (maxSupporters == recentSupporters)
+                    //{
+
+                    //}
+                    //else if (recentSupporters <= 1.0)
+                    //{
+
+                    //}
+                    //var balancedScore = (double)score.PointsEarned * balanceMult;
+                    //if (double.IsNaN(balancedScore))
+                    //{
+
+                    //}
+
+                    //balanceMult = 7.66 - (.35 * ((double)ship.Supporters - 1.0));
+                    //balancedScore = (double)score.PointsEarned * balanceMult;
+
+
+                    //var balancedScore = ((double)score.PointsEarned * Math.Pow(1.0 / Math.Max(recentSupporters, 1), .75));
+
+                    var balanceFactor = 0;
+                    var balancedScore = ((double)score.PointsEarned / ((1.0 - balanceFactor) + (balanceFactor * Math.Max(recentSupporters, 1))));
+
+                    //var balanceMult = 6.66 - (.33 * ((double)ship.Supporters - 1.0));
+                    //var balancedScore = scoreDict[ship] > 0
+                    //    ? ((double)score.PointsEarned * Math.Pow(((double)maxScore / (double)scoreDict[ship]), 1.1))
+                    //    : score.PointsEarned;
+                    //var balancedScore = scoreDict[ship] > 0
+                    //    ? ((double)score.PointsEarned * Math.Pow((1.0 + (double)ship.TestPlace * .1), 1.1))
+                    //    : score.PointsEarned;
+
+                    if (double.IsInfinity(balancedScore) || balancedScore > 10000)
+                    {
+                        var scd = scoreDict[ship];
+                        var x = 0;
+                    }
+
+                    //var balancedScore = (double)score.PointsEarned * (1.0 + (((double)ship.Place - .5) * .1));
+                    if (ship != null)
+                        scoreDict[ship] += balancedScore;
+
+                    //// Update places
+                    //ships = scoreDict
+                    //    .OrderByDescending(a => a.Value)
+                    //    .Select(a => a.Key);
+                    //for (int j = 0; j < ships.Count(); j++)
+                    //{
+                    //    ships.ToArray()[j].TestPlace = j + 1;
+                    //}
+                }
+
+                var row = new List<object>() { i };
+                row.AddRange(ships.Select(a => scoreDict[a].ToString()));
+                sheetValues.Add(row);
+                //File.AppendAllText("shipscores.xls", "\n" + i.ToString()
+                //    + string.Join(", ", ships.Select(a => scoreDict[a])));
+            }
+
+            Console.WriteLine(maxSupporters);
+
+            await sheetsService.UpdateDataAsync(sheetId, $"A1:YY{(24 * 30) + 1}", sheetValues as IList<IList<object>>);
+
+            await ReplyAsync("Pushing...");
+
+            // Update places
+            ships = scoreDict
+                .OrderByDescending(a => a.Value)
+                .Select(a => a.Key);
+            for (int j = 0; j < ships.Count(); j++)
+            {
+                ships.ToArray()[j].TestPlace = j + 1;
+            }
+
+            foreach (var ship in ships)
+            {
+                ship.TestScore = scoreDict[ship];
+                await repo.UpdateShipAsync(connection, ship);
+            }
+
+            await ReplyResultAsync("Done!");
+
+        }
+
 
         [Command("scores")]
         [Alias("score")]

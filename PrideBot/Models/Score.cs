@@ -14,7 +14,7 @@ namespace PrideBot.Models
         public int PointsEarned { get; set; }
 
         [DontPushToDatabase]
-        public DateTime TimeStamp { get; set; }
+        public DateTime Timestamp { get; set; }
         [DontPushToDatabase]
         public int ShipCount { get; set; }
         public string Approver { get; set; }

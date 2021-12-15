@@ -12,6 +12,9 @@ namespace PrideBot.Repository
     public partial class ModelRepository
     {
 
+        public async Task<IEnumerable<ShipScore>> GetAllShipScoresAsync(SqlConnection conn)
+        => (await new SqlCommand($"select * from VI_SHIP_SCORES order by TIMESTAMP", conn).ExecuteReaderAsync()).As<ShipScore>();
+
         public async Task<IEnumerable<ShipScore>> GetShipScoresAsync(SqlConnection conn, string scoreId)
         => (await new SqlCommand($"select * from VI_SHIP_SCORES where SCORE_ID = '{scoreId}'", conn).ExecuteReaderAsync()).As<ShipScore>();
     }
