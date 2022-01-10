@@ -125,7 +125,7 @@ namespace PrideBot.Modules
         [Summary("Relays a message.")]
         public async Task Echo([Remainder] string message)
         {
-            await ReplyAsync(DialogueDict.RollBrainrot(message));
+            await ReplyAsync(DialogueDict.GenerateEmojiText(message));
         }
 
         [Command("say")]
