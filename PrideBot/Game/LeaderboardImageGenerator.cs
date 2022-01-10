@@ -60,16 +60,16 @@ namespace PrideBot.Game
             if (clamp)
                 return t;
             else
-                return  Math.Clamp(t, -1.0, 1.0);
+                return Math.Clamp(t, -1.0, 1.0);
         }
 
         public async Task<MagickImageCollection> GenerateLeaderboardAsync(List<Ship> topShips, List<Ship> topRareShips)
         {
             var rand = new Random();
             var bgCollection = await GenerateBackgroundGifAsync(rand);
-            var yurikoFiles = Directory.GetFiles("Assets/Leaderboard/Yurikos/").ToArray();
-            var chosenYurikoFile = yurikoFiles[rand.Next(yurikoFiles.Length)];
-            using var yurikoImage = new MagickImageCollection(await File.ReadAllBytesAsync(chosenYurikoFile));
+            //var yurikoFiles = Directory.GetFiles("Assets/Leaderboard/Yurikos/").ToArray();
+            using var yurikoImage = new MagickImageCollection(await File.ReadAllBytesAsync("Assets/Leaderboard/Yurikos/puyumi.png"));
+            using var yurikoGlitchImage = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Yurikos/glitch.png"));
             using var textOverlay = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Overlays/Text.png"));
             using var bottomRightOverlay = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Overlays/BottomRight.png"));
             using var bottomLeftOverlay = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Overlays/BottomLeft.png"));
@@ -82,11 +82,12 @@ namespace PrideBot.Game
             var sineMult = 1.0;
 
             // resize yuriko
+            var p = 100.0 * yurikoHeight / (double)yurikoImage.First().Height;
             foreach (var yFrame in yurikoImage)
             {
-                var p = 100.0 * yurikoHeight / (double)yFrame.Height;
                 yFrame.Resize(new Percentage(p));
             }
+            yurikoGlitchImage.Resize(new Percentage(p));
 
             foreach (var staticFrame in staticImage)
             {
@@ -116,6 +117,13 @@ namespace PrideBot.Game
                 CompositeSine(bgFrame, bottomLeftOverlay, -90, -3, 20, 4,
                     GetSineT((double)(i + 1), sineMult * .8, false));
 
+                //// Composite yuriko
+                var yurikoFrame = yurikoImage[i % yurikoImage.Count];
+                //bgFrame.Composite(yurikoFrame, Gravity.Northwest,
+                //    (bgFrame.Width - yurikoFrame.Width) / 2,
+                //    ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude),
+                //    CompositeOperator.Over);
+
                 // Composite text
                 //if (i % staticImage.Count >= 7)
                 var glitchFrames = new List<int>() { 4, 5, 6, 7, 8, 9, 10, 11 };
@@ -127,26 +135,53 @@ namespace PrideBot.Game
                     var yOffset = 5 + rand.Next(10);
                     using var barImage = new MagickImage(MagickColors.Transparent, bgFrame.Width, bgFrame.Height);
                     var y = yOffset;
-                    var xOffset1 = -1 - rand.Next(2);
-                    var xOffset2 = 2 + rand.Next(3);
+                    var xOffset1 = -1 - rand.Next(4);
+                    var xOffset2 = 2 + rand.Next(6);
                     while (y < bgFrame.Height)
                     {
                         barImage.Draw(new DrawableRectangle(0, y, bgFrame.Width, y + barHeight));
                         y += barDistance;
                     }
-                    using var glitch1 = new MagickImage(textOverlay);
-                    using var glitch2 = new MagickImage(textOverlay);
+                    using var text1 = new MagickImage(textOverlay);
+                    using var text2 = new MagickImage(textOverlay);
+                    using var yuriko1 = new MagickImage(yurikoFrame);
+                    using var yuriko2 = new MagickImage(yurikoFrame);
                     // Mask the bars
-                    glitch1.Composite(barImage, CompositeOperator.DstIn);
-                    glitch2.Composite(barImage, CompositeOperator.DstOut);
+                    text1.Composite(barImage, CompositeOperator.DstIn);
+                    text2.Composite(barImage, CompositeOperator.DstOut);
                     var skipFrames = new List<int>() { 7, 8, 9 };
                     if (skipFrames.Contains(i % staticImage.Count))
                     {
                         xOffset1 = 0;
                         xOffset2 = 0;
+
+                        bgFrame.Composite(yurikoFrame, Gravity.Northwest,
+                            (bgFrame.Width - yurikoFrame.Width) / 2,
+                            ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude),
+                            CompositeOperator.Over);
                     }
-                    bgFrame.Composite(glitch1, Gravity.Northwest, xOffset1, 0, CompositeOperator.Over);
-                    bgFrame.Composite(glitch2, Gravity.Northwest, xOffset2, 0, CompositeOperator.Over);
+                    else
+                    {
+                        bgFrame.Composite(yurikoGlitchImage, Gravity.Northwest,
+                            (bgFrame.Width - yurikoFrame.Width) / 2,
+                            ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude),
+                            CompositeOperator.Over);
+                    }
+
+                    //bgFrame.Composite(yuriko1, Gravity.Northwest,
+                    //    (bgFrame.Width - yuriko1.Width) / 2 + xOffset1,
+                    //    ((bgFrame.Height - yuriko1.Height) / 2) + (int)(sineT * sineAmplitude),
+                    //    CompositeOperator.Over);
+
+                    //bgFrame.Composite(yuriko2, Gravity.Northwest,
+                    //    (bgFrame.Width - yuriko2.Width) / 2 + xOffset2,
+                    //    ((bgFrame.Height - yuriko2.Height) / 2) + (int)(sineT * sineAmplitude),
+                    //    CompositeOperator.Over);
+
+
+
+                    bgFrame.Composite(text1, Gravity.Northwest, xOffset1, 0, CompositeOperator.Over);
+                    bgFrame.Composite(text2, Gravity.Northwest, xOffset2, 0, CompositeOperator.Over);
 
                     // Composite static additive
                     var staticFrame = staticImage[i % staticImage.Count];
@@ -154,6 +189,11 @@ namespace PrideBot.Game
                 }
                 else
                 {
+                    bgFrame.Composite(yurikoFrame, Gravity.Northwest,
+                        (bgFrame.Width - yurikoFrame.Width) / 2,
+                        ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude),
+                        CompositeOperator.Over);
+
                     bgFrame.Composite(textOverlay, Gravity.Northwest, 0, 0, CompositeOperator.Over);
 
                     // Composite static 2 additive
@@ -162,40 +202,33 @@ namespace PrideBot.Game
                     bgFrame.Composite(staticFrame, Gravity.Northwest, 0, 0, CompositeOperator.Plus);
                 }
 
-                // Add ship images
-                for (int j = 0; j < 5; j++)
-                {
-                    var x = 60;
-                    var y = 100 + (j * 76);
-                    if (j >= topShips.Count)
-                        break;
-                    using var shipImage = await shipImageGenerator.GenerateShipImageAsync(topShips[j]);
-                    shipImage.InterpolativeResize(shipImage.Width * 2, shipImage.Height * 2, PixelInterpolateMethod.Nearest);
-                    bgFrame.Composite(shipImage, Gravity.Northwest, x, y, CompositeOperator.Over);
-                }
+                //// Add ship images
+                //for (int j = 0; j < 5; j++)
+                //{
+                //    var x = 60;
+                //    var y = 100 + (j * 76);
+                //    if (j >= topShips.Count)
+                //        break;
+                //    using var shipImage = await shipImageGenerator.GenerateShipImageAsync(topShips[j]);
+                //    shipImage.InterpolativeResize(shipImage.Width * 2, shipImage.Height * 2, PixelInterpolateMethod.Nearest);
+                //    bgFrame.Composite(shipImage, Gravity.Northwest, x, y, CompositeOperator.Over);
+                //}
 
-                // Add rare ship images
-                for (int j = 0; j < 5; j++)
-                {
-                    var x = 560;
-                    var y = 100 + (j * 76);
-                    if (j >= topRareShips.Count)
-                        break;
-                    using var shipImage = await shipImageGenerator.GenerateShipImageAsync(topRareShips[j]);
-                    shipImage.InterpolativeResize(shipImage.Width * 2, shipImage.Height * 2, PixelInterpolateMethod.Nearest);
-                    bgFrame.Composite(shipImage, Gravity.Northwest, x, y, CompositeOperator.Over);
-                }
-
-                // Composite yuriko
-                var yurikoFrame = yurikoImage[i % yurikoImage.Count];
-                bgFrame.Composite(yurikoFrame, Gravity.Northwest,
-                    (bgFrame.Width - yurikoFrame.Width) / 2,
-                    ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude),
-                    CompositeOperator.Over);
+                //// Add rare ship images
+                //for (int j = 0; j < 5; j++)
+                //{
+                //    var x = 560;
+                //    var y = 100 + (j * 76);
+                //    if (j >= topRareShips.Count)
+                //        break;
+                //    using var shipImage = await shipImageGenerator.GenerateShipImageAsync(topRareShips[j]);
+                //    shipImage.InterpolativeResize(shipImage.Width * 2, shipImage.Height * 2, PixelInterpolateMethod.Nearest);
+                //    bgFrame.Composite(shipImage, Gravity.Northwest, x, y, CompositeOperator.Over);
+                //}
 
             }
 
-           return bgCollection;
+            return bgCollection;
         }
 
         class Star
@@ -247,8 +280,8 @@ namespace PrideBot.Game
 
         public async Task<MagickImageCollection> GenerateBackgroundGifAsync(Random rand)
         {
-            var width = 1500/4;
-            var height = 1000/4;
+            var width = 1500 / 4;
+            var height = 1000 / 4;
             var bgColor = new MagickColor("#0D0F27");
             var starRows = 9;
             var starColumns = 12;
@@ -256,7 +289,7 @@ namespace PrideBot.Game
             var yPerRow = (height * 2 / starRows) + (starRows / 2);
             var randomRange = 15;
             var skipChance = .3;
-            var sparkleChance = .5;
+            var sparkleChance = 1.0;
 
             var stars = new List<Star>();
             for (int column = 0; column < starColumns; column++)
@@ -268,7 +301,7 @@ namespace PrideBot.Game
                     int x = (column * xPerColumn) + (rand.Next() % (randomRange * 2)) + randomRange;
                     int y = (row * yPerRow) + (rand.Next() % (randomRange * 2)) + randomRange;
                     stars.Add(new Star()
-                    { 
+                    {
                         x = x,
                         y = y,
                         sparkles = rand.NextDouble() < sparkleChance,
@@ -278,7 +311,7 @@ namespace PrideBot.Game
             }
 
 
-            using var starCollection= new MagickImageCollection(await File.ReadAllBytesAsync($"Assets/Leaderboard/Star.gif"));
+            using var starCollection = new MagickImageCollection(await File.ReadAllBytesAsync($"Assets/Leaderboard/Star.gif"));
             foreach (var starImage in starCollection)
             {
                 starImage.InterpolativeResize(starImage.Width * 2, starImage.Height * 2, PixelInterpolateMethod.Nearest);
@@ -301,7 +334,7 @@ namespace PrideBot.Game
                     var star = stars[j];
 
                     var frame = starCollection.Count - 1;
-                    if(star.sparkles)
+                    if (star.sparkles)
                     {
                         var starFrame = MathHelper.TrueMod(i - star.sparkleOffset, FrameCount);
                         if (starFrame < starCollection.Count)
