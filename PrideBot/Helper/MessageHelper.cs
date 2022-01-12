@@ -156,7 +156,7 @@ namespace PrideBot
         {
             try
             {
-                return await (await user.GetOrCreateDMChannelAsync()).SendMessageAsync(text, isTTS, embed, options, allowedMentions, messageReference);
+                return await (await user.CreateDMChannelAsync()).SendMessageAsync(text, isTTS, embed, options, allowedMentions, messageReference);
             }
             catch
             {

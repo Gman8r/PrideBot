@@ -43,9 +43,10 @@ namespace PrideBot.Events
             context.Client.UserIsTyping += UserIsTyping;
         }
 
-        private async Task UserIsTyping(SocketUser user, ISocketMessageChannel channel)
+        private async Task UserIsTyping(Cacheable<IUser, ulong> usr, Cacheable<IMessageChannel, ulong> chnl)
         {
-            if (channel.Id != OriginChannel.Id || user.Id != context.User.Id || !string.IsNullOrEmpty(WebhookName)) return;
+            if (chnl.Id != OriginChannel.Id || usr.Id != context.User.Id || !string.IsNullOrEmpty(WebhookName)) return;
+            var channel = await chnl.GetOrDownloadAsync();
             await Channel.TriggerTypingAsync();
         }
 

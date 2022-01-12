@@ -62,7 +62,7 @@ namespace PrideBot.Modules
                     throw new CommandException(DialogueDict.GetNoBrainRot("QUIZ_ATTEMPTED"));
             }
             await connection.CloseAsync();
-            await new QuizSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, repo, client,
+            await new QuizSession(await Context.User.CreateDMChannelAsync(), Context.User, config, repo, client,
                 new TimeSpan(0, 10, 0), Context.Message, scoringService, quizLog, guildSettings)
                 .PerformSessionAsync();
         }
@@ -79,7 +79,7 @@ namespace PrideBot.Modules
             var guildSettings = await repo.GetOrCreateGuildSettingsAsync(connection, client.GetGyn(config).Id.ToString());
             var quizLog = await repo.GetOrCreateQuizLogAsync(connection, user.Id.ToString(), day.ToString());
             await connection.CloseAsync();
-            await new QuizSession(await user.GetOrCreateDMChannelAsync(), user, config, repo, client,
+            await new QuizSession(await user.CreateDMChannelAsync(), user, config, repo, client,
                 new TimeSpan(0, 5, 0), Context.Message, scoringService, quizLog, guildSettings)
                 .PerformSessionAsync();
         }

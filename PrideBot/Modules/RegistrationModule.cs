@@ -51,7 +51,7 @@ namespace PrideBot.Modules
         [ValidEventPeriods(EventPeriod.BeforeEvent | EventPeriod.DuringEvent)]
         public async Task Register()
         {
-            await new RegistrationSession(await Context.User.GetOrCreateDMChannelAsync(), Context.User, config, shipImageGenerator, repo, client,
+            await new RegistrationSession(await Context.User.CreateDMChannelAsync(), Context.User, config, shipImageGenerator, repo, client,
                 new TimeSpan(0, 10, 0), Context.Message, scoringService, userReg)
                 .PerformSessionAsync();
         }

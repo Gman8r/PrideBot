@@ -73,10 +73,10 @@ namespace PrideBot
             this.client = client;
         }
 
-        private async Task ReactionAdded(Cacheable<IUserMessage, ulong> msg, ISocketMessageChannel channel, SocketReaction reaction)
+        private async Task ReactionAdded(Cacheable<IUserMessage, ulong> msg, Cacheable<IMessageChannel, ulong> chnl, SocketReaction reaction)
         {
             if (currentPrompt == null
-                || reaction.Channel.Id != channel.Id
+                || reaction.Channel.Id != chnl.Id
                 || currentPrompt.IsEntered
                 || !currentPrompt.AcceptsEmote
                 || msg.Id != currentPrompt.BotMessage.Id

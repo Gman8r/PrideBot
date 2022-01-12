@@ -44,9 +44,10 @@ namespace PrideBot
             client.UserIsTyping += UserIsTyping;
         }
 
-        private async Task UserIsTyping(SocketUser user, ISocketMessageChannel channel)
+        private async Task UserIsTyping(Cacheable<IUser, ulong> usr, Cacheable<IMessageChannel, ulong> chnl)
         {
-            if (channel.Id != OriginChannel.Id || !user.IsOwner(config) || !string.IsNullOrEmpty(WebhookName)) return;
+            var ownerId = config.ParseUlongField("ids:owner");
+            if (chnl.Id != OriginChannel.Id || usr.Id != ownerId || !string.IsNullOrEmpty(WebhookName)) return;
             using var typing = Channel.EnterTypingState();
         }
 

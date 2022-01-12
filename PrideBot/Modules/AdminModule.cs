@@ -286,7 +286,7 @@ namespace PrideBot.Modules
             try
             {
                 await loggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "Finale", $"DM'ing {user.Username} with results"));
-                var dmChannel = await user.GetOrCreateDMChannelAsync();
+                var dmChannel = await user.CreateDMChannelAsync();
                 await dmChannel.SendMessageAsync(embed: embed.Build());
                 await loggingService.OnLogAsync(new LogMessage(LogSeverity.Warning, "Finale", $"Sent DM to {user.Username} with results"));
             }

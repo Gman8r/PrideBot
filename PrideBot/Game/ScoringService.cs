@@ -102,7 +102,7 @@ namespace PrideBot.Game
             {
                 try
                 {
-                    await (await approver.GetOrCreateDMChannelAsync()).SendMessageAsync("Heyyy! Just making sure you fill in the value on the 1CC table for that achievement, 'kayyy?\n https://docs.google.com/spreadsheets/d/1vdAQ1QvBsuJViY8pftYxZXfEP8HWkCzzIf0IhSJCJcY/edit#gid=0");
+                    await (await approver.CreateDMChannelAsync()).SendMessageAsync("Heyyy! Just making sure you fill in the value on the 1CC table for that achievement, 'kayyy?\n https://docs.google.com/spreadsheets/d/1vdAQ1QvBsuJViY8pftYxZXfEP8HWkCzzIf0IhSJCJcY/edit#gid=0");
                 }
                 catch
                 {
@@ -161,14 +161,16 @@ namespace PrideBot.Game
             return embed;
         }
 
-        private async Task ReactionAddedAsync(Cacheable<Discord.IUserMessage, ulong> msg, ISocketMessageChannel channel, SocketReaction reaction)
-            => CheckReactionForScore(msg, channel, reaction).GetAwaiter();
+        private async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> msg, Cacheable<IMessageChannel, ulong> chnl, SocketReaction reaction)
+            => CheckReactionForScore(msg, chnl, reaction).GetAwaiter();
 
-        private async Task CheckReactionForScore(Cacheable<Discord.IUserMessage, ulong> msg, ISocketMessageChannel channel, SocketReaction reaction)
+        private async Task CheckReactionForScore(Cacheable<IUserMessage, ulong> msg, Cacheable<IMessageChannel, ulong> chnl, SocketReaction reaction)
         {
             try
             {
-                var gChannel = channel as SocketGuildChannel;
+                var gChannel = client.Guilds
+                    .SelectMany(a => a.TextChannels)
+                    .FirstOrDefault(a => a.Id == chnl.Id);
                 if (gChannel == null || !gChannel.Guild.IsGyn(config))
                     return;
                 var gUser = gChannel.Guild.GetUser(reaction.UserId);
