@@ -109,6 +109,7 @@ namespace PrideBot
             .AddSingleton<Random>()                 // Add random to the collection
             .AddSingleton<ModelRepository>()
             .AddSingleton<DialogueDict>()
+                .AddSingleton<TokenConfig>()
             .AddSingleton(Configuration);             // Add the configuration to the collection
 
             Console.WriteLine();
@@ -124,7 +125,6 @@ namespace PrideBot
                 .AddSingleton<UserRegisteredCache>()
                 .AddSingleton<ChatScoringService>()
                 .AddSingleton<VoiceScoringService>()
-                .AddSingleton<TokenConfig>()
                 .AddSingleton<SnakeGame>()
                 .AddSingleton<LeaderboardImageGenerator>()
                 .AddSingleton<BullshitService>()

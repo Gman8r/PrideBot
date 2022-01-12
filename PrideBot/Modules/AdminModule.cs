@@ -128,6 +128,15 @@ namespace PrideBot.Modules
             await ReplyAsync(DialogueDict.GenerateEmojiText(message));
         }
 
+        [Command("emoji")]
+        [Alias("emote")]
+        [Priority(0)]
+        [Summary("Relays a message with emoji.")]
+        public async Task Emoji([Remainder] string message)
+        {
+            await ReplyAsync(DialogueDict.GenerateEmojiText(message));
+        }
+
         [Command("say")]
         [Alias("echo")]
         [Priority(1)]

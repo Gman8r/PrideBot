@@ -121,15 +121,11 @@ namespace PrideBot.Modules
         //    }
         //}
 
-        //[Command("auditlog")]
-        //public async Task Auditlog(ulong id, string actionType)
-        //{
-        //    var logs = (await Context.Guild.GetAuditLogsAsync(100, userId: 111231140462866432, actionType: (ActionType)Enum.Parse(typeof(ActionType), actionType)).FlattenAsync())
-        //        .Select(a => JsonConvert.SerializeObject(a.Data));
-
-        //    var msg = "```\n" + string.Join("\n\n", logs) + "```\n";
-        //    await ReplyAsync(msg);
-        //}
+        [Command("say")]
+        public async Task Auditlog([Remainder] string message)
+        {
+            await ReplyAsync(DialogueDict.GenerateEmojiText(message));
+        }
 
         //[Command("emote")]
         //public async Task EmoteText(string text)

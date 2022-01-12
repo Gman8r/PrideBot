@@ -13,6 +13,7 @@
     <PackageReference Include="Discord.Net" Version="2.3.1" />
     <PackageReference Include="EntityFramework" Version="6.4.4" />
     <PackageReference Include="Google.Apis.Sheets.v4" Version="1.51.0.2272" />
+    <PackageReference Include="GroupDocs.Search" Version="21.8.1" />
     <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="7.24.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="5.0.0" />
@@ -636,6 +637,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Assets\Stars\Small.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Services\customstopwords.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Services\emojisuggestions.json">
