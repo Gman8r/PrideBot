@@ -13,6 +13,7 @@ using PrideBot.Repository;
 using PrideBot.Sheets;
 using PrideBot.Quizzes;
 using PrideBot.Events;
+using Discord.Interactions;
 
 namespace PrideBot
 {
@@ -52,6 +53,8 @@ namespace PrideBot
             provider.GetRequiredService<LoggingService>();      // Start the logging service
             provider.GetRequiredService<CommandHandler>();      // Start the command handler service
             provider.GetRequiredService<DialogueDict>();
+            provider.GetRequiredService<InteractionCommandHandler>();
+            provider.GetRequiredService<CommandErrorReportingService>();
             var tokenConfig = provider.GetRequiredService<TokenConfig>();
 
             if (!(bool)Configuration.ParseBoolField("stealthmode")) 
@@ -92,16 +95,22 @@ namespace PrideBot
 
         private void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
+            var client = new DiscordSocketClient(new DiscordSocketConfig
             {                                       // Add discord to the collection
                 LogLevel = LogSeverity.Verbose,     // Tell the logger to give Verbose amount of info
                 MessageCacheSize = 1000,             // Cache 1,000 messages per channel
                 AlwaysDownloadUsers = true
-            }))
+            });
+            services.AddSingleton(client)
             .AddSingleton(new CommandService(new CommandServiceConfig
             {                                       // Add the command service to the collection
                 LogLevel = LogSeverity.Verbose,     // Tell the logger to give Verbose amount of info
-                DefaultRunMode = RunMode.Async,     // Force all commands to run async by default
+                DefaultRunMode = Discord.Commands.RunMode.Async,     // Force all commands to run async by default
+            }))
+            .AddSingleton(new InteractionService(client, new InteractionServiceConfig
+            {
+                LogLevel = LogSeverity.Verbose,
+                DefaultRunMode = Discord.Interactions.RunMode.Async,
             }))
             .AddSingleton<CommandHandler>()         // Add the command handler to the collection
             .AddSingleton<StartupService>()         // Add startupservice to the collection
@@ -109,7 +118,10 @@ namespace PrideBot
             .AddSingleton<Random>()                 // Add random to the collection
             .AddSingleton<ModelRepository>()
             .AddSingleton<DialogueDict>()
-                .AddSingleton<TokenConfig>()
+            .AddSingleton<TokenConfig>()
+            .AddSingleton<CommandErrorReportingService>()
+            .AddSingleton<InteractionCommandHandler>()
+            .AddSingleton<Plushie.PlushieMenuService>()
             .AddSingleton(Configuration);             // Add the configuration to the collection
 
             Console.WriteLine();

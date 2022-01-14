@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Commands;
+using Discord.Interactions;
 using Discord.WebSocket;
 using System;
 using System.IO;
@@ -11,19 +12,22 @@ namespace PrideBot
     {
         private readonly DiscordSocketClient _discord;
         private readonly CommandService _commands;
+        private readonly InteractionService _interactions;
 
         private string _logDirectory { get;}
         private string _logFile => Path.Combine(_logDirectory, $"{DateTime.UtcNow.ToString("yyyy-MM-dd")}.txt");
 
         // DiscordSocketClient and CommandService are injected automatically from the IServiceProvider
-        public LoggingService(DiscordSocketClient discord, CommandService commands)
+        public LoggingService(DiscordSocketClient discord, CommandService commands, InteractionService interactions)
         {
             _logDirectory = Path.Combine(AppContext.BaseDirectory, Startup.DebugMode ? "logsdebug" : "logs");
             _discord = discord;
             _commands = commands;
-            
+            _interactions = interactions;
+
             _discord.Log += OnLogAsync;
             _commands.Log += OnLogAsync;
+            _interactions.Log += OnLogAsync;
         }
 
         bool LogFileInUse = false;

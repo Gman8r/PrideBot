@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using Discord.Interactions;
 
 namespace PrideBot
 {
@@ -16,18 +17,21 @@ namespace PrideBot
         private readonly DiscordSocketClient discord;
         private readonly CommandService commands;
         private readonly IConfigurationRoot config;
+        private readonly InteractionService interactions;
 
         // DiscordSocketClient, CommandService, and IConfigurationRoot are injected automatically from the IServiceProvider
         public StartupService(
             IServiceProvider provider,
             DiscordSocketClient discord,
             CommandService commands,
-            IConfigurationRoot config)
+            IConfigurationRoot config,
+            InteractionService interactions)
         {
             this.provider = provider;
             this.config = config;
             this.discord = discord;
             this.commands = commands;
+            this.interactions = interactions;
         }
 
         public async Task StartAsync(string discordToken)
@@ -45,9 +49,16 @@ namespace PrideBot
             commands.AddTypeReader(typeof(MessageUrl), new UrlMessageTypeReader());
 
             if (!config.ParseBoolField("stealthmode"))
-                await commands.AddModulesAsync(Assembly.GetEntryAssembly(), provider);     // Load commands and modules into the command service
+            {
+                await commands.AddModulesAsync(Assembly.GetEntryAssembly(), provider);
+                await interactions.AddModulesAsync(Assembly.GetEntryAssembly(), provider);
+            }
             else
-                await commands.AddModuleAsync<SecretStealthModule>(provider);  // Only load stealth module modules
+            {
+                // Only load stealth module modules
+                // TODO stealth interaction module if needed
+                await commands.AddModuleAsync<SecretStealthModule>(provider);
+            }
 
             // Initialize helper fields
             var appData = await discord.GetApplicationInfoAsync();

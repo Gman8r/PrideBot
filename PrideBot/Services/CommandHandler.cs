@@ -16,6 +16,7 @@ namespace PrideBot
         private readonly IConfigurationRoot config;
         private readonly IServiceProvider provider;
         private readonly LoggingService loggingService;
+        private readonly CommandErrorReportingService errorReportingService;
 
         private Dictionary<ulong, int> commandArgData;
 
@@ -24,7 +25,7 @@ namespace PrideBot
             DiscordSocketClient client,
             CommandService commands,
             IConfigurationRoot config,
-            IServiceProvider provider, LoggingService loggingService)
+            IServiceProvider provider, LoggingService loggingService, CommandErrorReportingService errorReportingService)
         {
             this.client = client;
             this.commands = commands;
@@ -35,6 +36,7 @@ namespace PrideBot
             client.MessageReceived += OnMessageReceivedAsync;
             commands.CommandExecuted += OnCommandExecutedAsync;
             this.loggingService = loggingService;
+            this.errorReportingService = errorReportingService;
         }
 
         private async Task OnMessageReceivedAsync(SocketMessage s)
@@ -55,72 +57,10 @@ namespace PrideBot
 
         private async Task OnCommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
         {
-            if (!string.IsNullOrEmpty(result?.ErrorReason))
-                await ReportErrorAsync(command, context, result);
+            if (!string.IsNullOrEmpty(result?.ErrorReason) && result.Error != CommandError.UnknownCommand)
+                await errorReportingService.ReportErrorAsync(context.User, context.Channel, (command.IsSpecified && command.Value.Name != null) ? command.Value.Name : "",
+                    result.ErrorReason, result.Error == CommandError.Exception);
             commandArgData.Remove(context.Message.Id);
-        }
-
-        public async Task ReportErrorAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
-        {
-            try
-            {
-                if (context.Guild != null
-                    && !(context.Guild as SocketGuild).GetUser(context.Client.CurrentUser.Id).GetPermissions(context.Channel as IGuildChannel).Has(ChannelPermission.SendMessages))
-                {
-                    // Can't send messages, so just forget it
-                    return;
-                }
-
-                string errorMessage = null;
-
-                if (result.Error == CommandError.UnknownCommand)
-                {
-                    var argPos = commandArgData[context.Message.Id];
-                    var commandName = context.Message.Content.Substring(argPos).TrimEnd();
-                    var module = commands.Modules
-                        .FirstOrDefault(a => a.IsSubmodule
-                        && (commandName.StartsWith(a.GetModulePathPrefix(), StringComparison.OrdinalIgnoreCase) // ![submodule] [wrongcommand]
-                        || commandName.Equals(a.GetModulePathPrefix().TrimEnd(), StringComparison.OrdinalIgnoreCase))); // ![submodule]
-                    if (module != null)
-                    {
-                        // Submodule help (user used an invalid command in a submodule)
-                        var moduleClass = PrideModuleBase.GetModule(module, commands).Value;
-
-                        errorMessage = $"Invalid subcommand for {module.GetModulePathPrefix().TrimEnd()}.\n\n" +
-                            await moduleClass.GetHelpLineAsync(module, module.Commands, context as SocketCommandContext, provider, config);
-                    }
-                }
-                else if (!string.IsNullOrEmpty(result.ErrorReason))
-                {
-                    var commandException = result.Error == CommandError.Exception && result.ErrorReason.StartsWith("COMMANDEXCEPTION:");
-                    if (result.Error != CommandError.Exception)
-                    {
-                        errorMessage = result.ErrorReason;
-                    }
-                    else
-                    {
-                        if (result.ErrorReason.StartsWith("COMMANDEXCEPTION:"))
-                            errorMessage = (result.ErrorReason.Substring("COMMANDEXCEPTION:".Count()));
-                        else
-                            errorMessage = DialogueDict.Get("EXCEPTION");
-                    }
-                }
-
-                if (result.Error == CommandError.ParseFailed || result.Error == CommandError.ObjectNotFound || result.Error == CommandError.BadArgCount)
-                    errorMessage = DialogueDict.Get("ERROR_MESSAGE", errorMessage, config.GetDefaultPrefix(), command.IsSpecified ? command.Value.Name : "");
-
-                if (errorMessage != null)
-                {
-                    await context.Channel.SendMessageAsync(embed:
-                        EmbedHelper.GetEventErrorEmbed(context.User, DialogueDict.RollBrainrot(errorMessage), context.Client as DiscordSocketClient).Build());
-                }
-            }
-            catch (Exception e)
-            {
-                var logMessage = new LogMessage(LogSeverity.Error, "CommandHandler",
-                    "Error reporting an error: " + result.Error.ToString(), e);
-                await loggingService.OnLogAsync(logMessage);
-            }
         }
     }
 }
