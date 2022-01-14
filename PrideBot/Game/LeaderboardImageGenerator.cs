@@ -76,6 +76,7 @@ namespace PrideBot.Game
             using var topLeftOverlay = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Overlays/TopLeft.png"));
             using var staticImage = new MagickImageCollection(await File.ReadAllBytesAsync("Assets/Leaderboard/Static.gif"));
             using var staticImage2 = new MagickImageCollection(await File.ReadAllBytesAsync("Assets/Leaderboard/Static2.gif"));
+            using var yurikoOutlineImage = new MagickImage(await File.ReadAllBytesAsync("Assets/Leaderboard/Yurikos/outline.png"));
 
             var yurikoHeight = (double)bgCollection.First().Height * 4 / 5.0;
             var sineAmplitude = 30;
@@ -201,6 +202,17 @@ namespace PrideBot.Game
                     var staticFrame = staticImage2[i % staticImage2.Count];
                     bgFrame.Composite(staticFrame, Gravity.Northwest, 0, 0, CompositeOperator.Plus);
                 }
+
+
+                //using var grayMask = new MagickImage(bgFrame);
+                //grayMask.Grayscale();
+                //grayMask.Composite(yurikoOutlineImage, Gravity.Northwest,
+                //            (bgFrame.Width - yurikoFrame.Width) / 2,
+                //            ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude),
+                //            CompositeOperator.DstIn);
+                //bgFrame.Composite(grayMask, Gravity.Northwest, 0, 0, CompositeOperator.Over);
+
+
 
                 //// Add ship images
                 //for (int j = 0; j < 5; j++)
