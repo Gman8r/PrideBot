@@ -81,9 +81,9 @@ namespace PrideBot.Modules
 
             var dbShips = await repo.GetUserShipsAsync(connection, dbUser);
 
-            var imagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips);
+            var imageFile = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips);
             var embed = EmbedHelper.GetEventEmbed(Context.User, config)
-                .WithImageUrl(config.GetRelativeHostPathWeb(imagePath))
+                .WithAttachedImageUrl(imageFile)
                 .WithThumbnailUrl(user.GetServerAvatarUrlOrDefault())
                 .WithTitle($"User Overview")
                 .WithDescription(isSelf ? "Here's who you're supporting!" : $"Here's who {user.Mention} is supporting!")
@@ -97,7 +97,7 @@ namespace PrideBot.Modules
                 .Select(a => $"{EmoteHelper.GetShipTierEmoji(a)} **{a}** Pairing: **{dbShips.Get(a)?.GetDisplayName() ?? "None"}**" +
                     $" {((dbShips.Get(a).ScoreRatio == 1m || !dbShips.Has(a)) ? "" : $" ({GameHelper.GetPointPercent(dbShips.Get(a).ScoreRatio)}% SP)")}")));
 
-            await ReplyAsync(embed: embed.Build());
+            await Context.Channel.SendFileAsync(imageFile.Stream, imageFile.FileName, embed: embed.Build());
         }
 
 
@@ -511,8 +511,8 @@ namespace PrideBot.Modules
                         ? "#" + dbShips.Get((UserShipTier)a).Place.ToString()
                         : "#??"))
                 .ToArray();
-            var imagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips, scoreTexts: scoreStrs);
-            embed.ImageUrl = config.GetRelativeHostPathWeb(imagePath);
+            var imageFIle = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips, scoreTexts: scoreStrs);
+            embed.WithAttachedImageUrl(imageFIle);
             await ReplyAsync(embed: embed.Build());
         }
 
@@ -551,9 +551,9 @@ namespace PrideBot.Modules
                 : DialogueDict.Get("SHIP_SCORES_NO_POINTS");
 
 
-            var shipImagePath = await shipImageGenerator.WriteShipImageAsync(ship);
+            var shipImageFile = await shipImageGenerator.WriteShipImageAsync(ship);
             var embed = EmbedHelper.GetEventEmbed(Context.User, config)
-                .WithThumbnailUrl(config.GetRelativeHostPathWeb(shipImagePath))
+                .WithAttachedThumbnailUrl(shipImageFile)
                 .WithTitle($"Ship Overview: {ship.GetDisplayName()}")
                 .WithDescription(desc);
 
@@ -579,7 +579,7 @@ namespace PrideBot.Modules
                 }
             }
 
-            await ReplyAsync(embed: embed.Build());
+            await Context.Channel.SendFileAsync(shipImageFile.Stream, shipImageFile.FileName, embed: embed.Build());
         }
     }
 }

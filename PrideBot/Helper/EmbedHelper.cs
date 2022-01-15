@@ -51,6 +51,12 @@ namespace PrideBot
             return embed;
         }
 
+        public static EmbedBuilder WithAttachedImageUrl(this EmbedBuilder builder, MemoryFile file)
+            => builder.WithImageUrl(file?.FileName == null ? null : $"attachment://{file.FileName}");
+
+        public static EmbedBuilder WithAttachedThumbnailUrl(this EmbedBuilder builder, MemoryFile file)
+            => builder.WithThumbnailUrl(file?.FileName == null ? null : $"attachment://{file.FileName}");
+
         public static List<EmbedFieldBuilder> GetOverflowFields(IEnumerable<string> values, string separator, string title, string subsequentTitle = "\u200B")
         {
             var embeds = new List<EmbedFieldBuilder>();

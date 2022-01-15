@@ -214,8 +214,8 @@ namespace PrideBot.Game
                     ? null
                     : "#" + dbShips.Get((UserShipTier)a).Place.ToString())
                 .ToArray();
-            var imagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips);//, scoreTexts: scoreStrs);
-            embed.ImageUrl = config.GetRelativeHostPathWeb(imagePath);
+            var memFile = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips);//, scoreTexts: scoreStrs);
+            embed.WithAttachedImageUrl(memFile);
             return embed;
         }
 

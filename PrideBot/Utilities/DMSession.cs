@@ -76,7 +76,7 @@ namespace PrideBot
         private async Task ReactionAdded(Cacheable<IUserMessage, ulong> msg, Cacheable<IMessageChannel, ulong> chnl, SocketReaction reaction)
         {
             if (currentPrompt == null
-                || reaction.Channel.Id != chnl.Id
+                || chnl.Id != channel.Id
                 || currentPrompt.IsEntered
                 || !currentPrompt.AcceptsEmote
                 || msg.Id != currentPrompt.BotMessage.Id
@@ -142,19 +142,19 @@ namespace PrideBot
 
         protected abstract Task PerformSessionInternalAsync();
 
-        protected async Task<Prompt> SendAndAwaitYesNoResponseAsync(string text = null, EmbedBuilder embed = null, bool canSkip = false, bool canCancel = false)
-            => await SendAndAwaitEmoteResponseAsync(text, embed, new List<IEmote>() { YesEmote, NoEmote }, canSkip, canCancel);
+        protected async Task<Prompt> SendAndAwaitYesNoResponseAsync(string text = null, EmbedBuilder embed = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null)
+            => await SendAndAwaitEmoteResponseAsync(text, embed, new List<IEmote>() { YesEmote, NoEmote }, canSkip, canCancel, alwaysPopulateEmotes, file);
 
-        protected async Task<Prompt> SendAndAwaitEmoteResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool canSkip = false, bool canCancel = false)
-            => await SendAndAwaitResponseAsync(text, embed, emoteChoices, false, canSkip, canCancel);
+        protected async Task<Prompt> SendAndAwaitEmoteResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null)
+            => await SendAndAwaitResponseAsync(text, embed, emoteChoices, false, canSkip, canCancel, alwaysPopulateEmotes, file);
 
-        protected async Task<Prompt> SendAndAwaitResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false)
+        protected async Task<Prompt> SendAndAwaitResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null)
         {
-            await SendResponseAsync(text, embed, emoteChoices, acceptsText, canSkip, canCancel);
+            await SendResponseAsync(text, embed, emoteChoices, acceptsText, canSkip, canCancel, alwaysPopulateEmotes, file);
             return await AwaitCurrentResponseAsync();
         }
 
-        protected async Task<Prompt> SendResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false)
+        protected async Task<Prompt> SendResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null)
         {
             emoteChoices ??= new List<IEmote>();
             if (emoteChoices.Count >= 3)
@@ -181,7 +181,9 @@ namespace PrideBot
                 //    text += $"\n\nSelect {canCancel} to cancel.";
             }
 
-            var message = await channel.SendMessageAsync(text, embed: embed.Build());
+            var message = file == null
+                ? await channel.SendMessageAsync(text, embed: embed.Build())
+                : await channel.SendFileAsync(file.Stream, file.FileName, text, embed: embed.Build());
             currentPrompt = new Prompt(message, acceptsText, emoteChoices);
             currentPrompt.AlwaysPopulateEmotes = alwaysPopulateEmotes;
             AddReactions(message, emoteChoices).GetAwaiter();

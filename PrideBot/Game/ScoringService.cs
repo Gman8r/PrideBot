@@ -142,8 +142,8 @@ namespace PrideBot.Game
                         .Select(a => "+" + (dbShipScores
                             .FirstOrDefault(aa => ((int)aa.Tier) == a)?.PointsEarned ?? 0).ToString())
                         .ToArray();
-                    var imagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbUserShips, scoreTexts: scores);
-                    embed.ImageUrl = config.GetRelativeHostPathWeb(imagePath);
+                    var imageFile = await shipImageGenerator.WriteUserCardAsync(dbUser, dbUserShips, scoreTexts: scores);
+                    embed.WithAttachedImageUrl(imageFile);
                     break;
 
                 case (ModelRepository.AddScoreError.UserNotRegistered):

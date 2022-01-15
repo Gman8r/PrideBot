@@ -22,21 +22,19 @@ namespace PrideBot.Registration
         public string GetShipAvatarPath(User user, IConfigurationRoot config)
             => config.GetRelativeHostPathLocal("ships/" + user.UserId + ".png");
 
-        public async Task<string> WriteUserCardAsync(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0, string[] scoreTexts = null,
+        public async Task<MemoryFile> WriteUserCardAsync(User dbUser, UserShipCollection dbShips, int highlightTier = -1, int highlightHeart = 0, string[] scoreTexts = null,
             bool blackOutHeartRight = false)
         {
-            var path =
+            return
                 await (await GenerateUserCardAsync(dbUser, dbShips, highlightTier, highlightHeart, scoreTexts, blackOutHeartRight))
-                .WriteToWebFileAsync(config, "ships");
-            return path;
+                .WriteToMemoryFileAsync("ships");
         }
 
-        public async Task<string> WriteShipImageAsync(Ship ship)
+        public async Task<MemoryFile> WriteShipImageAsync(Ship ship)
         {
-            var path =
+            return
                 await (await GenerateShipImageAsync(ship))
-                .WriteToWebFileAsync(config, "ships");
-            return path;
+                .WriteToMemoryFileAsync("ships");
         }
 
         public async Task<MagickImage> GenerateUserCardAsync(User dbUser, UserShipCollection userShips, int highlightTier = -1, int highlightHeart = 0, string[] scoreTexts = null, bool blackOutHeartRight = false)
@@ -163,7 +161,7 @@ namespace PrideBot.Registration
             return image;
         }
 
-        public async Task<string> GenerateBackgroundChoicesAsync(User dbUser)
+        public async Task<MemoryFile> GenerateBackgroundChoicesAsync(User dbUser)
         {
             var backgroundFiles = Directory.GetFiles("Assets/Backgrounds");
             var rows = backgroundFiles.Length > 2 ? 2 : 1;
@@ -190,9 +188,9 @@ namespace PrideBot.Registration
                 }
             }
 
-            var path = await image.WriteToWebFileAsync(config, "backgrounds");
+            var file = await image.WriteToMemoryFileAsync("backgrounds");
             backgroundImages.ForEach(a => a.Dispose());
-            return path;
+            return file;
         }
 
 

@@ -14,8 +14,7 @@ namespace PrideBot.Models
         public string CharacterId2 { get; set; }
         [DontPushToDatabase]
         public string Nickname { get; set; }
-        public int TestPlace { get; set; }
-        public double TestScore { get; set; }
+
 
         [DontPushToDatabase]
         public bool IsBlacklisted { get; set; }
@@ -45,5 +44,11 @@ namespace PrideBot.Models
         public bool IsEmpty() => string.IsNullOrWhiteSpace(CharacterId1) || string.IsNullOrWhiteSpace(CharacterId2);
 
         public string GetDisplayName() => /*Nickname ??*/ $"{Character1First}X{Character2First}";
+
+        // Debug values
+        [DontPushToDatabase]
+        public int TestPlace { get; set; }
+        [DontPushToDatabase]
+        public double TestScore { get; set; }
     }
 }

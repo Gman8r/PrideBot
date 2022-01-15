@@ -68,11 +68,12 @@ namespace PrideBot.Modules
             var dbUser = await repo.GetOrCreateUserAsync(connection, Context.User.Id.ToString());
             var embed = EmbedHelper.GetEventEmbed(Context.User, config)
                 .WithTitle("Background Config");
+            MemoryFile fileToSend = null;
             if (bgIndex == 0)
             {
-                var bgImagePath = await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser);
+                fileToSend = await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser);
                 embed.Description = DialogueDict.Get("SET_BACKGROUND_LIST", config.GetDefaultPrefix());
-                embed.ImageUrl = config.GetRelativeHostPathWeb(bgImagePath);
+                embed.WithAttachedImageUrl(fileToSend);
             }
             else
             {
@@ -83,11 +84,14 @@ namespace PrideBot.Modules
                 await repo.UpdateUserAsync(connection, dbUser);
 
                 var dbShips = await repo.GetUserShipsAsync(connection, dbUser.UserId);
-                var shipImagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips);
+                fileToSend = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips);
                 embed.Description = DialogueDict.Get("SET_BACKGROUND_CHANGED");
-                embed.ImageUrl = config.GetRelativeHostPathWeb(shipImagePath);
+                embed.WithAttachedImageUrl(fileToSend);
             }
-            await ReplyAsync(embed: embed.Build());
+            if (fileToSend == null)
+                await ReplyAsync(embed: embed.Build());
+            else
+                await Context.Channel.SendFileAsync(fileToSend.Stream, fileToSend.FileName, embed: embed.Build());
         }
     }
 }
