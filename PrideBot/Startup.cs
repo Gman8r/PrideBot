@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PrideBot.Game;
 using PrideBot.Registration;
 using PrideBot.Repository;
-using PrideBot.Sheets;
+using PrideBot.GDrive;
 using PrideBot.Quizzes;
 using PrideBot.Events;
 using Discord.Interactions;

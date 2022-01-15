@@ -18,7 +18,7 @@ using System.Net;
 using Microsoft.Data.SqlClient;
 using PrideBot.Models;
 using PrideBot.Repository;
-using PrideBot.Sheets;
+using PrideBot.GDrive;
 using PrideBot.Registration;
 using PrideBot.Game;
 using PrideBot.Events;
@@ -32,6 +32,7 @@ namespace PrideBot.Modules
     {
         readonly ModelRepository modelRepository;
         readonly GoogleSheetsService sheetsService;
+        readonly GoogleDriveService driveService;
         readonly DialogueDict dialogueDict;
         readonly ModelRepository repo;
         readonly UserRegisteredCache regCache;
@@ -39,7 +40,7 @@ namespace PrideBot.Modules
         readonly AnnouncementService announcementService;
         readonly IConfigurationRoot config;
 
-        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService, DialogueDict dialogueDict, ModelRepository repo, UserRegisteredCache regCache, ChatScoringService chatScoringService, AnnouncementService announcementService, IConfigurationRoot config)
+        public DatabaseModule(ModelRepository modelRepository, GoogleSheetsService sheetsService, DialogueDict dialogueDict, ModelRepository repo, UserRegisteredCache regCache, ChatScoringService chatScoringService, AnnouncementService announcementService, IConfigurationRoot config, GoogleDriveService driveService)
         {
             this.modelRepository = modelRepository;
             this.sheetsService = sheetsService;
@@ -49,17 +50,79 @@ namespace PrideBot.Modules
             this.chatScoringService = chatScoringService;
             this.announcementService = announcementService;
             this.config = config;
+            this.driveService = driveService;
+        }
+
+
+
+        [Command("updatealltables")]
+        [Summary("Big red button, very fun")]
+        [Alias("updatallsheets", "pushalltables", "pushallsheets")]
+        public async Task UploadAllSheets(bool clearContentsFirst = false)
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+            var files = await driveService.GetFilesInFolderAsync(config["ids:tablesdrivefolder"]);
+            foreach (var file in files)
+            {
+                var url = $"https://docs.google.com/spreadsheets/d/{file.Id}/edit#gid=0";
+                await UploadAllSubsheets(url, clearContentsFirst);
+            }
+            await ReplyAsync("Done for real!!");
         }
 
         [Command("updatetable")]
         [Alias("updatesheet", "pushtable", "pushsheet")]
-        public async Task UploadSheet(string url, string tableName, bool clearContentsFirst = false)
-
+        [Summary("Updates a single subsheet from a url")]
+        [Priority(1)]
+        public async Task UploadSingleSubsheet(string url, bool clearContentsFirst = false)
         {
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
-            var mainRowsAffected = await PushSheetAsync(url, tableName, connection, clearContentsFirst);
 
+            var sheetIds = GetSheetIds(url);
+            var metaData = await sheetsService.GetSheetMetaDataAsync(sheetIds.Item1);
+            var tableName = metaData.Properties.Title.Replace(" ", "_");
+            var subsheetName = metaData.Sheets
+                .FirstOrDefault(a => a.Properties.SheetId == int.Parse(sheetIds.Item2))
+                .Properties.Title;
+
+            await UploadSubsheet(connection, sheetIds, tableName, subsheetName, clearContentsFirst);
+        }
+
+        [Command("updatetablefull")]
+        [Summary("Updates every subsheet from the table linked in the url")]
+        [Alias("updatesheetfull", "pushtablefull", "pushsheetfull")]
+        public async Task UploadAllSubsheets(string url, bool clearContentsFirst = false)
+        {
+            using var connection = repo.GetDatabaseConnection();
+            await connection.OpenAsync();
+
+            var baseSheetIds = GetSheetIds(url);
+            var metaData = await sheetsService.GetSheetMetaDataAsync(baseSheetIds.Item1);
+            var tableName = metaData.Properties.Title.Replace(" ", "_");
+
+            foreach (var sheet in metaData.Sheets)
+            {
+                await UploadSubsheet(connection, (baseSheetIds.Item1, sheet.Properties.SheetId.ToString()), tableName, sheet.Properties.Title, clearContentsFirst);
+            }
+        }
+
+        private (string, string) GetSheetIds(string url)
+        {
+            var idPattern = @"\/d\/(.*?)\/.*gid=([^$]*)";
+            var idMatch = new Regex(idPattern).Match(url);
+            var groups = idMatch.Groups.Cast<Group>();
+            var sheetId = groups.SkipLast(1).Last().Value;
+            var subsheetId = groups.Last().Value;
+            return (sheetId, subsheetId);
+        }
+
+        async Task UploadSubsheet(SqlConnection connection, (string, string) sheetIds, string tableName, string subsheetName, bool clearContentsFirst = false)
+        {
+            await ReplyResultAsync($"Uploading {subsheetName} in {tableName}...");
+
+            var mainRowsAffected = await PushSheetAsync(tableName, sheetIds.Item1, subsheetName, connection, clearContentsFirst);
             if (mainRowsAffected == -1)
                 await ReplyResultAsync($"No rows need changing or adding in my database.");
             else
@@ -69,7 +132,7 @@ namespace PrideBot.Modules
             {
                 using var altConnection = repo.GetAltDatabaseConnection();
                 await altConnection.OpenAsync();
-                var altRowsAffected = await PushSheetAsync(url, tableName, altConnection, clearContentsFirst);
+                var altRowsAffected = await PushSheetAsync(tableName, sheetIds.Item1, subsheetName, altConnection, clearContentsFirst);
                 if (altRowsAffected == -1)
                     await ReplyResultAsync($"No rows need changing or adding in the other database.");
                 else
@@ -79,20 +142,15 @@ namespace PrideBot.Modules
             await ReplyResultAsync($"Done!");
         }
 
-        public async Task<int> PushSheetAsync(string url, string tableName, SqlConnection connection, bool clearFirst)
+        public async Task<int> PushSheetAsync(string tableName, string sheetId, string subsheetName, SqlConnection connection, bool clearFirst)
         {
-            if (clearFirst)
-                await new SqlCommand($"delete from {tableName};", connection).ExecuteNonQueryAsync();
 
-            var idPattern = "\\/d\\/(.*?)\\/(|$)";
-            var idMatch = new Regex(idPattern).Match(url);
-            var groups = idMatch.Groups.Cast<Group>();
-            var sheetId = groups.SkipLast(1).Last().Value + groups.Last().Value;
-
-            var sheetsResult = await sheetsService.ReadSheetDataAsync(sheetId, "A1:Y1001");
+            var sheetsResult = await sheetsService.ReadSheetDataAsync(sheetId, $"{subsheetName}!A1:Y1001");
             var fieldsRow = sheetsResult.Values.FirstOrDefault();
             var fieldDict = new Dictionary<string, Type>();
 
+            if (clearFirst)
+                await new SqlCommand($"delete from {tableName};", connection).ExecuteNonQueryAsync();
 
             // Remove () columns
             var notesColumns = fieldsRow
@@ -192,8 +250,8 @@ namespace PrideBot.Modules
                     var b = reader[i].ToString();
                     try
                     {
-                    if (!fieldMatch.ToString().Equals(reader[i].ToString()))
-                        changes[fieldName] = Convert.ChangeType(fieldMatch, fieldDict[fieldName]);
+                        if (!fieldMatch.ToString().Equals(reader[i].ToString()))
+                            changes[fieldName] = Convert.ChangeType(fieldMatch, fieldDict[fieldName]);
 
                     }
                     catch
@@ -260,128 +318,14 @@ namespace PrideBot.Modules
             var command = new SqlCommand(query, connection);
             foreach (var param in parameterDict.Reverse())
             {
-                command.Parameters.AddWithValue(param.Key, param.Value);
-                query = query.Replace("@" + param.Key, $"'{param.Value.ToString()}'");
+                object value = param.Value;
+                // Nullify empty strings
+                if (param.Value.GetType() == typeof(string) && string.IsNullOrEmpty((string)value))
+                    value = null;
+                command.Parameters.AddWithValue(param.Key, value ?? DBNull.Value);
+                query = query.Replace("@" + param.Key, $"'{value ?? "null"}'");
             }
             return await command.ExecuteNonQueryAsync();
-        }
-
-        [Command("updatedialogue")]
-        [Alias("pushdialogue")]
-        public async Task UpdateDialogue()
-        {
-            await UploadSheet("https://docs.google.com/spreadsheets/d/14EGqZ5_gVpqRgNCjqbYXncwHrbNOjh9J-QjyrN0vJlY/edit#gid=0", "DIALOGUE");
-            await dialogueDict.PullDialogueAsync();
-            await ReplyAsync("Please use the command on my other self as well, so that cute devil gets the dialogue re-cached too~");
-        }
-
-        [Command("randomdata")]
-        public async Task RandomShips(int userCount, int scoreCount, int seed = 0)
-        {
-            using var typingState = Context.Channel.EnterTypingState();
-            var rand = seed == 0 ? new Random() : new Random(seed);
-            using var connection = repo.GetDatabaseConnection();
-            await connection.OpenAsync();
-            var allChars = (await repo.GetAllCharactersAsync(connection)).ToList();
-            var achievements = (await repo.GetAllAchievementsAsync(connection)).ToList();
-            for (int userId = 0; userId < userCount; userId++)
-            {
-                var dbUser = await repo.GetOrCreateUserAsync(connection, userId.ToString());
-                var previousShips = new List<string>();
-                for (int tier = 0; tier < 3; tier++)
-                {
-                    if (tier > 0 && rand.NextDouble() > .75)
-                        continue;
-                    var char1 = allChars[GetWeightedIndex(allChars.Count, .2, rand)];
-                    var char2 = allChars[GetWeightedIndex(allChars.Count, .2, rand)];
-                    var dbShipId = await repo.GetOrCreateShipAsync(connection, char1.CharacterId, char2.CharacterId);
-                    if (!previousShips.Contains(dbShipId))
-                    {
-                        await repo.CreateOrReplaceUserShip(connection, dbUser.UserId, (UserShipTier)tier, dbShipId);
-                        previousShips.Add(dbShipId);
-                    }
-                }
-                dbUser.ShipsSelected = true;
-                await repo.UpdateUserAsync(connection, dbUser);
-                var achievement = achievements.FirstOrDefault(a => a.AchievementId.Equals("PREREGISTER"));
-                await repo.AttemptAddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore, Context.Client.CurrentUser.Id.ToString(), true);
-            }
-
-            for (int i = 0; i < scoreCount; i++)
-            {
-                var userId = GetWeightedIndex(userCount, .05, rand);
-                var achievement = achievements[rand.Next() % achievements.Count];
-                await repo.AttemptAddScoreAsync(connection, userId.ToString(), achievement.AchievementId, achievement.DefaultScore, Context.Client.CurrentUser.Id.ToString(), true);
-            }
-
-            await ReplyAsync("***WOP!*** I pulled a collection of info from a contest in another reality, just for you bestie!");
-        }
-
-        [Command("clearrandomdata")]
-        public async Task RandomShips()
-        {
-            using var connection = repo.GetDatabaseConnection();
-            await connection.OpenAsync();
-            var query = $"delete from ship_scores where SCORE_ID in (select SCORE_ID from VI_SCORES where len(USER_ID) < 10); "
-                + $"delete from SCORES where len(USER_ID) < 5; "
-                + $"delete from USER_SHIPS where len(USER_ID) < 5; "
-                + $"delete from USERS where len(USER_ID) < 5; ";
-
-            await new SqlCommand(query, connection).ExecuteNonQueryAsync();
-
-            await ReplyAsync("***FOOP!*** I sent that data back to the universe from which it came~");
-        }
-
-        int GetWeightedIndex(int upperBoundExclusive, double individualProb, Random rand)
-        {
-            for (int i = 0; i < upperBoundExclusive; i++)
-            {
-                if (rand.NextDouble() < individualProb)
-                    return i;
-            }
-            return rand.Next(rand.Next() % upperBoundExclusive);
-        }
-
-        [Command("updaterules")]
-        [RequireGyn]
-        [Summary("Updates the rules channel and auto-pushes dialogue.")]
-        public async Task UpdateRules()
-        {
-            await ReplyAsync("Pushing dialogue...");
-            await UpdateDialogue();
-            await ReplyAsync("Updating rules page...");
-            await announcementService.UpdateRulesAsync(Context.Guild);
-            await ReplyResultAsync("Done!");
-        }
-
-        [Command("cleardbcaches")]
-        [Alias("cleardbcache")]
-        [Summary("Clears or refreshes certain cached database data, including dialogue")]
-        public async Task ClearCaches()
-        {
-            regCache.Clear();
-            chatScoringService.ChatData.Clear();
-            await dialogueDict.PullDialogueAsync();
-            await ReplyResultAsync("Done!");
-        }
-
-        [Command("setannouncementtimes")]
-        public async Task SetBullshitTimes()
-        {
-            using var connection = repo.GetDatabaseConnection();
-            await connection.OpenAsync();
-            var bullshits = await repo.GetAllBullshitsAsync(connection);
-            var rand = new Random();
-            var startTime = DateTime.Now.AddHours(1);
-            var totalMinutes = (int)(new DateTime(DateTime.Now.Year, int.Parse(config["eventmonth"]) + 1, 1)
-                - startTime).TotalMinutes;
-            foreach (var bullshit in bullshits.Where(a => !a.Announced && (a.AnnounceTime == null || a.AnnounceTime < DateTime.Now.AddMonths(-1))))
-            {
-                var minutes = rand.Next(totalMinutes);
-                bullshit.AnnounceTime = startTime.AddMinutes(minutes);
-                await repo.UpdateBullshitAsync(connection, bullshit);
-            }
-            await ReplyAsync("Done!");
         }
     }
 }

@@ -21,7 +21,7 @@ using PrideBot.Registration;
 using PrideBot.Models;
 using PrideBot.Game;
 using PrideBot.Quizzes;
-using PrideBot.Sheets;
+using PrideBot.GDrive;
 
 namespace PrideBot.Modules
 {

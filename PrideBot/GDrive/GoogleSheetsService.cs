@@ -13,45 +13,24 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
 
-namespace PrideBot.Sheets
+namespace PrideBot.GDrive
 {
     public class GoogleSheetsService
     {
-
-        static string[] Scopes = { SheetsService.Scope.SpreadsheetsReadonly, SheetsService.Scope.Spreadsheets, SheetsService.Scope.Drive };
-        static string ApplicationName = "CucumberBot";
-
         SheetsService service;
         public SheetsService SheetsService => service;
+        public GoogleCredentialService googleCredentialService;
 
-        public GoogleSheetsService()
+        public GoogleSheetsService(GoogleCredentialService googleCredentialService)
         {
-
-            UserCredential credential;
-
-            using (var stream =
-                new FileStream("client_secret.json", FileMode.Open, FileAccess.Read))
-            {
-                string credPath = System.Environment.GetFolderPath(
-                    System.Environment.SpecialFolder.Personal);
-
-
-                credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
-                    GoogleClientSecrets.Load(stream).Secrets,
-                    Scopes,
-                    "user",
-                    CancellationToken.None,
-                    new FileDataStore(credPath, true)).Result;
-                Console.WriteLine("Credential file saved to: " + credPath);
-            }
+            this.googleCredentialService = googleCredentialService;
 
             // Create Google Sheets API service.
             service = new SheetsService(new BaseClientService.Initializer()
             {
-                HttpClientInitializer = credential,
-                ApplicationName = ApplicationName,
+                HttpClientInitializer = googleCredentialService.Credential,
+                ApplicationName = GoogleCredentialService.ApplicationName
             });
-
         }
 
         public async Task<UpdateValuesResponse> UpdateDataAsync(string spreadsheetId, string range, IList<IList<object>> values,
@@ -65,13 +44,19 @@ namespace PrideBot.Sheets
             return await updateRequest.ExecuteAsync();
         }
 
+        public async Task<Spreadsheet> GetSheetMetaDataAsync(string spreadsheetId)
+        {
+            var dataRequest = service.Spreadsheets.Get(spreadsheetId);
+            return await dataRequest.ExecuteAsync();
+        }
+
         public async Task<ValueRange> ReadSheetDataAsync(string spreadsheetId, string range,
             SpreadsheetsResource.ValuesResource.GetRequest.MajorDimensionEnum majorDimension = SpreadsheetsResource.ValuesResource.GetRequest.MajorDimensionEnum.ROWS,
             bool flattenDimensions = false)
         {
-            var request = service.Spreadsheets.Values.Get(spreadsheetId, range);
-            request.MajorDimension = majorDimension;
-            var results = await request.ExecuteAsync();
+            var valeuRequest = service.Spreadsheets.Values.Get(spreadsheetId, range);
+            valeuRequest.MajorDimension = majorDimension;
+            var results = await valeuRequest.ExecuteAsync();
             if (flattenDimensions)
             {
                 int maxSize = results.Values.Select(a => a.Count()).Max();
