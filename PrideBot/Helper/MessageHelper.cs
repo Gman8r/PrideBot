@@ -34,7 +34,7 @@ namespace PrideBot
 
             if (sendEmote)
                 message = $"{ProgressBar.SignatureEmote} {message}";
-            message = DialogueDict.RollBrainrot(message);
+            message = DialogueDict.GenerateEmojiText(message);
             return message;
         }
 

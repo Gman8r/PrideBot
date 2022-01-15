@@ -84,7 +84,7 @@ namespace PrideBot.Modules
             var imagePath = await shipImageGenerator.WriteUserCardAsync(dbUser, dbShips);
             var embed = EmbedHelper.GetEventEmbed(Context.User, config)
                 .WithImageUrl(config.GetRelativeHostPathWeb(imagePath))
-                .WithThumbnailUrl(user.GetAvatarUrlOrDefault())
+                .WithThumbnailUrl(user.GetServerAvatarUrlOrDefault())
                 .WithTitle($"User Overview")
                 .WithDescription(isSelf ? "Here's who you're supporting!" : $"Here's who {user.Mention} is supporting!")
                 .WithFooter(new EmbedFooterBuilder()
@@ -455,7 +455,7 @@ namespace PrideBot.Modules
             var dbShips = await repo.GetUserShipsAsync(connection, dbUser);
 
             var embed = EmbedHelper.GetEventEmbed(user, config)
-                .WithThumbnailUrl(user.GetAvatarUrlOrDefault())
+                .WithThumbnailUrl(user.GetServerAvatarUrlOrDefault())
                 .WithTitle($"Score Overview")
                 .WithDescription(user == Context.User
                 ? "Heyyy, I pulled some cosmic data about how your pairings are doing!"

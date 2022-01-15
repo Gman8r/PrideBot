@@ -26,6 +26,10 @@ namespace PrideBot
 
         public static string GetAvatarUrlOrDefault(this IUser user) => user.GetAvatarUrl() ?? user.GetDefaultAvatarUrl();
 
+        public static string GetServerAvatarUrlOrDefault(this IUser user) =>
+            ((user is IGuildUser gUser) ? gUser.GetGuildAvatarUrl() : null)
+            ?? user.GetServerAvatarUrlOrDefault();
+
         public static async Task<bool> IsFromPkUserAsync(this IMessage message, IConfigurationRoot config)
         {
             if (message.Author.IsWebhook)

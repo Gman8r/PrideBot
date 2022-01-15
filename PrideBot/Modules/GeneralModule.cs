@@ -179,7 +179,7 @@ namespace PrideBot.Modules
                     message += $"\n**Aliases:**  {string.Join(", ", aliases)}";
 
                 if (!string.IsNullOrWhiteSpace(command.Summary))
-                    message += "\n**Description:**  " + DialogueDict.RollBrainrot(command.Summary);
+                    message += "\n**Description:**  " + DialogueDict.GenerateEmojiText(command.Summary);
             }
 
             if (string.IsNullOrWhiteSpace(message))

@@ -143,7 +143,7 @@ namespace PrideBot.Modules
         [Summary("Relays a message in the specified chat channel.")]
         public async Task Echo(SocketTextChannel channel, [Remainder] string message)
         {
-            await channel.SendMessageAsync(DialogueDict.RollBrainrot(message));
+            await channel.SendMessageAsync(DialogueDict.GenerateEmojiText(message));
             await ReplyResultAsync("Done!");
         }
 

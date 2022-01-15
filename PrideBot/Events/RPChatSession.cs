@@ -73,7 +73,7 @@ namespace PrideBot.Events
 
         public async Task SendMessageAsync(string message, string attachmentFile = null)
         {
-            message = DialogueDict.RollBrainrot(message);
+            message = DialogueDict.GenerateEmojiText(message);
             if (string.IsNullOrEmpty(WebhookName))
             {
                 if (attachmentFile == null)

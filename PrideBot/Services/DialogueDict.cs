@@ -96,7 +96,7 @@ namespace PrideBot
             return str;
         }
 
-        public static string Get(string key, params object[] args) => RollBrainrot(GetNoBrainRot(key, args));
+        public static string Get(string key, params object[] args) => GenerateEmojiText(GetNoBrainRot(key, args));
 
         public static string RollBrainrot(string str, double chance = 1.0/17.0, Random rand = null, bool isRecursing = false)
         {

@@ -122,7 +122,7 @@ namespace PrideBot.Game
             var embed = EmbedHelper.GetEventEmbed(user, config, id: scoreId, showDate: true, userInThumbnail: true)
                 .WithTitle($"{achievement.Emoji} {(errorCode == ModelRepository.AddScoreError.CooldownViolated ? "Cooldown Required" : "Challenge Completed")}" +
                 $": {achievement.Description}!")
-                .WithDescription(DialogueDict.RollBrainrot(achievement.Flavor))
+                .WithDescription(DialogueDict.GenerateEmojiText(achievement.Flavor))
                 .WithUrl(titleUrl);
             if (approver != null)
                 embed.Footer.Text += $" | {user.Id} | Approver: {approver.Username}#{approver.Discriminator} ({approver.Id})";
