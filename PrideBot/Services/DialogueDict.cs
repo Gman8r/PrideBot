@@ -173,7 +173,7 @@ namespace PrideBot
             var rand = new Random();
             var lastEmojiAt = 0;
             text += " ";    // Space buffer at the end so last word searches for emoji as well
-            for (int i = 0; i < text.Length - 1; i++)
+            for (int i = 0; i < text.Length; i++)
             {
                 var chr = text[i];
                 var textSinceLastEmoji = text.Substring(lastEmojiAt, i - lastEmojiAt);
@@ -199,8 +199,10 @@ namespace PrideBot
                         }
                     }
                 }
-                    
-                returnText += chr;
+                
+                // Don't include extra space we added
+                if (i < text.Length - 1)
+                    returnText += chr;
             }
             return returnText;
         }
