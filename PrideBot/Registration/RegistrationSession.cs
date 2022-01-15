@@ -14,7 +14,7 @@ using PrideBot.Game;
 
 namespace PrideBot.Registration
 {
-    public class RegistrationSession : DMSession
+    public class RegistrationSession : Session
     {
         protected static IEmote DeleteEmote => new Emoji("🗑");
         protected static IEmote BackgroundEmote => new Emoji("🖼");

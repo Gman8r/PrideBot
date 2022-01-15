@@ -14,7 +14,7 @@ namespace PrideBot
     {
         public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            if (DMSession.activeSessions.Any(a => a.GetUser().Id == context.User.Id))
+            if (Session.activeSessions.Any(a => a.GetUser().Id == context.User.Id))
                 return PreconditionResult.FromError(DialogueDict.Get("SESSION_DUPE"));
 
             return PreconditionResult.FromSuccess();

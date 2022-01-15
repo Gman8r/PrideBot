@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace PrideBot.Quizzes
 {
-    public class QuizSession : DMSession
+    public class QuizSession : Session
     {
         const int TimerSeconds = 60;
 

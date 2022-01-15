@@ -12,19 +12,19 @@ using System.Threading.Tasks;
 
 namespace PrideBot
 {
-    public abstract class DMSession
+    public abstract class Session
     {
         protected static IEmote SkipEmote => new Emoji("➡");
         protected static IEmote YesEmote => new Emoji("✅");
         protected static IEmote NoEmote => new Emoji("❌");
 
-        public static readonly List<DMSession> activeSessions = new List<DMSession>();
+        public static readonly List<Session> activeSessions = new List<Session>();
 
         protected readonly DiscordSocketClient client;
-        protected readonly IDMChannel channel;
+        protected readonly IMessageChannel channel;
         protected readonly SocketUser user;
         protected readonly IConfigurationRoot config;
-        protected readonly SocketMessage originMessage;
+        protected readonly IMessage originMessage;
         protected readonly TimeSpan timeout;
 
         protected Prompt currentPrompt;
@@ -48,11 +48,18 @@ namespace PrideBot
             public bool AcceptsEmote => EmoteChoices.Any();
             public bool IsEntered { get; set; }
             public bool AlwaysPopulateEmotes { get; set; }
-            public SocketMessage MessageResponse { get; set; }
+            public IMessage MessageResponse { get; set; }
             public IEmote EmoteResponse { get; set; }
-            public bool IsSkipped => EmoteResponse?.ToString().Equals(SkipEmote.ToString()) ?? false;
-            public bool IsYes => EmoteResponse?.ToString().Equals(YesEmote.ToString()) ?? false;
-            public bool IsNo => EmoteResponse?.ToString().Equals(NoEmote.ToString()) ?? false;
+            public SocketMessageComponent InteractionResponse { get; set; }
+            public bool IsSkipped =>
+                EmoteResponse?.ToString().Equals(SkipEmote.ToString()) ?? false
+                || (InteractionResponse?.Data?.CustomId ?? "").Equals("SKIP");
+            public bool IsYes =>
+                EmoteResponse?.ToString().Equals(YesEmote.ToString()) ?? false
+                || (InteractionResponse?.Data?.CustomId ?? "").Equals("YES");
+            public bool IsNo =>
+                EmoteResponse?.ToString().Equals(NoEmote.ToString()) ?? false
+                || (InteractionResponse?.Data?.CustomId ?? "").Equals("NO");
 
             public Prompt(IMessage botMessage, bool acceptsText, List<IEmote> emoteChoies)
             {
@@ -62,7 +69,7 @@ namespace PrideBot
             }
         }
 
-        public DMSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, SocketMessage originMessage = null)
+        public Session(IDMChannel channel, SocketUser user, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, IMessage originMessage = null)
         {
             this.channel = channel;
             this.user = user;
@@ -87,7 +94,7 @@ namespace PrideBot
             currentPrompt.EmoteResponse = reaction.Emote;
         }
 
-        private Task MesageReceived(SocketMessage message)
+        private Task MesageReceived(IMessage message)
         {
             if (currentPrompt == null
                 || message.Channel.Id != channel.Id
@@ -96,6 +103,28 @@ namespace PrideBot
                 || !currentPrompt.AcceptsText)  return Task.CompletedTask;
 
             currentPrompt.MessageResponse = message;
+            currentPrompt.IsEntered = true;
+            return Task.CompletedTask;
+        }
+
+        private Task InteractionCreated(SocketInteraction interaction)
+        {
+            if (currentPrompt == null
+                || currentPrompt.IsEntered
+                || !(interaction is SocketMessageComponent mInteraction)
+                || mInteraction.Message.Id != currentPrompt.BotMessage.Id)
+                return Task.CompletedTask;
+
+            mInteraction.DeferAsync().GetAwaiter();
+
+            if (mInteraction.User.Id != user.Id)
+            {
+                var errorEmbed = EmbedHelper.GetEventErrorEmbed(mInteraction.User, $"Only {user.Mention} can interact with this message.", client);
+                mInteraction.RespondAsync(embed: errorEmbed.Build(), ephemeral: true).GetAwaiter();
+                return Task.CompletedTask;
+            }
+
+            currentPrompt.InteractionResponse = mInteraction;
             currentPrompt.IsEntered = true;
             return Task.CompletedTask;
         }
@@ -115,6 +144,7 @@ namespace PrideBot
             {
                 client.MessageReceived += MesageReceived;
                 client.ReactionAdded += ReactionAdded;
+                client.InteractionCreated += InteractionCreated;
                 await PerformSessionInternalAsync();
             }
             catch (OperationCanceledException e)
@@ -137,24 +167,25 @@ namespace PrideBot
                 activeSessions.Remove(this);
                 client.MessageReceived -= MesageReceived;
                 client.ReactionAdded -= ReactionAdded;
+                client.InteractionCreated -= InteractionCreated;
             }
         }
 
         protected abstract Task PerformSessionInternalAsync();
 
-        protected async Task<Prompt> SendAndAwaitYesNoResponseAsync(string text = null, EmbedBuilder embed = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null)
-            => await SendAndAwaitEmoteResponseAsync(text, embed, new List<IEmote>() { YesEmote, NoEmote }, canSkip, canCancel, alwaysPopulateEmotes, file);
+        protected async Task<Prompt> SendAndAwaitYesNoResponseAsync(string text = null, EmbedBuilder embed = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null)
+            => await SendAndAwaitEmoteResponseAsync(text, embed, new List<IEmote>() { YesEmote, NoEmote }, canSkip, canCancel, alwaysPopulateEmotes, file, interaction);
 
-        protected async Task<Prompt> SendAndAwaitEmoteResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null)
-            => await SendAndAwaitResponseAsync(text, embed, emoteChoices, false, canSkip, canCancel, alwaysPopulateEmotes, file);
+        protected async Task<Prompt> SendAndAwaitEmoteResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null)
+            => await SendAndAwaitResponseAsync(text, embed, emoteChoices, false, canSkip, canCancel, alwaysPopulateEmotes, file, interaction);
 
-        protected async Task<Prompt> SendAndAwaitResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null)
+        protected async Task<Prompt> SendAndAwaitResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null)
         {
-            await SendResponseAsync(text, embed, emoteChoices, acceptsText, canSkip, canCancel, alwaysPopulateEmotes, file);
+            await SendResponseAsync(text, embed, emoteChoices, acceptsText, canSkip, canCancel, alwaysPopulateEmotes, file, interaction);
             return await AwaitCurrentResponseAsync();
         }
 
-        protected async Task<Prompt> SendResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null)
+        protected async Task<Prompt> SendResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null)
         {
             emoteChoices ??= new List<IEmote>();
             if (emoteChoices.Count >= 3)
@@ -181,14 +212,27 @@ namespace PrideBot
                 //    text += $"\n\nSelect {canCancel} to cancel.";
             }
 
-            var message = file == null
-                ? await channel.SendMessageAsync(text, embed: embed.Build())
-                : await channel.SendFileAsync(file.Stream, file.FileName, text, embed: embed.Build());
+            IUserMessage message;
+            if (interaction != null)
+            {
+                if (file == null)
+                    message = await interaction.FollowupAsync(text, embed: embed.Build());
+                else
+                    message = await interaction.FollowupWithFileAsync(file.Stream, file.FileName, text, embed: embed.Build());
+            }
+            else
+            {
+                if (file == null)
+                    message = await channel.SendMessageAsync(text, embed: embed.Build());
+                else
+                    message = await channel.SendFileAsync(file.Stream, file.FileName, text, embed: embed.Build());
+            }
             currentPrompt = new Prompt(message, acceptsText, emoteChoices);
             currentPrompt.AlwaysPopulateEmotes = alwaysPopulateEmotes;
             AddReactions(message, emoteChoices).GetAwaiter();
             return currentPrompt;
         }
+
         protected async Task<Prompt> AwaitCurrentResponseAsync()
         {
             currentPrompt.EmoteResponse = null;
