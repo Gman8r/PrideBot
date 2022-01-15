@@ -175,27 +175,31 @@ namespace PrideBot
             text += " ";    // Space buffer at the end so last word searches for emoji as well
             for (int i = 0; i < text.Length - 1; i++)
             {
-                wordChance += .2;
                 var chr = text[i];
                 var textSinceLastEmoji = text.Substring(lastEmojiAt, i - lastEmojiAt);
                 if (i > 0
                     && char.IsWhiteSpace(chr)
-                    && !char.IsWhiteSpace(text[i-1])
-                    && rand.NextDouble() < wordChance)
+                    && !char.IsWhiteSpace(text[i-1]))
                 {
-                    var suggestions = GetEmojiSuggestions(textSinceLastEmoji.Split().Last());
-                    if (suggestions.Any())
+                    wordChance += .1;
+                    var nextChance = rand.NextDouble();
+                    if (nextChance < wordChance)
                     {
-                        //var maxScore = suggestions.Max(a => a.Value);
-                        //var maxScoreSuggestions = suggestions
-                        //    .Where(a => a.Value == maxScore)
-                        //    .ToList();
-                        var chosenSuggestion = suggestions[rand.Next(suggestions.Count)];
-                        returnText += " " + chosenSuggestion;
-                        wordChance = 0.0;
-                        lastEmojiAt = i;
+                        var suggestions = GetEmojiSuggestions(textSinceLastEmoji.Split().Last());
+                        if (suggestions.Any())
+                        {
+                            //var maxScore = suggestions.Max(a => a.Value);
+                            //var maxScoreSuggestions = suggestions
+                            //    .Where(a => a.Value == maxScore)
+                            //    .ToList();
+                            var chosenSuggestion = suggestions[rand.Next(suggestions.Count)];
+                            returnText += " " + chosenSuggestion;
+                            wordChance -= 1.0;
+                            lastEmojiAt = i;
+                        }
                     }
                 }
+                    
                 returnText += chr;
             }
             return returnText;
