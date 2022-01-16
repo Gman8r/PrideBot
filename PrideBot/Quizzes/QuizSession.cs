@@ -94,7 +94,7 @@ namespace PrideBot.Quizzes
                     .Select(a => EmoteHelper.GetNumberEmote(a))
                     .ToList();
                 numberEmoteChoices.Add(NoEmote);
-                response = await SendAndAwaitEmoteOrInteractionResponseAsync(embed: embed, emoteChoices: numberEmoteChoices);
+                response = await SendAndAwaitNonTextResponseAsync(embed: embed, emoteChoices: numberEmoteChoices);
             }
             chosenQuizIndex = 0;
             if (response.IsNo)

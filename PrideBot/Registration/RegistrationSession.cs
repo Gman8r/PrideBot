@@ -93,17 +93,19 @@ namespace PrideBot.Registration
 
                 await SetUpBackgroundAsync(connection, embed.Description);
 
+                dbUserShips = await repo.GetUserShipsAsync(connection, dbUser);
                 var confirmImageFile = await GetShipsImageAsync(dbUser, dbUserShips);
                 embed = GetEmbed()
                     .WithTitle("Confirm Please!")
-                    .WithDescription(DialogueDict.Get(dbUser.ShipsSelected ? "REGISTRATION_CONFIRM_EDIT" : "REGISTRATION_CONFIRM"));
+                    .WithDescription(DialogueDict.Get(dbUser.ShipsSelected ? "REGISTRATION_CONFIRM_EDIT" : "REGISTRATION_CONFIRM"))
+                    .WithAttachedImageUrl(confirmImageFile);
 
                 var confirmComponents = new ComponentBuilder()
                     .WithButton("All Set!", "YES", ButtonStyle.Success, ThumbsUpEmote)
                     .WithButton("Let Me Redo Some Stuff", "REDO", ButtonStyle.Secondary, new Emoji("↩"))
                     .WithButton("Actually, Cancel For Now", "NO", ButtonStyle.Secondary, NoEmote);
 
-                var result = await SendAndAwaitEmoteOrInteractionResponseAsync(file: confirmImageFile, embed: embed, components: confirmComponents);
+                var result = await SendAndAwaitNonTextResponseAsync(file: confirmImageFile, embed: embed, components: confirmComponents);
 
                 if (result.IsYes)
                     break;
@@ -190,7 +192,7 @@ namespace PrideBot.Registration
                     .WithButton("All Good!", "YES",
                         style: ButtonStyle.Success, emote: new Emoji("👍"), row: 1);
 
-                var response = await SendAndAwaitEmoteOrInteractionResponseAsync(file: editImageFile, embed: embed, components: messageComponents);
+                var response = await SendAndAwaitNonTextResponseAsync(file: editImageFile, embed: embed, components: messageComponents);
                 if (response.IsYes)
                     break;
                 else if (response.InteractionResponse.Data.Values?.FirstOrDefault()?.StartsWith("SHIP ") ?? false)
@@ -230,11 +232,17 @@ namespace PrideBot.Registration
 
             // Determine what bypasses are possible
             var canSkip = tier != UserShipTier.Primary || userHasRegistered || !isNewShip;
-            var skipComponents = canSkip
-                ? new ComponentBuilder()
-                    .WithButton(isNewShip ? $"Skip adding a {tier} Pair For Now" : $"Skip to Heart Config", "SKIP",
-                    style: ButtonStyle.Secondary, emote: SkipEmote)
-                : null;
+
+            ComponentBuilder skipComponents = null;
+            if (canSkip)
+            {
+                skipComponents = new ComponentBuilder();
+                if (!isNewShip)
+                    skipComponents.WithButton($"Just Configure The Hearts", "SKIP",
+                        style: ButtonStyle.Secondary, emote: SkipEmote);
+                skipComponents.WithButton(isNewShip ? $"Skip Adding a {tier} Pair For Now" : $"Leave This Pairing As Is", "SKIPSHIP",
+                    style: ButtonStyle.Secondary, emote: new Emoji("⏩"));
+            }
 
             // Now register the ship
             var shipValidated = false;
@@ -244,12 +252,16 @@ namespace PrideBot.Registration
             UserShip selectedUserShip = null;
             while (!shipValidated)
             {
-                embed.WithAttachedImageUrl(await GenerateShipImage(dbUser, dbUserShips, highlightTier: (int)tier));
-                response = await SendAndAwaitResponseAsync(embed: embed, components: skipComponents);
-                if (response.IsSkipped)
+                var imageFile = await GenerateShipImage(dbUser, dbUserShips, highlightTier: (int)tier);
+                embed.WithAttachedImageUrl(imageFile);
+                response = await SendAndAwaitResponseAsync(file: imageFile, embed: embed, components: skipComponents);
+
+                // Determine if skipping (whole ship or just to heart config)
+                var interactionId = response.InteractionResponse?.Data.CustomId ?? "";
+                if (interactionId.StartsWith("SKIP"))
                 {
                     skipped = true;
-                    if (isNewShip)
+                    if (interactionId.Equals("SKIPSHIP"))
                         return "";
                     else
                         break;
@@ -323,7 +335,7 @@ namespace PrideBot.Registration
 
                 var components = CreateHeartChoiceComponents(heartEmotes, true, true, heart == 1, heart == 1 ? userShip.Character1First : userShip.Character2First);
 
-                response = await SendAndAwaitEmoteOrInteractionResponseAsync(file: registrationHeartImageFile, embed: embed, components: components);
+                response = await SendAndAwaitNonTextResponseAsync(file: registrationHeartImageFile, embed: embed, components: components);
                 if (!response.InteractionResponse.Data.CustomId.StartsWith("SKIP"))
                 {
                     if (response.InteractionResponse.Data.CustomId.Equals("DUAL"))
@@ -399,7 +411,7 @@ namespace PrideBot.Registration
                 heart == 1 ? userShip.Character1First : userShip.Character2First, isRightHalf ? "right" : "left", heartChoicesStr))
                 .WithAttachedImageUrl(heartHalfBannerFile)
                 .WithTitle($"{(UserShipTier)userShip.Tier} Pair Heart Setup");
-            var response = await SendAndAwaitEmoteOrInteractionResponseAsync(file: heartHalfBannerFile, embed: embed, components: components);
+            var response = await SendAndAwaitNonTextResponseAsync(file: heartHalfBannerFile, embed: embed, components: components);
             var choice = response.InteractionResponse.Data.Values.FirstOrDefault();
             if (heart == 1)
             {
@@ -457,6 +469,10 @@ namespace PrideBot.Registration
                 .Select(a => new Emoji(EmoteHelper.NumberEmotes[a]) as IEmote)
                 .ToList();
 
+            var bgImageFile = await GetShipsImageAsync(dbUser, dbUserShips);
+
+            await channel.SendFileAsync(bgImageFile.Stream, bgImageFile.FileName);
+
             while (true)
             {
                 var bgImagesFile = await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser);
@@ -473,18 +489,19 @@ namespace PrideBot.Registration
                    .WithSelectMenu("CHOICE", selectMenuList, "Change Your Background")
                    .WithButton("Looks Good!", "YES",  ButtonStyle.Primary, ThumbsUpEmote);
 
-                var bgResponse = await SendAndAwaitEmoteOrInteractionResponseAsync(file: bgImagesFile, embed: embed, components: components);
+                var bgResponse = await SendAndAwaitNonTextResponseAsync(file: bgImagesFile, embed: embed, components: components);
 
                 if (bgResponse.IsYes)
                     break;
                 dbUser.CardBackground = int.Parse(bgResponse.InteractionResponse.Data.Values.FirstOrDefault()) + 1;
-                var bgImageFile = await GetShipsImageAsync(dbUser, dbUserShips);
+                bgImageFile = await GetShipsImageAsync(dbUser, dbUserShips);
                 embed = GetEmbed()
                     .WithTitle("Background Config")
-                    .WithDescription(DialogueDict.Get("REGISTRATION_BG_CHANGED", user.Queen(client)));
-                await repo.UpdateUserAsync(connection, dbUser);
+                    .WithDescription(DialogueDict.Get("REGISTRATION_BG_CHANGED", user.Queen(client)))
+                    .WithAttachedImageUrl(bgImageFile);
                 await channel.SendFileAsync(bgImageFile.Stream, bgImageFile.FileName, embed: embed.Build());
 
+                await repo.UpdateUserAsync(connection, dbUser);
                 embed = GetEmbed()
                     .WithTitle("Choose a Background")
                     .WithDescription(DialogueDict.Get("REGISTRATION_CHOOSE_BG"));

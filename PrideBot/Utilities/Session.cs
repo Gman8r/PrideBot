@@ -180,9 +180,9 @@ namespace PrideBot
         protected abstract Task PerformSessionInternalAsync();
 
         protected async Task<Prompt> SendAndAwaitYesNoEmoteResponseAsync(string text = null, EmbedBuilder embed = null, ComponentBuilder components = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null, bool disableComponents = true)
-            => await SendAndAwaitEmoteOrInteractionResponseAsync(text, embed, components, new List<IEmote>() { YesEmote, NoEmote }, canSkip, canCancel, alwaysPopulateEmotes, file, interaction, disableComponents);
+            => await SendAndAwaitNonTextResponseAsync(text, embed, components, new List<IEmote>() { YesEmote, NoEmote }, canSkip, canCancel, alwaysPopulateEmotes, file, interaction, disableComponents);
 
-        protected async Task<Prompt> SendAndAwaitEmoteOrInteractionResponseAsync(string text = null, EmbedBuilder embed = null, ComponentBuilder components = null, List<IEmote> emoteChoices = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null, bool disableComponents = true)
+        protected async Task<Prompt> SendAndAwaitNonTextResponseAsync(string text = null, EmbedBuilder embed = null, ComponentBuilder components = null, List<IEmote> emoteChoices = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null, bool disableComponents = true)
             => await SendAndAwaitResponseAsync(text, embed, components, emoteChoices, false, canSkip, canCancel, alwaysPopulateEmotes, file, interaction, disableComponents);
 
         protected async Task<Prompt> SendAndAwaitResponseAsync(string text = null, EmbedBuilder embed = null, ComponentBuilder components = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null, bool disableComponents = true)

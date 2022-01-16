@@ -79,13 +79,15 @@ namespace PrideBot.Game
                     text = null;
                 }
                 else
-                    embed.Author = null;
+                    embed.Item1.Author = null;
 
                 var channel = client.GetGyn(config)
                         .GetChannelFromConfig(config, "achievementschannel") as IMessageChannel;
                 if (reportChannel != null && errorCode == ModelRepository.AddScoreError.CooldownViolated)
                     channel = reportChannel;
-                var post = await channel.SendMessageAsync(text, embed: embed.Build());
+                var post = embed.Item2 == null
+                    ? await channel.SendMessageAsync(text, embed: embed.Item1.Build())
+                    : await channel.SendFileAsync(embed.Item2.Stream, embed.Item2.FileName, text, embed: embed.Item1.Build());
 
                 // Update database score with post data
                 if (!string.IsNullOrEmpty(scoreId) && int.Parse(scoreId) > 0)
@@ -115,7 +117,8 @@ namespace PrideBot.Game
             return errorCode;
         }
 
-        public async Task<EmbedBuilder> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, int basePointsEarned, ShipScore[] dbShipScores, UserShipCollection dbUserShips, IUser approver,
+        // returns (embed, ship image file)
+        public async Task<(EmbedBuilder, MemoryFile)> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, int basePointsEarned, ShipScore[] dbShipScores, UserShipCollection dbUserShips, IUser approver,
             string titleUrl = null, ModelRepository.AddScoreResult result = null)
         {
             var errorCode = result?.errorCode ?? ModelRepository.AddScoreError.None;
@@ -127,6 +130,7 @@ namespace PrideBot.Game
             if (approver != null)
                 embed.Footer.Text += $" | {user.Id} | Approver: {approver.Username}#{approver.Discriminator} ({approver.Id})";
 
+            MemoryFile imageFile = null;
             switch (errorCode)
             {
                 case (ModelRepository.AddScoreError.None):
@@ -142,7 +146,7 @@ namespace PrideBot.Game
                         .Select(a => "+" + (dbShipScores
                             .FirstOrDefault(aa => ((int)aa.Tier) == a)?.PointsEarned ?? 0).ToString())
                         .ToArray();
-                    var imageFile = await shipImageGenerator.WriteUserCardAsync(dbUser, dbUserShips, scoreTexts: scores);
+                    imageFile = await shipImageGenerator.WriteUserCardAsync(dbUser, dbUserShips, scoreTexts: scores);
                     embed.WithAttachedImageUrl(imageFile);
                     break;
 
@@ -158,7 +162,7 @@ namespace PrideBot.Game
                     break;
             }
 
-            return embed;
+            return (embed, imageFile);
         }
 
         private async Task ReactionAddedAsync(Cacheable<IUserMessage, ulong> msg, Cacheable<IMessageChannel, ulong> chnl, SocketReaction reaction)
