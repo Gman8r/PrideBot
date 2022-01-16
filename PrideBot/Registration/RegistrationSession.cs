@@ -67,9 +67,13 @@ namespace PrideBot.Registration
                 ? DialogueDict.Get("REGISTRATION_EDIT", user.Queen(client))
                 : DialogueDict.Get("REGISTRATION_WELCOME", user.Queen(client), config.GetDefaultPrefix()));
 
+            var components = new ComponentBuilder()
+                    .WithButton("Sounds Gay I'm In", "YES", ButtonStyle.Success, ThumbsUpEmote)
+                    .WithButton("Not Right Now Actually", "NO", ButtonStyle.Secondary, NoEmote);
+
             //embed.ImageUrl = config.GetRelativeHostPathWeb(await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser));
 
-            var firstResponse = await SendAndAwaitYesNoResponseAsync(embed: embed);
+            var firstResponse = await SendAndAwaitResponseAsync(embed: embed, components: components);
             if (!firstResponse.IsYes)
             {
                 await channel.SendMessageAsync(embed: GetUserCancelledEmbed().Build());
@@ -93,10 +97,13 @@ namespace PrideBot.Registration
                 embed = GetEmbed()
                     .WithTitle("Confirm Please!")
                     .WithDescription(DialogueDict.Get(dbUser.ShipsSelected ? "REGISTRATION_CONFIRM_EDIT" : "REGISTRATION_CONFIRM"));
-                var confirmChoices = new List<IEmote>() { YesEmote, new Emoji("↩") };
-                if (!dbUser.ShipsSelected)
-                    confirmChoices.Add(NoEmote);
-                var result = await SendAndAwaitEmoteResponseAsync(file: confirmImageFile, embed: embed, emoteChoices: confirmChoices);
+
+                var confirmComponents = new ComponentBuilder()
+                    .WithButton("All Set!", "YES", ButtonStyle.Success, ThumbsUpEmote)
+                    .WithButton("Let Me Redo Some Stuff", "REDO", ButtonStyle.Secondary, new Emoji("↩"))
+                    .WithButton("Actually, Cancel For Now", "NO", ButtonStyle.Secondary, NoEmote);
+
+                var result = await SendAndAwaitEmoteOrInteractionResponseAsync(file: confirmImageFile, embed: embed, components: confirmComponents);
 
                 if (result.IsYes)
                     break;
@@ -163,17 +170,35 @@ namespace PrideBot.Registration
                         .WithDescription(descriptionPrefix
                         + "\n\n" + DialogueDict.Get("REGISTRATION_EDIT_INSTRUCTIONS"))
                         .WithAttachedImageUrl(editImageFile);
-                var emoteChoices = new List<IEmote> {
-                    EmoteHelper.GetNumberEmote(1), EmoteHelper.GetNumberEmote(2), EmoteHelper.GetNumberEmote(3), BackgroundEmote, YesEmote};
-                var numberEmotes = emoteChoices
-                    .Where(a => EmoteHelper.NumberEmotes.Contains(a.ToString()))
-                    .ToList();
-                var response = await SendAndAwaitEmoteResponseAsync(file: editImageFile, embed: embed, emoteChoices: emoteChoices);
+
+                var messageComponents = new ComponentBuilder()
+                    //.WithButton("Edit Primary Ship", "SHIP 0",
+                    //    style: ButtonStyle.Primary, emote: new Emoji("💗"))
+                    //.WithButton("Edit Secondary Ship", "SHIP 1",
+                    //    style: ButtonStyle.Primary, emote: new Emoji("💖"))
+                    //.WithButton("Edit Tertiary Ship", "SHIP 2",
+                    //    style: ButtonStyle.Primary, emote: new Emoji("♥"))
+                    .WithSelectMenu("CHOICE", new List<SelectMenuOptionBuilder>()
+                    {
+                        new SelectMenuOptionBuilder("Configure Primary Pairing", "SHIP 0", dbUserShips.Get(UserShipTier.Primary)?.GetDisplayName() ?? "None Set", new Emoji("💗")),
+                        new SelectMenuOptionBuilder("Configure Secondary Pairing", "SHIP 1", dbUserShips.Get(UserShipTier.Secondary)?.GetDisplayName() ?? "None Set", new Emoji("💖")),
+                        new SelectMenuOptionBuilder("Configure Tertiary Pairing", "SHIP 2", dbUserShips.Get(UserShipTier.Tertiary)?.GetDisplayName() ?? "None Set", new Emoji("♥"))
+                    },
+                        placeholder: "Configure a Pairing!")
+                    .WithButton("Edit Card Background", "BG",
+                        style: ButtonStyle.Primary, emote: new Emoji("🖼"), row: 1)
+                    .WithButton("All Good!", "YES",
+                        style: ButtonStyle.Success, emote: new Emoji("👍"), row: 1);
+
+                var response = await SendAndAwaitEmoteOrInteractionResponseAsync(file: editImageFile, embed: embed, components: messageComponents);
                 if (response.IsYes)
                     break;
-                else if (numberEmotes.Contains(response.EmoteResponse))
-                    descriptionPrefix = await SetUpShip(connection, (UserShipTier)(numberEmotes.IndexOf(response.EmoteResponse)));
-                else if (response.EmoteResponse.Equals(BackgroundEmote))
+                else if (response.InteractionResponse.Data.Values?.FirstOrDefault()?.StartsWith("SHIP ") ?? false)
+                {
+                    var tierNo = int.Parse(response.InteractionResponse.Data.Values.First().Split()[1]);
+                    descriptionPrefix = await SetUpShip(connection, (UserShipTier)tierNo);
+                }
+                else if (response.InteractionResponse.Data.CustomId.Equals("BG"))
                     await SetUpBackgroundAsync(connection);
 
                 dbUserShips = await repo.GetUserShipsAsync(connection, dbUser);
@@ -205,6 +230,11 @@ namespace PrideBot.Registration
 
             // Determine what bypasses are possible
             var canSkip = tier != UserShipTier.Primary || userHasRegistered || !isNewShip;
+            var skipComponents = canSkip
+                ? new ComponentBuilder()
+                    .WithButton(isNewShip ? $"Skip adding a {tier} Pair For Now" : $"Skip to Heart Config", "SKIP",
+                    style: ButtonStyle.Secondary, emote: SkipEmote)
+                : null;
 
             // Now register the ship
             var shipValidated = false;
@@ -215,7 +245,7 @@ namespace PrideBot.Registration
             while (!shipValidated)
             {
                 embed.WithAttachedImageUrl(await GenerateShipImage(dbUser, dbUserShips, highlightTier: (int)tier));
-                response = await SendAndAwaitResponseAsync(embed: embed, canSkip: canSkip);
+                response = await SendAndAwaitResponseAsync(embed: embed, components: skipComponents);
                 if (response.IsSkipped)
                 {
                     skipped = true;
@@ -253,8 +283,8 @@ namespace PrideBot.Registration
 
             embed.Description = DialogueDict.Get("REGISTRATION_HEART_PROMPT");
             response = await SetUpHeartAsync(connection, selectedUserShip, embed, 1);
-            //if (!response.IsSkipped)
-            await SetUpHeartAsync(connection, selectedUserShip, GetEmbed(), 2);
+            if (!response.InteractionResponse.Data.CustomId.Equals("SKIPSHIP"))
+                await SetUpHeartAsync(connection, selectedUserShip, GetEmbed(), 2);
 
             return DialogueDict.Get("REGISTRATION_FINISH_SHIP", user.Queen(client));
         }
@@ -267,7 +297,7 @@ namespace PrideBot.Registration
             do
             {
                 heartIsValid = true;
-                var heartEmotes = client.GetGuild(776510593443430401).Emotes.Where(a => a.Name.StartsWith("shipheart"))
+                var heartEmotes = client.GetGuild(932086074887508019).Emotes.Where(a => a.Name.StartsWith("shipheart"))
                     .Select(a => (IEmote)a)
                     .ToList();
                 // Make sure we have heart all emote images
@@ -285,17 +315,18 @@ namespace PrideBot.Registration
                 }
                 var heartChoicesStr = string.Join(" ", heartEmotes);
                 var registrationHeartImageFile = await GenerateShipImage(dbUser, dbUserShips, highlightTier: userShip.Tier, highlightHeart: heart);
-                embed = embed.WithDescription((embed.Description ?? "")
+                embed.WithDescription((embed.Description ?? "")
                         + "\n\n" + DialogueDict.Get("REGISTRATION_HEART_CHOOSE",
                         heart == 1 ? userShip.Character1First : userShip.Character2First, SkipEmote, heartChoicesStr, DoubleEmote))
                     .WithAttachedImageUrl(registrationHeartImageFile)
                     .WithTitle($"{(UserShipTier)userShip.Tier} Pair Heart Setup");
-                var choiceEmotes = new List<IEmote>(heartEmotes);
-                choiceEmotes.Insert(0, DoubleEmote);
-                response = await SendAndAwaitEmoteResponseAsync(file: registrationHeartImageFile, embed: embed, emoteChoices: choiceEmotes, canSkip: true);
-                if (!response.IsSkipped)
+
+                var components = CreateHeartChoiceComponents(heartEmotes, true, true, heart == 1, heart == 1 ? userShip.Character1First : userShip.Character2First);
+
+                response = await SendAndAwaitEmoteOrInteractionResponseAsync(file: registrationHeartImageFile, embed: embed, components: components);
+                if (!response.InteractionResponse.Data.CustomId.StartsWith("SKIP"))
                 {
-                    if (response.EmoteResponse.Equals(DoubleEmote))
+                    if (response.InteractionResponse.Data.CustomId.Equals("DUAL"))
                     {
                         if (heart == 1)
                         {
@@ -341,12 +372,14 @@ namespace PrideBot.Registration
                     }
                     else if (heart == 1)
                     {
-                        userShip.Heart1 = ((Emote)response.EmoteResponse).Name;
+                        userShip.Heart1 = response.InteractionResponse.Data.Values.FirstOrDefault();
                         userShip.Heart1Right = null;
                     }
                     else
                     {
-                        userShip.Heart2 = ((Emote)response.EmoteResponse).Name;
+                        userShip.Heart2 = response.InteractionResponse.Data.Values.FirstOrDefault();
+
+
                         userShip.Heart2Right = null;
                     }
                 }
@@ -358,30 +391,58 @@ namespace PrideBot.Registration
 
         async Task SetUpHeartHalf(SqlConnection connection, UserShip userShip, int heart, bool isRightHalf, List<IEmote> heartEmotes)
         {
-            var choiceEmotes = new List<IEmote>(heartEmotes);
-            choiceEmotes.RemoveAt(0);
-            var heartChoicesStr = string.Join(" ", choiceEmotes);
+            var components = CreateHeartChoiceComponents(heartEmotes, false, false, false, "");
+            var heartChoicesStr = string.Join(" ", heartEmotes);
             var heartHalfBannerFile = await GenerateShipImage(dbUser, dbUserShips, highlightTier: userShip.Tier, highlightHeart: heart);
             var embed = GetEmbed()
                 .WithDescription(DialogueDict.Get("REGISTRATION_HEART_CHOOSE_SIDE",
                 heart == 1 ? userShip.Character1First : userShip.Character2First, isRightHalf ? "right" : "left", heartChoicesStr))
                 .WithAttachedImageUrl(heartHalfBannerFile)
                 .WithTitle($"{(UserShipTier)userShip.Tier} Pair Heart Setup");
-            var response = await SendAndAwaitEmoteResponseAsync(file: heartHalfBannerFile, embed: embed, emoteChoices: choiceEmotes);
+            var response = await SendAndAwaitEmoteOrInteractionResponseAsync(file: heartHalfBannerFile, embed: embed, components: components);
+            var choice = response.InteractionResponse.Data.Values.FirstOrDefault();
             if (heart == 1)
             {
                 if (!isRightHalf)
-                    userShip.Heart1 = ((Emote)response.EmoteResponse).Name;
+                    userShip.Heart1 = choice;
                 else
-                    userShip.Heart1Right = ((Emote)response.EmoteResponse).Name;
+                    userShip.Heart1Right = choice;
             }
             else
             {
                 if (!isRightHalf)
-                    userShip.Heart2 = ((Emote)response.EmoteResponse).Name;
+                    userShip.Heart2 = choice;
                 else
-                    userShip.Heart2Right = ((Emote)response.EmoteResponse).Name;
+                    userShip.Heart2Right = choice;
             }
+        }
+
+        ComponentBuilder CreateHeartChoiceComponents(IEnumerable<IEmote> heartEmotes, bool canSkip, bool withDualOption, bool isFirstChar, string charName)
+        {
+            heartEmotes = heartEmotes
+                .OrderBy(a => a.Name)
+                .ToList();
+            var component = new ComponentBuilder();
+            var options = new List<SelectMenuOptionBuilder>();
+            foreach (var emote in heartEmotes)
+            {
+                var name = emote.Name.Length > 9
+                    ? emote.Name.Substring(9).CapitalizeFirst()
+                    : "Default";
+                options.Add(new SelectMenuOptionBuilder(name, emote.Name, emote: emote));
+            }
+            component.WithSelectMenu("CHOICE", options, "Select a Heart");
+            if (withDualOption)
+                component.WithButton("Dual Heart", "DUAL", ButtonStyle.Primary, emote: DoubleEmote);
+            if (canSkip)
+            {
+                component.WithButton($"Skip Editing {charName}'s Heart", "SKIP", ButtonStyle.Secondary,
+                    emote: SkipEmote);
+                if (isFirstChar)
+                    component.WithButton($"Skip Editing Both Hearts for Pairing", "SKIPSHIP", ButtonStyle.Secondary,
+                        emote: new Emoji("⏩"));
+            }
+            return component;
         }
 
         async Task SetUpBackgroundAsync(SqlConnection connection, string descriptionPrefix = "")
@@ -392,20 +453,31 @@ namespace PrideBot.Registration
                 + "\n\n" + DialogueDict.Get("REGISTRATION_CUSTOMIZE_BG" + (dbUser.ShipsSelected ? "_EDIT" : ""), config.GetDefaultPrefix())
                 + "\n\n" + DialogueDict.Get("REGISTRATION_CHOOSE_BG"));
 
-            var bgImagesFile = await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser);
             var emotes = Enumerable.Range(1, Directory.GetFiles("Assets/Backgrounds").Length)
                 .Select(a => new Emoji(EmoteHelper.NumberEmotes[a]) as IEmote)
                 .ToList();
 
             while (true)
             {
-                emotes.Insert(0, YesEmote);
+                var bgImagesFile = await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser);
                 embed.WithAttachedImageUrl(bgImagesFile);
-                var bgResponse = await SendAndAwaitEmoteResponseAsync(file: bgImagesFile, embed: embed, emoteChoices: emotes);
+
+                var selectMenuList = new List<SelectMenuOptionBuilder>();
+                for (int i = 0; i < emotes.Count; i++)
+                {
+                    var emote = emotes[i];
+                    selectMenuList.Add(new SelectMenuOptionBuilder($"Choose Background {i + 1}", i.ToString(),
+                        emote: emote));
+                }
+                var components = new ComponentBuilder()
+                   .WithSelectMenu("CHOICE", selectMenuList, "Change Your Background")
+                   .WithButton("Looks Good!", "YES",  ButtonStyle.Primary, ThumbsUpEmote);
+
+                var bgResponse = await SendAndAwaitEmoteOrInteractionResponseAsync(file: bgImagesFile, embed: embed, components: components);
 
                 if (bgResponse.IsYes)
                     break;
-                dbUser.CardBackground = emotes.FindIndex(a => a.ToString().Equals(bgResponse.EmoteResponse.ToString()));
+                dbUser.CardBackground = int.Parse(bgResponse.InteractionResponse.Data.Values.FirstOrDefault()) + 1;
                 var bgImageFile = await GetShipsImageAsync(dbUser, dbUserShips);
                 embed = GetEmbed()
                     .WithTitle("Background Config")
@@ -523,7 +595,7 @@ namespace PrideBot.Registration
                 embed.Description += " " + DialogueDict.Get("REGISTRATION_ERROR_SHIP_DUPE_SWAP",
                 currentTier.ToString().ToLower(), currentShip.GetDisplayName());
             }
-            var response = await SendAndAwaitYesNoResponseAsync(embed: embed);
+            var response = await SendAndAwaitYesNoEmoteResponseAsync(embed: embed);
             if (response.IsYes)
             {
                 await repo.SwapShipTiersAsync(connection, dbUser.UserId, (UserShipTier)duplicateShip.Tier, currentTier);

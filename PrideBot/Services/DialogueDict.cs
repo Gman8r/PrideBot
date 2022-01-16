@@ -181,7 +181,7 @@ namespace PrideBot
                     && char.IsWhiteSpace(chr)
                     && !char.IsWhiteSpace(text[i-1]))
                 {
-                    wordChance += .1;
+                    wordChance += .15;
                     var nextChance = rand.NextDouble();
                     if (nextChance < wordChance)
                     {

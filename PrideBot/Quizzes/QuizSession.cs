@@ -87,14 +87,14 @@ namespace PrideBot.Quizzes
 
             Prompt response;
             if (availableQuizzes.Count == 1)
-                response = await SendAndAwaitYesNoResponseAsync(embed: embed);
+                response = await SendAndAwaitYesNoEmoteResponseAsync(embed: embed);
             else
             {
                 var numberEmoteChoices = Enumerable.Range(1, availableQuizzes.Count)
                     .Select(a => EmoteHelper.GetNumberEmote(a))
                     .ToList();
                 numberEmoteChoices.Add(NoEmote);
-                response = await SendAndAwaitEmoteResponseAsync(embed: embed, emoteChoices: numberEmoteChoices);
+                response = await SendAndAwaitEmoteOrInteractionResponseAsync(embed: embed, emoteChoices: numberEmoteChoices);
             }
             chosenQuizIndex = 0;
             if (response.IsNo)

@@ -16,6 +16,7 @@ namespace PrideBot
     {
         protected static IEmote SkipEmote => new Emoji("➡");
         protected static IEmote YesEmote => new Emoji("✅");
+        protected static IEmote ThumbsUpEmote => new Emoji("👍");
         protected static IEmote NoEmote => new Emoji("❌");
 
         public static readonly List<Session> activeSessions = new List<Session>();
@@ -35,13 +36,18 @@ namespace PrideBot
         {
             IsCancelled = true;
             cancellationMessage = message;
+            if (currentPrompt?.BotMessage.Components?.Any() ?? false)
+            {
+                var newComponents = currentPrompt.BotMessage.Components.ToBuilder().WithAllDisabled(true);
+                currentPrompt.BotMessage.ModifyAsync(a => a.Components = newComponents?.Build()).GetAwaiter();
+            }
         }
 
         string cancellationMessage;
 
         protected class Prompt
         {
-            public IMessage BotMessage { get; }
+            public IUserMessage BotMessage { get; }
             public bool AcceptsText { get; }
             public List<IEmote> EmoteChoices { get; }
 
@@ -61,7 +67,7 @@ namespace PrideBot
                 EmoteResponse?.ToString().Equals(NoEmote.ToString()) ?? false
                 || (InteractionResponse?.Data?.CustomId ?? "").Equals("NO");
 
-            public Prompt(IMessage botMessage, bool acceptsText, List<IEmote> emoteChoies)
+            public Prompt(IUserMessage botMessage, bool acceptsText, List<IEmote> emoteChoies)
             {
                 BotMessage = botMessage;
                 AcceptsText = acceptsText;
@@ -173,19 +179,25 @@ namespace PrideBot
 
         protected abstract Task PerformSessionInternalAsync();
 
-        protected async Task<Prompt> SendAndAwaitYesNoResponseAsync(string text = null, EmbedBuilder embed = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null)
-            => await SendAndAwaitEmoteResponseAsync(text, embed, new List<IEmote>() { YesEmote, NoEmote }, canSkip, canCancel, alwaysPopulateEmotes, file, interaction);
+        protected async Task<Prompt> SendAndAwaitYesNoEmoteResponseAsync(string text = null, EmbedBuilder embed = null, ComponentBuilder components = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null, bool disableComponents = true)
+            => await SendAndAwaitEmoteOrInteractionResponseAsync(text, embed, components, new List<IEmote>() { YesEmote, NoEmote }, canSkip, canCancel, alwaysPopulateEmotes, file, interaction, disableComponents);
 
-        protected async Task<Prompt> SendAndAwaitEmoteResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null)
-            => await SendAndAwaitResponseAsync(text, embed, emoteChoices, false, canSkip, canCancel, alwaysPopulateEmotes, file, interaction);
+        protected async Task<Prompt> SendAndAwaitEmoteOrInteractionResponseAsync(string text = null, EmbedBuilder embed = null, ComponentBuilder components = null, List<IEmote> emoteChoices = null, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null, bool disableComponents = true)
+            => await SendAndAwaitResponseAsync(text, embed, components, emoteChoices, false, canSkip, canCancel, alwaysPopulateEmotes, file, interaction, disableComponents);
 
-        protected async Task<Prompt> SendAndAwaitResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null)
+        protected async Task<Prompt> SendAndAwaitResponseAsync(string text = null, EmbedBuilder embed = null, ComponentBuilder components = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null, bool disableComponents = true)
         {
-            await SendResponseAsync(text, embed, emoteChoices, acceptsText, canSkip, canCancel, alwaysPopulateEmotes, file, interaction);
-            return await AwaitCurrentResponseAsync();
+            await SendResponseAsync(text, embed, components, emoteChoices, acceptsText, canSkip, canCancel, alwaysPopulateEmotes, file, interaction);
+            var prompt = await AwaitCurrentResponseAsync();
+            if (disableComponents && (prompt.BotMessage.Components?.Any() ?? false))
+            {
+                var newComponents = prompt.BotMessage.Components.ToBuilder().WithAllDisabled(true);
+                prompt.BotMessage.ModifyAsync(a => a.Components = newComponents?.Build()).GetAwaiter();
+            }
+            return prompt;
         }
 
-        protected async Task<Prompt> SendResponseAsync(string text = null, EmbedBuilder embed = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null)
+        protected async Task<Prompt> SendResponseAsync(string text = null, EmbedBuilder embed = null, ComponentBuilder components = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null)
         {
             emoteChoices ??= new List<IEmote>();
             if (emoteChoices.Count >= 3)
@@ -216,16 +228,16 @@ namespace PrideBot
             if (interaction != null)
             {
                 if (file == null)
-                    message = await interaction.FollowupAsync(text, embed: embed.Build());
+                    message = await interaction.FollowupAsync(text, embed: embed?.Build(), components: components?.Build());
                 else
-                    message = await interaction.FollowupWithFileAsync(file.Stream, file.FileName, text, embed: embed.Build());
+                    message = await interaction.FollowupWithFileAsync(file.Stream, file.FileName, text, embed: embed?.Build(), components: components?.Build());
             }
             else
             {
                 if (file == null)
-                    message = await channel.SendMessageAsync(text, embed: embed.Build());
+                    message = await channel.SendMessageAsync(text, embed: embed?.Build(), components: components?.Build());
                 else
-                    message = await channel.SendFileAsync(file.Stream, file.FileName, text, embed: embed.Build());
+                    message = await channel.SendFileAsync(file.Stream, file.FileName, text, embed: embed?.Build(), components: components?.Build());
             }
             currentPrompt = new Prompt(message, acceptsText, emoteChoices);
             currentPrompt.AlwaysPopulateEmotes = alwaysPopulateEmotes;

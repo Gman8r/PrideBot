@@ -55,7 +55,7 @@ namespace PrideBot
         {
             Task.Run(async () =>
             {
-                if (!string.IsNullOrEmpty(result?.ErrorReason))
+                if (!string.IsNullOrEmpty(result?.ErrorReason) && result.Error != InteractionCommandError.UnknownCommand)
                     await errorReportingService.ReportErrorAsync(context.User, context.Channel, command?.Name ?? "",
                         result.ErrorReason, result.Error == InteractionCommandError.Exception);
             });
