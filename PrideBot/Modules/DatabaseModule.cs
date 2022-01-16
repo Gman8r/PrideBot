@@ -327,5 +327,15 @@ namespace PrideBot.Modules
             }
             return await command.ExecuteNonQueryAsync();
         }
+
+        [Command("pushdialogue")]
+        [Alias("updatedilogue")]
+        [Priority(1)]
+        public async Task PushDialogue()
+        {
+            await UploadAllSubsheets(@"https://docs.google.com/spreadsheets/d/14EGqZ5_gVpqRgNCjqbYXncwHrbNOjh9J-QjyrN0vJlY/edit#gid=0");
+            await dialogueDict.PullDialogueAsync();
+            await ReplyAsync("Dialogue updated! You'll need to repeat this command on any other instances of me that are running as well.");
+        }
     }
 }

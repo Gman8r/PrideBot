@@ -67,35 +67,41 @@ namespace PrideBot.Quizzes
                 .WithValue("Hold");
             if (availableQuizzes.Count() > 1)
             {
-                var fieldValue = "";
-                for (int i = 0; i < availableQuizzes.Count; i++)
-                {
-                    var quizOption = availableQuizzes[i];
-                    if (!string.IsNullOrEmpty(categoryField.Value.ToString()))
-                        fieldValue += "\n";
-                    fieldValue += $"{EmoteHelper.NumberEmotes[i+1]} - {quizOption.Category}";
-                    categoryField.Name = "Today's Category Choices:";
-                }
-                categoryField.Value = fieldValue;
+                //var fieldValue = "";
+                //for (int i = 0; i < availableQuizzes.Count; i++)
+                //{
+                //    var quizOption = availableQuizzes[i];
+                //    if (!string.IsNullOrEmpty(categoryField.Value.ToString()))
+                //        fieldValue += "\n";
+                //    fieldValue += $"{EmoteHelper.NumberEmotes[i+1]} - {quizOption.Category}";
+                //    categoryField.Name = "Today's Category Choices:";
+                //}
+                //categoryField.Value = fieldValue;
             }
             else
             {
                 categoryField.Name = "Today's Quiz Category:";
                 categoryField.Value = $"❓ {availableQuizzes.FirstOrDefault().Category}";
+                embed.AddField(categoryField);
             }
-            embed.AddField(categoryField);
 
-            Prompt response;
+            var components = new ComponentBuilder();
             if (availableQuizzes.Count == 1)
-                response = await SendAndAwaitYesNoEmoteResponseAsync(embed: embed);
+            {
+                components.WithButton("Ready!", "YES", ButtonStyle.Success, ThumbsUpEmote);
+                components.WithButton("Nevermind, Not Yet", "NO", ButtonStyle.Secondary, NoEmote);
+            }
             else
             {
-                var numberEmoteChoices = Enumerable.Range(1, availableQuizzes.Count)
-                    .Select(a => EmoteHelper.GetNumberEmote(a))
-                    .ToList();
-                numberEmoteChoices.Add(NoEmote);
-                response = await SendAndAwaitNonTextResponseAsync(embed: embed, emoteChoices: numberEmoteChoices);
+
+                for (int i = 0; i < availableQuizzes.Count; i++)
+                {
+                    var quizOption = availableQuizzes[i];
+                    components.WithButton(quizOption.Category, i.ToString(), ButtonStyle.Secondary, EmoteHelper.GetNumberEmote(i + 1));
+                }
+                components.WithButton("Nevermind, Not Yet", "NO", ButtonStyle.Secondary, NoEmote);
             }
+            var response = await SendAndAwaitNonTextResponseAsync(embed: embed, components: components);
             chosenQuizIndex = 0;
             if (response.IsNo)
             {
@@ -104,9 +110,8 @@ namespace PrideBot.Quizzes
             }
             else if (!response.IsYes)
             {
-                var selection = EmoteHelper.NumberEmotes.ToList()
-                    .FindIndex(a => a.Equals(response.EmoteResponse.ToString()));
-                chosenQuizIndex = selection - 1;
+                var selection = int.Parse(response.InteractionResponse.Data.CustomId);
+                chosenQuizIndex = selection;
             }
 
             var quiz = availableQuizzes[chosenQuizIndex];
@@ -128,37 +133,39 @@ namespace PrideBot.Quizzes
             var correctIndex = rand.Next() % 4;
             choices.Insert(correctIndex, correctChoice);
 
-            var textChoices = new List<char>() { 'A', 'B', 'C', 'D' };
-            var emoteChoices = textChoices
-            .Select(a => EmoteHelper.GetLetterEmote(a))
-            .ToList();
             embed = GetEmbed()
                 .WithTitle("Quiz Question")
                 .WithDescription($"{quiz.Question}");
-            embed.AddField("Choices:", string.Join("\n", choices.Select(a => $"{emoteChoices[choices.IndexOf(a)]} {a}")));
 
-            response = await SendResponseAsync(embed: embed, emoteChoices: emoteChoices, alwaysPopulateEmotes: true);
+            var choicesComponents = new ComponentBuilder();
+            for (int i = 0; i < choices.Count; i++)
+            {
+                // Restrict choice to 80 chars just in case
+                choices[i] = choices[i].Substring(0, Math.Min(choices[i].Length, 80));
+                var choice = choices[i];
+                choicesComponents.WithButton(choice, i.ToString(), ButtonStyle.Secondary, EmoteHelper.GetLetterEmote((char)('A' + i)),
+                    row: i / 2);
+            }
+
+            response = await SendResponseAsync(embed: embed, components: choicesComponents, acceptsText: false);
             RunTimer().GetAwaiter();
-            await AwaitCurrentResponseAsync();
             var attemptsLeft = 3;
+            quizLog.Guess1 = null;
+            quizLog.Guess2 = null;
+            quizLog.Guess3 = null;
             while (attemptsLeft > 0)
             {
-                int chosenIndex;
-                if (response.EmoteResponse != null)
-                {
-                    chosenIndex = emoteChoices.FindIndex(a => a.ToString().Equals(response.EmoteResponse.ToString()));
-                }
-                else
-                {
-                    if (response.MessageResponse.Content.Length != 1 || !textChoices.Contains(response.MessageResponse.Content.ToUpper()[0]))
-                    {
-                        await channel.SendMessageAsync(DialogueDict.Get("QUIZ_BAD_PARSE"));
-                        await AwaitCurrentResponseAsync();
-                        continue;
-                    }
-                    chosenIndex = response.MessageResponse.Content.ToUpper()[0] - 'A';
-                }
+                await AwaitCurrentResponseAsync();
+                var chosenIndex = int.Parse(response.InteractionResponse.Data.CustomId);
+
                 var chosenLetter = ((char)('A' + chosenIndex)).ToString();
+
+                if (new List<string>() { quizLog.Guess1, quizLog.Guess2, quizLog.Guess3 }.Contains(choices[chosenIndex]))
+                {
+                    await channel.SendMessageAsync(DialogueDict.Get($"QUIZ_WRONG_REPEAT"));
+                    continue;
+                }
+
                 if (attemptsLeft == 3)
                     quizLog.Guess1 = choices[chosenIndex];
                 else if (attemptsLeft == 2)
@@ -170,7 +177,6 @@ namespace PrideBot.Quizzes
                     if (attemptsLeft > 1)
                     {
                         await channel.SendMessageAsync(DialogueDict.Get($"QUIZ_WRONG_{4 - attemptsLeft}", chosenLetter));
-                        await AwaitCurrentResponseAsync();
                     }
                 }
                 else

@@ -57,6 +57,7 @@ namespace PrideBot
             public IMessage MessageResponse { get; set; }
             public IEmote EmoteResponse { get; set; }
             public SocketMessageComponent InteractionResponse { get; set; }
+            public bool AutoDeferInteractions { get; set; } = true;
             public bool IsSkipped =>
                 EmoteResponse?.ToString().Equals(SkipEmote.ToString()) ?? false
                 || (InteractionResponse?.Data?.CustomId ?? "").Equals("SKIP");
