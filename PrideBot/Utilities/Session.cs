@@ -76,7 +76,7 @@ namespace PrideBot
             }
         }
 
-        public Session(IDMChannel channel, SocketUser user, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, IMessage originMessage = null)
+        public Session(IMessageChannel channel, SocketUser user, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, IMessage originMessage = null)
         {
             this.channel = channel;
             this.user = user;

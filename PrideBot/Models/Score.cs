@@ -11,7 +11,7 @@ namespace PrideBot.Models
         public int ScoreId { get; set; }
         public string UserId { get; set; }
         public string AchievementId { get; set; }
-        public int PointsEarned { get; set; }
+        public decimal PointsEarned { get; set; }
 
         [DontPushToDatabase]
         public DateTime Timestamp { get; set; }

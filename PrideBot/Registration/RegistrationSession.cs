@@ -70,6 +70,7 @@ namespace PrideBot.Registration
             var components = new ComponentBuilder()
                     .WithButton("Sounds Gay I'm In", "YES", ButtonStyle.Success, ThumbsUpEmote)
                     .WithButton("Not Right Now Actually", "NO", ButtonStyle.Secondary, NoEmote);
+                    //.WithButton("Stop Doing That Emote Thing First (coming soon)", "YES", ButtonStyle.Secondary, new Emoji("😖"));
 
             //embed.ImageUrl = config.GetRelativeHostPathWeb(await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser));
 
@@ -123,6 +124,7 @@ namespace PrideBot.Registration
             await channel.SendMessageAsync(embed: embed.Build());
             if (!userHasRegistered)
             {
+                dbUser = await repo.GetUserAsync(connection, dbUser.UserId);
                 dbUser.ShipsSelected = true;
                 await repo.UpdateUserAsync(connection, dbUser);
                 userRegs[user.Id.ToString()] = true;
@@ -493,7 +495,9 @@ namespace PrideBot.Registration
 
                 if (bgResponse.IsYes)
                     break;
+                dbUser = await repo.GetUserAsync(connection, dbUser.UserId);
                 dbUser.CardBackground = int.Parse(bgResponse.InteractionResponse.Data.Values.FirstOrDefault()) + 1;
+                await repo.UpdateUserAsync(connection, dbUser);
                 bgImageFile = await GetShipsImageAsync(dbUser, dbUserShips);
                 embed = GetEmbed()
                     .WithTitle("Background Config")
@@ -501,7 +505,6 @@ namespace PrideBot.Registration
                     .WithAttachedImageUrl(bgImageFile);
                 await channel.SendFileAsync(bgImageFile.Stream, bgImageFile.FileName, embed: embed.Build());
 
-                await repo.UpdateUserAsync(connection, dbUser);
                 embed = GetEmbed()
                     .WithTitle("Choose a Background")
                     .WithDescription(DialogueDict.Get("REGISTRATION_CHOOSE_BG"));

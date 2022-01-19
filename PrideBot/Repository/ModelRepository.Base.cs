@@ -29,7 +29,22 @@ namespace PrideBot.Repository
 
         public SqlConnection GetDatabaseConnection()
             => new SqlConnection(GetConnectionString());
+
         public SqlConnection GetAltDatabaseConnection()
             => new SqlConnection(GetAltConnectionString());
+
+        public async Task<SqlConnection> GetAndOpenDatabaseConnectionAsync()
+        {
+            var conn = GetDatabaseConnection();
+            await conn.OpenAsync();
+            return conn;
+        }
+
+        public async Task<SqlConnection> GetAndOpenAltDatabaseConnectionAsync()
+        {
+            var conn = GetAltDatabaseConnection();
+            await conn.OpenAsync();
+            return conn;
+        }
     }
 }

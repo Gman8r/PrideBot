@@ -137,14 +137,21 @@ namespace PrideBot.Quizzes
                 .WithTitle("Quiz Question")
                 .WithDescription($"{quiz.Question}");
 
+            var choiceStr = "";
+            for (int i = 0; i < choices.Count; i++)
+            {
+                choiceStr += $"\n{EmoteHelper.GetLetterEmote((char)('A' + i))} {choices[i]}";
+            }
+            embed.AddField("Choices:",
+                choiceStr.Trim());
+
             var choicesComponents = new ComponentBuilder();
             for (int i = 0; i < choices.Count; i++)
             {
                 // Restrict choice to 80 chars just in case
                 choices[i] = choices[i].Substring(0, Math.Min(choices[i].Length, 80));
                 var choice = choices[i];
-                choicesComponents.WithButton(choice, i.ToString(), ButtonStyle.Secondary, EmoteHelper.GetLetterEmote((char)('A' + i)),
-                    row: i / 2);
+                choicesComponents.WithButton(" ", i.ToString(), ButtonStyle.Secondary, EmoteHelper.GetLetterEmote((char)('A' + i)));
             }
 
             response = await SendResponseAsync(embed: embed, components: choicesComponents, acceptsText: false);
@@ -220,7 +227,7 @@ namespace PrideBot.Quizzes
             var quizOpenedMessage = (await quizChannel.GetPinnedMessagesAsync()).FirstOrDefault();
             var quizOpenedUrl = quizOpenedMessage?.GetJumpUrl();
 
-            var overridePoints = 0;
+            var overridePoints = 0m;
             if (quizLog.Correct && user.IsGYNSage(config))
             {
                 var pAchievement = await repo.GetAchievementAsync(connection, "QUIZ_PARTICIPATE");

@@ -52,11 +52,16 @@ namespace PrideBot.Plushie
             return $"PLUSHMENU.{(isButton ? "B" : "S")}:{userId},{selectedPlushieId},{(int)action},{imageState}";
         }
 
-        public async Task<IUserMessage> PostPlushieMenuAsync(IGuildUser user, IMessageChannel channel)
+        public async Task<IUserMessage> PostPlushieMenuAsync(IGuildUser user, IMessageChannel channel, IEnumerable<UserPlushie> userPlushies)
         {
             var components = GenerateComponents(user.Id, 0, "0.1.2.3.4.5");
-            return await channel.SendMessageAsync("a", components: components?.Build());
+            return await channel.SendMessageAsync(user.Mention, components: components?.Build());
         }
+
+        //public async Task<EmbedBuilder> GenerateEmbedAsync()
+        //{
+
+        //}
 
         public ComponentBuilder GenerateComponents(ulong userId, int selectedPlushieId, string imageState)
         {
@@ -79,8 +84,8 @@ namespace PrideBot.Plushie
                 {
                     chooseMenu.AddOption(new SelectMenuOptionBuilder()
                     {
-                        Label = i.ToString(),
-                        Description = "Number " + i.ToString(),
+                        Label = "Your Plushie #" + i.ToString(),
+                        Description = "Reimu Hakurei",
                         Emote = EmoteHelper.GetNumberEmote(i),
                         IsDefault = selectedPlushieId == i,
                         Value = i.ToString()
@@ -108,7 +113,7 @@ namespace PrideBot.Plushie
                     Style = ButtonStyle.Primary,
                     Emote = new Emoji("💗"),
                     Label = "Pawn",
-                    CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Sell, imageState)
+                    CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Pawn, imageState)
                 }.Build());
                 // Give button
                 plushieOptionRowBuilder.AddComponent(new ButtonBuilder()
@@ -139,7 +144,7 @@ namespace PrideBot.Plushie
                 Label = isCoolownOver
                     ? (!hasRoom
                         ? "Free Some Room To Get More Plushies!"
-                        : "Get A Plushie!")
+                        : "Get A New Plushie!")
                     : "Get Another Plushie Tomorrow!",
                 CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Draw, imageState)
             }.Build());

@@ -158,14 +158,14 @@ namespace PrideBot.Game
 
                         bgFrame.Composite(yurikoFrame, Gravity.Northwest,
                             (bgFrame.Width - yurikoFrame.Width) / 2,
-                            ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude),
+                            ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude) + 5,
                             CompositeOperator.Over);
                     }
                     else
                     {
                         bgFrame.Composite(yurikoGlitchImage, Gravity.Northwest,
                             (bgFrame.Width - yurikoFrame.Width) / 2,
-                            ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude),
+                            ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude) + 5,
                             CompositeOperator.Over);
                     }
 
@@ -192,7 +192,7 @@ namespace PrideBot.Game
                 {
                     bgFrame.Composite(yurikoFrame, Gravity.Northwest,
                         (bgFrame.Width - yurikoFrame.Width) / 2,
-                        ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude),
+                        ((bgFrame.Height - yurikoFrame.Height) / 2) + (int)(sineT * sineAmplitude) + 5,
                         CompositeOperator.Over);
 
                     bgFrame.Composite(textOverlay, Gravity.Northwest, 0, 0, CompositeOperator.Over);

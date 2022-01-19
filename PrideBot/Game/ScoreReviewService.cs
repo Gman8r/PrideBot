@@ -26,7 +26,7 @@ namespace PrideBot.Game
         {
             public string userId;
             public int quizStreak;
-            public int pointTotal;
+            public decimal pointTotal;
         }
 
         public ScoreReviewService(ModelRepository repo, LeaderboardImageGenerator leaderboardImageGenerator, IConfigurationRoot config, DiscordSocketClient client, LoggingService loggingService, ShipImageGenerator shipImageGenerator, LeaderboardService leaderboardService)

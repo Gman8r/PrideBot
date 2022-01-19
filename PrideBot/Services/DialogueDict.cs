@@ -164,7 +164,7 @@ namespace PrideBot
             return str;
         }
 
-        public static string GenerateEmojiText(string text) => instance.GenerateEmojiTextInternal(text);
+        public static string GenerateEmojiText(string text) => text;
 
         public string GenerateEmojiTextInternal(string text)
         {
@@ -181,7 +181,7 @@ namespace PrideBot
                     && char.IsWhiteSpace(chr)
                     && !char.IsWhiteSpace(text[i-1]))
                 {
-                    wordChance += .15;
+                    wordChance += .075;
                     var nextChance = rand.NextDouble();
                     if (nextChance < wordChance)
                     {

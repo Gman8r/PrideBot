@@ -61,10 +61,32 @@ namespace PrideBot.Modules
             var repostAction = RepostAction.Edit;
             switch (action)
             {
+                case PlushieAction.Use:
+                    await Context.Interaction.FollowupAsync("bababa u used it");
+                    selectedPlushieId = 0;
+                    break;
+                case PlushieAction.Pawn:
+
+                    //var session = new 
+                    //var dbCharacters = await repo.GetAllCharactersAsync(connection);
+                    //var shipResult = await RegistrationSession.ParseShipAsync(connection, repo, shipName, dbCharacters);
+                    //if (!shipResult.IsSuccess)
+                    //    throw new CommandException(shipResult.ErrorMessage);
+                    //var ship = shipResult.Value;
+                    //var validationResult = await RegistrationSession.ValidateShipAsync(connection, shipResult.Value, dbCharacters);
+                    //if (!validationResult.IsSuccess)
+                    //    throw new CommandException(DialogueDict.Get("SHIP_SCORES_INVALID"));
+
+                    //await Context.Interaction.FollowupAsync("bababa u used it");
+                    //selectedPlushieId = 0;
+                    break;
                 case PlushieAction.BringToBottom:
                 case PlushieAction.Close:
                     (Context.Interaction as SocketMessageComponent).Message.DeleteAsync().GetAwaiter();
                     repostAction = action == PlushieAction.BringToBottom ? RepostAction.Post : RepostAction.DontPost;
+                    break;
+                case PlushieAction.ClearSelection:
+                    selectedPlushieId = 0;
                     break;
                 default:
                     break;
@@ -89,7 +111,7 @@ namespace PrideBot.Modules
 
         async Task HandleUpdateAsync(int selectedId, string imageState, RepostAction repostAction)
         {
-            // TODO check image state sand determine whether to edit image, then replace image state
+            // TODO check image state and determine whether to edit image, then replace image state
 
             var message = (Context.Interaction as SocketMessageComponent).Message;
             if (repostAction != RepostAction.DontPost)
@@ -106,7 +128,7 @@ namespace PrideBot.Modules
         {
             var id = ulong.Parse(idStr);
             if (id != Context.User.Id)
-                throw new CommandException("That's not for you! Be fair to everyone and use your own buttons please!");
+                throw new CommandException("That's not for you! Be fair to everyone and use your own buttons please!", ephemeral: true);
         }
     }
 }

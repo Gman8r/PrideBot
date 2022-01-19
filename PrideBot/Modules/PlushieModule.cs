@@ -48,7 +48,7 @@ namespace PrideBot.Modules
         //[ValidEventPeriods(EventPeriod.DuringEvent)]
         public async Task Plushie()
         {
-            await plushieService.PostPlushieMenuAsync(Context.User as IGuildUser, Context.Channel);
+            await plushieService.PostPlushieMenuAsync(Context.User as IGuildUser, Context.Channel, new List<UserPlushie>());
         }
     }
 }

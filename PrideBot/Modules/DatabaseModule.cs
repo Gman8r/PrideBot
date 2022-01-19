@@ -333,7 +333,7 @@ namespace PrideBot.Modules
         [Priority(1)]
         public async Task PushDialogue()
         {
-            await UploadAllSubsheets(@"https://docs.google.com/spreadsheets/d/14EGqZ5_gVpqRgNCjqbYXncwHrbNOjh9J-QjyrN0vJlY/edit#gid=0");
+            await UploadAllSubsheets(@"https://docs.google.com/spreadsheets/d/19ixAtvE8-5Oda12ySwfSBuE4lkmrXPL_jarBADn_dcw/edit#gid=0");
             await dialogueDict.PullDialogueAsync();
             await ReplyAsync("Dialogue updated! You'll need to repeat this command on any other instances of me that are running as well.");
         }

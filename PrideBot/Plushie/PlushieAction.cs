@@ -10,7 +10,7 @@ namespace PrideBot.Plushie
         Draw,
         Select,
         Use,
-        Sell,
+        Pawn,
         Give,
         ClearSelection,
         BringToBottom,

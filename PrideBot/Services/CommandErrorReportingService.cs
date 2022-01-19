@@ -23,37 +23,14 @@ namespace PrideBot
             this.client = client;
         }
 
-        public async Task ReportErrorAsync(IUser user, IMessageChannel channel, string commandName, string errorReason, bool isException)
+        public async Task ReportErrorAsync(IUser user, IMessageChannel channel, string commandName, string errorReason, bool isException, IDiscordInteraction interaction)
         {
             try
             {
                 var guild = (channel as IGuildChannel)?.Guild;
-                //if (!(channel is IGuildChannel)
-                //    && !(guild as SocketGuild).GetUser(context.Client.CurrentUser.Id).GetPermissions(context.Channel as IGuildChannel).Has(ChannelPermission.SendMessages))
-                //{
-                //    // Can't send messages, so just forget it
-                //    return;
-                //}
-
                 string errorMessage = null;
+                var ephemeral = false;
 
-                //if (result.Error == CommandError.UnknownCommand)
-                //{
-                //    var argPos = commandArgData[context.Message.Id];
-                //    var commandName = context.Message.Content.Substring(argPos).TrimEnd();
-                //    var module = commands.Modules
-                //        .FirstOrDefault(a => a.IsSubmodule
-                //        && (commandName.StartsWith(a.GetModulePathPrefix(), StringComparison.OrdinalIgnoreCase) // ![submodule] [wrongcommand]
-                //        || commandName.Equals(a.GetModulePathPrefix().TrimEnd(), StringComparison.OrdinalIgnoreCase))); // ![submodule]
-                //    if (module != null)
-                //    {
-                //        // Submodule help (user used an invalid command in a submodule)
-                //        var moduleClass = PrideModuleBase.GetModule(module, commands).Value;
-
-                //        errorMessage = $"Invalid subcommand for {module.GetModulePathPrefix().TrimEnd()}.\n\n" +
-                //            await moduleClass.GetHelpLineAsync(module, module.Commands, context as SocketCommandContext, provider, config);
-                //    }
-                //}
                 if (!string.IsNullOrEmpty(errorReason))
                 {
                     var commandException = isException && errorReason.StartsWith("COMMANDEXCEPTION:");
@@ -64,7 +41,14 @@ namespace PrideBot
                     else
                     {
                         if (errorReason.StartsWith("COMMANDEXCEPTION:"))
+                        {
                             errorMessage = (errorReason.Substring("COMMANDEXCEPTION:".Count()));
+                            if (errorMessage.StartsWith("EPHEMERAL:"))
+                            {
+                                errorMessage = (errorReason.Substring("EPHEMERAL:".Count()));
+                                ephemeral = true;
+                            }
+                        }
                         else
                             errorMessage = DialogueDict.Get("EXCEPTION");
                     }
@@ -75,8 +59,17 @@ namespace PrideBot
 
                 if (errorMessage != null)
                 {
-                    await channel.SendMessageAsync(embed:
-                        EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(errorMessage), client as DiscordSocketClient).Build());
+                    if (interaction != null)
+                    {
+                        await interaction.FollowupAsync(embed:
+                            EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(errorMessage), client as DiscordSocketClient).Build(),
+                            ephemeral: ephemeral);
+                    }
+                    else
+                    {
+                        await channel.SendMessageAsync(embed:
+                            EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(errorMessage), client as DiscordSocketClient).Build());
+                    }
                 }
             }
             catch (Exception e)

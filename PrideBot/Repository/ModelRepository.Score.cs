@@ -60,7 +60,7 @@ namespace PrideBot.Repository
             CooldownViolated = 2
         }
 
-        public async Task<AddScoreResult> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, int pointsEarned, string approverId, bool ignoreCooldown)
+        public async Task<AddScoreResult> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, decimal pointsEarned, string approverId, bool ignoreCooldown)
         {
             var command = new SqlCommand("SP_ADD_SCORE", conn);
             command.CommandType = CommandType.StoredProcedure;

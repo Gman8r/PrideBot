@@ -40,14 +40,14 @@ namespace PrideBot.Game
             return $"{((int)ts.TotalHours).ToString("D2")}:{ts.Minutes.ToString("D2")}:{ts.Seconds.ToString("D2")}";
         }
 
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, int overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
         {
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
             return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, overridePoints, titleUrl, ignoreIfNotRegistered, ignoreCooldown, dontPing, reportChannel);
         }
 
         // Returns True if score was applied in some way
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, int overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
         {
             if (overridePoints > 999)
                 throw new CommandException("Max score for an achievement is 999, WHY ARE YOU EVEN DOING THIS??");
@@ -69,7 +69,7 @@ namespace PrideBot.Game
             {
                 var dbShipScores = (await repo.GetShipScoresAsync(connection, scoreId)).ToArray();
 
-                var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, pointsEarned, dbShipScores,                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, dbResult);
+                var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, pointsEarned, dbShipScores, await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, dbResult);
                 var text = user.Mention + " Achievement! " + achievement.Emoji;// + " Achievement!";// + " " + achievement.Emoji;
 
                 if (errorCode == ModelRepository.AddScoreError.CooldownViolated)
@@ -118,7 +118,7 @@ namespace PrideBot.Game
         }
 
         // returns (embed, ship image file)
-        public async Task<(EmbedBuilder, MemoryFile)> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, int basePointsEarned, ShipScore[] dbShipScores, UserShipCollection dbUserShips, IUser approver,
+        public async Task<(EmbedBuilder, MemoryFile)> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, decimal basePointsEarned, ShipScore[] dbShipScores, UserShipCollection dbUserShips, IUser approver,
             string titleUrl = null, ModelRepository.AddScoreResult result = null)
         {
             var errorCode = result?.errorCode ?? ModelRepository.AddScoreError.None;
@@ -143,8 +143,8 @@ namespace PrideBot.Game
                     embed.AddField($"You feel your bond with your community grow stronger...\nYou've earned {EmoteHelper.SPEmote} !", scoreStr.Trim());
 
                     var scores = Enumerable.Range(0, 3)
-                        .Select(a => "+" + (dbShipScores
-                            .FirstOrDefault(aa => ((int)aa.Tier) == a)?.PointsEarned ?? 0).ToString())
+                        .Select(a => "+" + ((int)(Math.Round(dbShipScores
+                            .FirstOrDefault(aa => ((int)aa.Tier) == a)?.PointsEarned ?? 0))).ToString())
                         .ToArray();
                     imageFile = await shipImageGenerator.WriteUserCardAsync(dbUser, dbUserShips, scoreTexts: scores);
                     embed.WithAttachedImageUrl(imageFile);

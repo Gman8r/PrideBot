@@ -21,26 +21,217 @@ using PrideBot.Events;
 
 namespace PrideBot.Modules
 {
-    [RequireOwner]
+    [RequireSage]
     [DontAutoLoad]
     [Name("Secret (Stealth)")]
     public class SecretStealthModule : PrideModuleBase
     {
         private IConfigurationRoot config;
+        private CommandHandler commandHandler;
 
-        public SecretStealthModule(IConfigurationRoot config)
+        public SecretStealthModule(IConfigurationRoot config, CommandHandler commandHandler)
         {
             this.config = config;
+            this.commandHandler = commandHandler;
         }
 
-        //[Command("lambda")]
-        //public static async Task Haha(SocketTextChannel channel, [Remainder]string content)
-        //{
-        // var msg =    await channel.SendMessageAsync(content);
-        //    await msg.PinAsync();
-        //}
+        [Command("applyroles")]
+        [RequireContext(ContextType.Guild)]
+        public async Task Haha(params IGuildUser[] users)
+        {
+            using var typing = Context.Channel.EnterTypingState();
+            await ReapplyRoles(Context.Guild, users);
+            await ReplyResultAsync("Donnnneeeeee!");
+        }
+
+        [Command("applybans")]
+        [RequireContext(ContextType.Guild)]
+        public async Task bannn()
+        {
+            await ReapplyBans(Context.Guild);
+            await ReplyResultAsync("Donnnneeeeee!");
+        }
+
+        [Command("applyemotes")]
+        [RequireContext(ContextType.Guild)]
+        public async Task emote()
+        {
+            await ReapplyEmotes(Context.Guild);
+            await ReplyResultAsync("Donnnneeeeee!");
+        }
+
+        async Task ReapplyBans(SocketGuild guild)
+        {
+            var dataStr = await File.ReadAllTextAsync("guild.json");
+            var data = JsonConvert.DeserializeObject<dynamic>(dataStr);
+            var bans = data.bans;
+            var guildBans = await guild.GetBansAsync();
+            foreach (var ban in bans)
+            {
+                ulong id = (ulong)ban.id;
+                var guildBan = guildBans.FirstOrDefault(a => a.User.Id == id);
+                if (guildBan != null)   // already banned
+                    continue;
+
+                string reason = ban.reason;
+                if (string.IsNullOrWhiteSpace(reason))
+                    reason = null;
+
+                Console.WriteLine("Banning " + ban.name);
+                await guild.AddBanAsync(id, 0, reason);
+            }
+        }
+
+        async Task ReapplyEmotes(SocketGuild guild)
+        {
+            var dataStr = await File.ReadAllTextAsync("guild.json");
+            var data = JsonConvert.DeserializeObject<dynamic>(dataStr);
+            var emotes = data.emotes;
+            var guidldEmotes = guild.Emotes;
+            foreach (var emote in emotes)
+            {
+                string name = emote.name;
+                string url = emote.url;
+                var guildEmote = guidldEmotes.FirstOrDefault(a => a.Name.Equals(name));
+                if (guildEmote != null)   // already added
+                    continue;
+
+                try
+                {
+                    var extension = url.Substring(url.Length - 4);
+                    var imageData = await WebHelper.DownloadWebFileDataAsync(url);
+                    var path = "emotes/" + name + extension;
+                    if (File.Exists(path))
+                    {
+
+                    }
+                    await File.WriteAllBytesAsync(path, imageData);
+                    //stream.Seek(0, SeekOrigin.Begin);
+                    //await guild.CreateEmoteAsync(name, new Image(stream));
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("COULDN'T GET " + emote.name);
+                }
+            }
+        }
 
 
+
+        async Task ReapplyRoles(SocketGuild guild, IEnumerable<IGuildUser> guildUsers)
+        {
+            var dataStr = await File.ReadAllTextAsync("guild.json");
+            var data = JsonConvert.DeserializeObject<dynamic>(dataStr);
+            var users = data.users;
+            var botUser = Context.Guild.GetUser(Context.Client.CurrentUser.Id);
+            var tasks = new List<Task>();
+            foreach (var user in data.users)
+            {
+                ulong id = (ulong)user.id;
+                if (!guildUsers.Any(a => a.Id == id))
+                    continue;
+                var guildUser = guild.GetUser(id);
+                if (guildUser == null || guildUser.IsBot)
+                    continue;
+                var roles = user.roles;
+
+                var task = Task.Run(async () =>
+                {
+                    var guildRoles = new List<SocketRole>();
+                    // figure out roles from names
+                    foreach (var role in roles)
+                    {
+                        string name = role.name;
+                        if (name.Equals("@everyone"))
+                            continue;
+
+                        var guildRole = guild.Roles
+                            .FirstOrDefault(a => a.Name.Equals(name));
+                        if (guildRole == null)
+                            continue;
+                        if (guildRole.Position >= botUser.Roles.Max(a => a.Position))
+                            continue;
+
+                        guildRoles.Add(guildRole);
+                    }
+
+                    Console.WriteLine("Applying for " + guildUser.Username);
+                    await guildUser.AddRolesAsync(guildRoles);
+                });
+                tasks.Add(task);
+            }
+
+            await Task.WhenAll(tasks);
+        }
+
+        [Command("write")]
+        async Task Write(ulong guildID)
+        {
+            var guild = Context.Client.GetGuild(guildID);
+            await WriteGuild(guild);
+            await ReplyResultAsync("Done!");
+        }
+
+
+
+        public static async Task WriteGuild(SocketGuild guild)
+        {
+            var guildDict = new Dictionary<string, object>();
+            var users = new List<Dictionary<string, object>>();
+            var emotes = new List<Dictionary<string, object>>();
+            var bans = new List<Dictionary<string, object>>();
+            guildDict["name"] = guild.Name;
+            guildDict["users"] = users;
+            guildDict["emotes"] = emotes;
+            guildDict["bans"] = bans;
+            foreach (var user in guild.Users)
+            {
+                var userDict = new Dictionary<string, object>();
+                users.Add(userDict);
+                userDict["id"] = user.Id;
+                userDict["nickname"] = user.Nickname;
+                userDict["username"] = user.Username;
+                userDict["discriminator"] = user.Discriminator;
+                userDict["fullname"] = user.Username + "#" + user.Discriminator;
+                userDict["bot"] = user.IsBot;
+
+                var roles = new List<Dictionary<string, object>>();
+                userDict["roles"] = roles;
+                foreach (var role in user.Roles)
+                {
+                    var roleDict = new Dictionary<string, object>();
+                    roles.Add(roleDict);
+                    roleDict["id"] = role.Id;
+                    roleDict["name"] = role.Name;
+                }
+            }
+            foreach (var emote in guild.Emotes)
+            {
+                var emoteDict = new Dictionary<string, object>();
+                emotes.Add(emoteDict);
+                emoteDict["id"] = emote.Id;
+                emoteDict["url"] = emote.Url;
+                emoteDict["name"] = emote.Name;
+                emoteDict["animated"] = emote.Animated;
+            }
+            var guildBans = await guild.GetBansAsync();
+            foreach (var guildBan in guildBans)
+            {
+                var banDict = new Dictionary<string, object>();
+                bans.Add(banDict);
+                banDict["id"] = guildBan.User?.Id;
+                banDict["username"] = guildBan.User?.Username;
+                banDict["discriminator"] = guildBan.User?.Discriminator;
+                banDict["fullname"] = guildBan.User.Username + "#" + guildBan.User.Discriminator;
+                banDict["reason"] = guildBan.Reason;
+            }
+
+            var a = 0;
+
+            var jsonString = JsonConvert.SerializeObject(guildDict, Formatting.Indented);
+            File.WriteAllText($"guilds/{guild.Id} {guild.Name.Substring(0, 5)}.json", jsonString);
+            Console.WriteLine("Wrote " + guild.Name);
+        }
 
         //[Command("hook")]
         //[Alias("mimic", "possess")]
@@ -121,10 +312,14 @@ namespace PrideBot.Modules
         //    }
         //}
 
-        [Command("say")]
-        public async Task Auditlog([Remainder] string message)
+        [Command("mayday")]
+        public async Task Auditlog()
         {
-            await ReplyAsync(DialogueDict.GenerateEmojiText(message));
+            foreach (var guild in Context.Client.Guilds)
+            {
+                commandHandler.RelayMessageAsync(guild);
+            }
+            await ReplyAsync("omg... on it.");
         }
 
         //[Command("emote")]

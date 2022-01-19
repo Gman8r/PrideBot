@@ -99,7 +99,8 @@ namespace PrideBot
             {                                       // Add discord to the collection
                 LogLevel = LogSeverity.Verbose,     // Tell the logger to give Verbose amount of info
                 MessageCacheSize = 1000,             // Cache 1,000 messages per channel
-                AlwaysDownloadUsers = true
+                AlwaysDownloadUsers = true,
+                GatewayIntents = GatewayIntents.All
             });
             services.AddSingleton(client)
             .AddSingleton(new CommandService(new CommandServiceConfig

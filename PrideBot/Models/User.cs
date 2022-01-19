@@ -11,6 +11,7 @@ namespace PrideBot.Models
         public bool ShipsSelected { get; set; }
         public int CardBackground { get; set; }
         public bool PingForAchievements { get; set; }
+        public bool disableEmojiSpeak { get; set; }
 
         [DontPushToDatabase]
         public DateTime RegisteredAt { get; set; }
