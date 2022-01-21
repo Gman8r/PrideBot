@@ -41,7 +41,15 @@ namespace PrideBot
                     value = (record[i] ?? "N").Equals("Y");
                 else
                     value = record.IsDBNull(i) ? null : record[i];
+                try
+                {
+
                 property.SetValue(result, value);
+                }
+                catch (Exception e)
+                {
+                    var aasf = 1;
+                }
             }
             return result;
         }

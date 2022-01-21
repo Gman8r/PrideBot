@@ -203,6 +203,9 @@ namespace PrideBot.Game
                     bgFrame.Composite(staticFrame, Gravity.Northwest, 0, 0, CompositeOperator.Plus);
                 }
 
+                bgFrame.Crop(new MagickGeometry(42, 0, 666, 500));
+                bgFrame.RePage();
+
 
                 //using var grayMask = new MagickImage(bgFrame);
                 //grayMask.Grayscale();
@@ -301,7 +304,7 @@ namespace PrideBot.Game
             var yPerRow = (height * 2 / starRows) + (starRows / 2);
             var randomRange = 15;
             var skipChance = .3;
-            var sparkleChance = 1.0;
+            var sparkleChance = .5;
 
             var stars = new List<Star>();
             for (int column = 0; column < starColumns; column++)

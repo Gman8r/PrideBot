@@ -18,6 +18,6 @@ namespace PrideBot.Models
         [DontPushToDatabase]
         public decimal ScoreRatio { get; set; }
         [DontPushToDatabase]
-        public int PointsEarnedByUser { get; set; }
+        public decimal PointsEarnedByUser { get; set; }
     }
 }

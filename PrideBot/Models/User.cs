@@ -16,8 +16,8 @@ namespace PrideBot.Models
         [DontPushToDatabase]
         public DateTime RegisteredAt { get; set; }
         [DontPushToDatabase]
-        public int PointsEarned { get; set; }
+        public decimal PointsEarned { get; set; }
         [DontPushToDatabase]
-        public int PointsGivenToShips { get; set; }
+        public decimal PointsGivenToShips { get; set; }
     }
 }

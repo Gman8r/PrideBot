@@ -33,7 +33,7 @@ using PrideBot.Quizzes;
 using PrideBot.Game;
 using PrideBot.Registration;
 
-namespace PrideBot.Plushie
+namespace PrideBot.Plushies
 {
     public class PlushieMenuService
     {
@@ -58,8 +58,11 @@ namespace PrideBot.Plushie
             return await channel.SendMessageAsync(user.Mention, components: components?.Build());
         }
 
-        //public async Task<EmbedBuilder> GenerateEmbedAsync()
+        //public async Task<EmbedBuilder> GenerateEmbedAsync(IGuildUser user)
         //{
+        //    var embed = EmbedHelper.GetEventEmbed(user, config)
+        //        .WithTitle("Plushies 🧸")
+        //        .WithDescription(DialogueDict.Get("PLUSHIE_MENU_DESCRIPTION"))
 
         //}
 

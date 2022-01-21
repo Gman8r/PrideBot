@@ -22,7 +22,7 @@ using PrideBot.Game;
 using PrideBot.Quizzes;
 using PrideBot.Events;
 using Discord.Interactions;
-using PrideBot.Plushie;
+using PrideBot.Plushies;
 
 namespace PrideBot.Modules
 {

@@ -20,7 +20,7 @@ using PrideBot.Models;
 using PrideBot.Repository;
 using PrideBot.Quizzes;
 using PrideBot.Game;
-using PrideBot.Plushie;
+using PrideBot.Plushies;
 
 namespace PrideBot.Modules
 {
@@ -31,13 +31,15 @@ namespace PrideBot.Modules
         readonly ModelRepository repo;
         readonly IConfigurationRoot config;
         readonly DiscordSocketClient client;
-        readonly PlushieMenuService plushieService;
+        readonly PlushieMenuService menuService;
+        readonly PlushieService plushieService;
 
-        public PlushieModule(ModelRepository modelRepository, IConfigurationRoot config, DiscordSocketClient client, PlushieMenuService plushieService)
+        public PlushieModule(ModelRepository modelRepository, IConfigurationRoot config, DiscordSocketClient client, PlushieMenuService plushieMenuService, PlushieService plushieService)
         {
             this.repo = modelRepository;
             this.config = config;
             this.client = client;
+            this.menuService = plushieMenuService;
             this.plushieService = plushieService;
         }
 
@@ -48,7 +50,18 @@ namespace PrideBot.Modules
         //[ValidEventPeriods(EventPeriod.DuringEvent)]
         public async Task Plushie()
         {
-            await plushieService.PostPlushieMenuAsync(Context.User as IGuildUser, Context.Channel, new List<UserPlushie>());
+            await menuService.PostPlushieMenuAsync(Context.User as IGuildUser, Context.Channel, new List<UserPlushie>());
+        }
+
+        [Command("getplushie")]
+        [Summary("Get da plushie")]
+        //[RequireRegistration]
+        //[RequireSingleSession]
+        //[ValidEventPeriods(EventPeriod.DuringEvent)]
+        public async Task DrawPlushie()
+        {
+            using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
+            await plushieService.DrawPlushie(connection, Context.Channel, null);
         }
     }
 }

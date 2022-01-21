@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace PrideBot.Plushie
+namespace PrideBot.Plushies
 {
     [Flags]
     public enum PlushieContext

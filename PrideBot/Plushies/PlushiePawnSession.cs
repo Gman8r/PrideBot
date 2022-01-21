@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PrideBot.Plushie
+namespace PrideBot.Plushies
 {
     class PlushiePawnSession : Session
     {

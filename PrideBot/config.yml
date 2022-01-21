@@ -2,7 +2,8 @@
 prefixes:
     - '!'
 status: 🏳‍🌈
-eventmonth: 6
+eventstart: 2022-02-01
+eventend: 2022-02-14
 eventcolor: 0xB00B69 # not sure if used
 firstquizstreakday: 11
 chatsessionmessages: 5

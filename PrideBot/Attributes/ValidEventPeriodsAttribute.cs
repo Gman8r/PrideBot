@@ -27,12 +27,13 @@ namespace PrideBot
                 || (context.User is SocketGuildUser gUser && gUser.GuildPermissions.Administrator))
                 return Task.FromResult(PreconditionResult.FromSuccess());
             var month = DateTime.Now.Month;
-            var eventMonth = int.Parse(config["eventmonth"]);
-            if (month < eventMonth && ValidPeriods.HasFlag(EventPeriod.BeforeEvent))
+            var eventStart = DateTime.Parse(config["eventstart"]);
+            var eventEnd = DateTime.Parse(config["eventend"]);
+            if (DateTime.Now < eventStart && ValidPeriods.HasFlag(EventPeriod.BeforeEvent))
                 return Task.FromResult(PreconditionResult.FromSuccess());
-            else if (month == eventMonth && ValidPeriods.HasFlag(EventPeriod.DuringEvent))
+            else if ((DateTime.Now > eventStart && DateTime.Now < eventEnd) && ValidPeriods.HasFlag(EventPeriod.DuringEvent))
                 return Task.FromResult(PreconditionResult.FromSuccess());
-            else if (month > eventMonth && ValidPeriods.HasFlag(EventPeriod.AfterEvent))
+            if (DateTime.Now > eventStart && ValidPeriods.HasFlag(EventPeriod.AfterEvent))
                 return Task.FromResult(PreconditionResult.FromSuccess());
 
             return Task.FromResult(PreconditionResult.FromError(DialogueDict.Get("ERROR_WRONG_TIME")));

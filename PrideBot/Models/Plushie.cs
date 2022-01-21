@@ -1,4 +1,4 @@
-﻿using PrideBot.Plushie;
+﻿using PrideBot.Plushies;
 using System;
 using System.Collections.Generic;
 using System.Text;

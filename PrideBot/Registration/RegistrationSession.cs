@@ -46,7 +46,15 @@ namespace PrideBot.Registration
             await connection.OpenAsync();
 
             dbUserShips = new UserShipCollection();
-            dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
+            try
+            {
+
+                dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
+            }
+            catch (Exception e)
+            {
+                var b = 0;
+            }
             if (dbUser != null)
                 dbUserShips = await repo.GetUserShipsAsync(connection, dbUser);
             userHasRegistered = dbUser.ShipsSelected;
@@ -235,14 +243,16 @@ namespace PrideBot.Registration
             // Determine what bypasses are possible
             var canSkip = tier != UserShipTier.Primary || userHasRegistered || !isNewShip;
 
-            ComponentBuilder skipComponents = null;
+            ComponentBuilder shipChooseComponents = new ComponentBuilder()
+                .WithButton("Type Your Pairing as [Character One X Character Two]",
+                emote: new Emoji("ℹ"), style: ButtonStyle.Secondary, customId: "TEXTINSTRUCTIONS", disabled: true);
+
             if (canSkip)
             {
-                skipComponents = new ComponentBuilder();
                 if (!isNewShip)
-                    skipComponents.WithButton($"Just Configure The Hearts", "SKIP",
+                    shipChooseComponents.WithButton($"Just Configure The Hearts", "SKIP",
                         style: ButtonStyle.Secondary, emote: SkipEmote);
-                skipComponents.WithButton(isNewShip ? $"Skip Adding a {tier} Pair For Now" : $"Leave This Pairing As Is", "SKIPSHIP",
+                shipChooseComponents.WithButton(isNewShip ? $"Skip Adding a {tier} Pair For Now" : $"Leave This Pairing As Is", "SKIPSHIP",
                     style: ButtonStyle.Secondary, emote: new Emoji("⏩"));
             }
 
@@ -256,7 +266,7 @@ namespace PrideBot.Registration
             {
                 var imageFile = await GenerateShipImage(dbUser, dbUserShips, highlightTier: (int)tier);
                 embed.WithAttachedImageUrl(imageFile);
-                response = await SendAndAwaitResponseAsync(file: imageFile, embed: embed, components: skipComponents);
+                response = await SendAndAwaitResponseAsync(file: imageFile, embed: embed, components: shipChooseComponents);
 
                 // Determine if skipping (whole ship or just to heart config)
                 var interactionId = response.InteractionResponse?.Data.CustomId ?? "";
@@ -484,7 +494,7 @@ namespace PrideBot.Registration
                 for (int i = 0; i < emotes.Count; i++)
                 {
                     var emote = emotes[i];
-                    selectMenuList.Add(new SelectMenuOptionBuilder($"Choose Background {i + 1}", i.ToString(),
+                    selectMenuList.Add(new SelectMenuOptionBuilder($"Preview Background {i + 1}", i.ToString(),
                         emote: emote));
                 }
                 var components = new ComponentBuilder()

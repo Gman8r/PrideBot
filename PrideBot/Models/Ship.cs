@@ -27,7 +27,7 @@ namespace PrideBot.Models
         [DontPushToDatabase]
         public string Character2First { get; set; }
         [DontPushToDatabase]
-        public int PointsEarned { get; set; }
+        public decimal PointsEarned { get; set; }
         [DontPushToDatabase]
         public int Supporters { get; set; }
         [DontPushToDatabase]
