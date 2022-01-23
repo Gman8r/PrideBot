@@ -10,7 +10,8 @@ namespace PrideBot.Models
         [PrimaryKey]
         [DontPushToDatabase]
         public string PlushieId { get; set; }
-        public bool Name { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
         public PlushieContext Context { get; set; }
         public decimal Weight { get; set; }
     }

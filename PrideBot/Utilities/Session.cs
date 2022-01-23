@@ -161,6 +161,10 @@ namespace PrideBot
                     .WithDescription(cancellationMessage);
                 await channel.SendMessageAsync(embed: embed.Build());
             }
+            catch (CommandException e)
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 if (e.Message.Contains("50007"))

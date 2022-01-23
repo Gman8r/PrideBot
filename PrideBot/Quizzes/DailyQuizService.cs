@@ -80,9 +80,9 @@ namespace PrideBot.Quizzes
                         continue;
 
                     // last 15 minutes of day, quiz should be closed
-                    var isEndOfDay = GameHelper.GetQuizDay(DateTime.Now.AddMinutes(QuizCancelBufferMinutes)) != GameHelper.GetQuizDay();
+                    var isEndOfDay = GameHelper.GetEventDay(DateTime.Now.AddMinutes(QuizCancelBufferMinutes)) != GameHelper.GetEventDay();
 
-                    if (quizSettings.open && (isEndOfDay || quizSettings.day != GameHelper.GetQuizDay()))
+                    if (quizSettings.open && (isEndOfDay || quizSettings.day != GameHelper.GetEventDay()))
                     {
                         if (quizSettings.open)
                         {
@@ -93,7 +93,7 @@ namespace PrideBot.Quizzes
                     {
                         if (!quizSettings.open)
                         {
-                            await OpenQuizAsync(GameHelper.GetQuizDay());
+                            await OpenQuizAsync(GameHelper.GetEventDay());
                         }
                     }
                 }

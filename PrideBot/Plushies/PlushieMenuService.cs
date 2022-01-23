@@ -40,11 +40,15 @@ namespace PrideBot.Plushies
 
         readonly IConfigurationRoot config;
         readonly ShipImageGenerator shipImageGenerator;
+        readonly PlushieImageService imageService;
+        public ModelRepository repo;
 
-        public PlushieMenuService(IConfigurationRoot config, ShipImageGenerator shipImageGenerator)
+        public PlushieMenuService(IConfigurationRoot config, ShipImageGenerator shipImageGenerator, PlushieImageService imageService, ModelRepository repo)
         {
             this.config = config;
             this.shipImageGenerator = shipImageGenerator;
+            this.imageService = imageService;
+            this.repo = repo;
         }
 
         string GetCustomId(bool isButton, ulong userId, int selectedPlushieId, PlushieAction action, string imageState)
@@ -52,28 +56,47 @@ namespace PrideBot.Plushies
             return $"PLUSHMENU.{(isButton ? "B" : "S")}:{userId},{selectedPlushieId},{(int)action},{imageState}";
         }
 
-        public async Task<IUserMessage> PostPlushieMenuAsync(IGuildUser user, IMessageChannel channel, IEnumerable<UserPlushie> userPlushies)
+        public async Task<IUserMessage> PostPlushieMenuAsync(SqlConnection connection, IGuildUser user, IMessageChannel channel)
         {
-            var components = GenerateComponents(user.Id, 0, "0.1.2.3.4.5");
-            return await channel.SendMessageAsync(user.Mention, components: components?.Build());
+            var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, user.Id.ToString());
+            var components = await GenerateComponentsAsync(connection, userPlushies, user.Id, 0, string.Join(".", userPlushies.Select(a => a.UserPlushieId)));
+            var embedData = await  GenerateEmbedAsync(user, userPlushies);
+            var embed = embedData.Item1;
+            var file = embedData.Item2;
+            if (file != null)
+                return await channel.SendFileAsync(file.Stream, file.FileName, user.Mention, embed: embed.Build(), components: components?.Build());
+            else
+                return await channel.SendMessageAsync(user.Mention, embed: embed.Build(), components: components?.Build());
         }
 
-        //public async Task<EmbedBuilder> GenerateEmbedAsync(IGuildUser user)
-        //{
-        //    var embed = EmbedHelper.GetEventEmbed(user, config)
-        //        .WithTitle("Plushies 🧸")
-        //        .WithDescription(DialogueDict.Get("PLUSHIE_MENU_DESCRIPTION"))
+        public async Task<(EmbedBuilder, MemoryFile)> GenerateEmbedAsync(IGuildUser user, IEnumerable<UserPlushie> userPlushies, string overrideImageUrl = null)
+        {
+            var imageFile = userPlushies.Any() && overrideImageUrl == null
+                ? await imageService.WritePlushieCollectionImageAsync(userPlushies)
+                : null;
+            var embed = EmbedHelper.GetEventEmbed(user, config)
+                .WithTitle("Plushies 🧸")
+                .WithDescription(DialogueDict.Get(userPlushies.Any() ? "PLUSHIE_MENU_DESCRIPTION" : "PLUSHIE_MENU_DESCRIPTION_EMPTY"));
+            if (overrideImageUrl != null)
+                embed.WithImageUrl(overrideImageUrl);
+            else
+                embed.WithAttachedImageUrl(imageFile);
+            foreach (var plushie in userPlushies)
+            {
+                embed.AddField($"{plushie.Name} ({plushie.CharacterName})", plushie.Description);
+            }
+            return (embed, imageFile);
 
-        //}
+        }
 
-        public ComponentBuilder GenerateComponents(ulong userId, int selectedPlushieId, string imageState)
+        public async Task<ComponentBuilder> GenerateComponentsAsync(SqlConnection connection, IEnumerable<UserPlushie> userPlushies, ulong userId, int selectedPlushieId, string imageState)
         {
             var cBuilder = new ComponentBuilder();
             cBuilder.ActionRows = new List<ActionRowBuilder>();
 
             // Dropdown
             var dropdownBuilder = new ActionRowBuilder();
-            if (true)   // If any plushies available
+            if (userPlushies.Any())   // If any plushies available
             {
                 var chooseMenu = new SelectMenuBuilder()
                 {
@@ -83,15 +106,14 @@ namespace PrideBot.Plushies
                 };
 
                 // Options
-                for (int i = 1; i <= 6; i++)
+                foreach (var plushie in userPlushies)
                 {
                     chooseMenu.AddOption(new SelectMenuOptionBuilder()
                     {
-                        Label = "Your Plushie #" + i.ToString(),
-                        Description = "Reimu Hakurei",
-                        Emote = EmoteHelper.GetNumberEmote(i),
-                        IsDefault = selectedPlushieId == i,
-                        Value = i.ToString()
+                        Label = plushie.CharacterName,
+                        Description = plushie.Name,
+                        IsDefault = selectedPlushieId == plushie.UserPlushieId,
+                        Value = plushie.UserPlushieId.ToString()
                     });
                 }
                 dropdownBuilder.AddComponent(chooseMenu.Build());
@@ -138,8 +160,10 @@ namespace PrideBot.Plushies
             // Draw and misc buttons
             var navigationRowBuilder = new ActionRowBuilder();
             // Draw
-            var isCoolownOver = true;
-            var hasRoom = true;
+            var isCoolownOver = await repo.CanUserDrawPlushieAsync(connection, userId.ToString(), GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay() : 0); ;
+            var hasRoom = isCoolownOver
+               ? await repo.CanUserReceivePlushieAsync(connection, userId.ToString())
+               : false;
             navigationRowBuilder.AddComponent(new ButtonBuilder()
             {
                 Style = ButtonStyle.Success,
@@ -149,7 +173,8 @@ namespace PrideBot.Plushies
                         ? "Free Some Room To Get More Plushies!"
                         : "Get A New Plushie!")
                     : "Get Another Plushie Tomorrow!",
-                CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Draw, imageState)
+                CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Draw, imageState),
+                IsDisabled = !isCoolownOver || !hasRoom
             }.Build());
             // Bring to bottom
             navigationRowBuilder.AddComponent(new ButtonBuilder()

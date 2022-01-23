@@ -67,25 +67,6 @@ namespace PrideBot.Modules
             await Context.Channel.SendFileAsync(stream, "yuriko.gif");
         }
 
-        [Command("postteaser")]
-        [Alias("postteaser")]
-        public async Task PostTeaser()
-        {
-            var gyn = Context.Client.GetGyn(config);
-            var announcementsChannel = gyn.GetChannelFromConfig(config, "announcementschannel") as SocketTextChannel;
-            var webhook = (await announcementsChannel.GetWebhooksAsync())
-                .FirstOrDefault(a => a.Creator.Id == Context.Client.CurrentUser.Id);
-            if (webhook == null)
-            {
-                var imageStream = new MemoryStream(await File.ReadAllBytesAsync("black.png"));
-                imageStream.Seek(0, SeekOrigin.Begin);
-                webhook = await announcementsChannel.CreateWebhookAsync("A Rift Has Opened", imageStream);
-            }
-
-            var client = new DiscordWebhookClient(webhook);
-            await client.SendFileAsync("whosthatpokemon.gif", "@everyone");
-        }
-
         [Command("refreshleaderboard")]
         [Alias("updateleaderboard")]
         public async Task RefreshLeaderboard()

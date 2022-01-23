@@ -23,6 +23,7 @@ using PrideBot.Quizzes;
 using PrideBot.Events;
 using Discord.Interactions;
 using PrideBot.Plushies;
+using Microsoft.Data.SqlClient;
 
 namespace PrideBot.Modules
 {
@@ -31,13 +32,15 @@ namespace PrideBot.Modules
         private readonly IConfigurationRoot config;
         private readonly IServiceProvider provider;
         private readonly ModelRepository repo;
-        private readonly PlushieMenuService plushieService;
+        private readonly PlushieMenuService plushieMenuService;
+        private readonly PlushieService plushieService;
 
-        public PlushieInteractionModule(IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, PlushieMenuService plushieService)
+        public PlushieInteractionModule(IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, PlushieMenuService plushieMenuService, PlushieService plushieService)
         {
             this.config = config;
             this.provider = provider;
             this.repo = repo;
+            this.plushieMenuService = plushieMenuService;
             this.plushieService = plushieService;
         }
 
@@ -58,12 +61,18 @@ namespace PrideBot.Modules
             var action = (PlushieAction)int.Parse(actionStr);
             var selectedPlushieId = int.Parse(selectedIdStr);
 
+            var message = (Context.Interaction as SocketMessageComponent).Message;
             var repostAction = RepostAction.Edit;
+            using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
             switch (action)
             {
                 case PlushieAction.Use:
                     await Context.Interaction.FollowupAsync("bababa u used it");
                     selectedPlushieId = 0;
+                    break;
+                case PlushieAction.Draw:
+                    await message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build());
+                    await plushieService.DrawPlushie(connection, Context.Channel, Context.Interaction.User as SocketUser, Context.Interaction);
                     break;
                 case PlushieAction.Pawn:
 
@@ -92,7 +101,9 @@ namespace PrideBot.Modules
                     break;
             }
 
-            await HandleUpdateAsync(selectedPlushieId, imageState, repostAction);
+            var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, Context.User.Id.ToString());
+            await HandleUpdateAsync(connection, userPlushies, selectedPlushieId, imageState, repostAction);
+            connection?.Close();
         }
 
         // Handle select menu in plushie menu
@@ -106,21 +117,62 @@ namespace PrideBot.Modules
             var oldSelectedPlushieId = int.Parse(oldSelectedIdStr);
             var selectedPlushieId = int.Parse(selectedPlushieIds.FirstOrDefault() ?? "0");
 
-            await HandleUpdateAsync(selectedPlushieId, imageState, RepostAction.Edit);
+            using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
+            var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, Context.User.Id.ToString());
+            if (!userPlushies.Any(a => a.UserPlushieId == selectedPlushieId))
+                selectedPlushieId = 0;
+
+
+            await HandleUpdateAsync(connection, userPlushies, selectedPlushieId, imageState, RepostAction.Edit);
         }
 
-        async Task HandleUpdateAsync(int selectedId, string imageState, RepostAction repostAction)
+        async Task HandleUpdateAsync(SqlConnection connection, IEnumerable<UserPlushie> userPlushies, int selectedPlushieId, string imageState, RepostAction repostAction)
         {
-            // TODO check image state and determine whether to edit image, then replace image state
-
-            var message = (Context.Interaction as SocketMessageComponent).Message;
             if (repostAction != RepostAction.DontPost)
             {
-                var components = plushieService.GenerateComponents(Context.User.Id, selectedId, imageState);
+                var message = (Context.Interaction as SocketMessageComponent).Message;
+
+                // TODO check image state and determine whether to edit image, then replace image state
+                var newImageState = string.Join(".", userPlushies.Select(a => a.UserPlushieId));
+                var overrideImageFile = newImageState.Equals(imageState)
+                    ? (message.Embeds.FirstOrDefault().Image.HasValue ? message.Embeds.FirstOrDefault().Image.Value.Url : null)
+                    : null;
+                var embedData = await plushieMenuService.GenerateEmbedAsync(Context.User as IGuildUser, userPlushies, overrideImageFile);
+                var embed = embedData.Item1;
+                var file = embedData.Item2;
+                imageState = newImageState;
+                
+                
+                var components = await plushieMenuService.GenerateComponentsAsync(connection, userPlushies, Context.User.Id, selectedPlushieId, imageState);
                 if (repostAction == RepostAction.Edit)
-                    await message.ModifyAsync(a => a.Components = components?.Build());
+                {
+                    if (file != null)
+                    {
+                        var attachment = new FileAttachment(file.Stream, file.FileName);
+                        await message.ModifyAsync(a =>
+                        {
+                            a.Components = components?.Build();
+                            a.Embed = embed.Build();
+                            a.Attachments = new List<FileAttachment>() { attachment };
+                        });
+                    }
+                    else
+                    {
+                        await message.ModifyAsync(a =>
+                        {
+                            a.Components = components?.Build();
+                            a.Embed = embed.Build();
+                            a.Attachments = new List<FileAttachment>();
+                        }); 
+                    }
+                }
                 else if (repostAction == RepostAction.Post)
-                    await Context.Channel.SendMessageAsync(message.Content, components: components?.Build());
+                {
+                    if (file != null)
+                        await Context.Channel.SendFileAsync(file.Stream, file.FileName, message.Content, embed: embed.Build(), components: components?.Build());
+                    else
+                        await Context.Channel.SendMessageAsync(message.Content, embed: embed.Build(), components: components?.Build());
+                }
             }
         }
 

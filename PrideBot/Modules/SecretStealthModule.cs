@@ -60,6 +60,23 @@ namespace PrideBot.Modules
             await ReplyResultAsync("Donnnneeeeee!");
         }
 
+        //[Command("postteaser")]
+        //[Alias("postteaser")]
+        //public async Task PostTeaser(ITextChannel channel)
+        //{
+        //    var webhook = (await channel.GetWebhooksAsync())
+        //        .FirstOrDefault(a => a.Creator.Id == Context.Client.CurrentUser.Id);
+        //    if (webhook == null)
+        //    {
+        //        var imageStream = new MemoryStream(await File.ReadAllBytesAsync("black.png"));
+        //        imageStream.Seek(0, SeekOrigin.Begin);
+        //        webhook = await channel.CreateWebhookAsync("A Rift Has Opened", imageStream);
+        //    }
+
+        //    var client = new DiscordWebhookClient(webhook);
+        //    await client.SendFileAsync("whosthatpokemon.gif", "@everyone");
+        //}
+
         async Task ReapplyBans(SocketGuild guild)
         {
             var dataStr = await File.ReadAllTextAsync("guild.json");

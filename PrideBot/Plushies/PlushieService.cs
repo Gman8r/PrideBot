@@ -41,30 +41,21 @@ namespace PrideBot.Plushies
         readonly IConfigurationRoot config;
         readonly ModelRepository repo;
         readonly PlushieImageService imageService;
+        readonly DiscordSocketClient client;
 
-        public PlushieService(IConfigurationRoot config, ModelRepository repo, PlushieImageService imageService)
+        public PlushieService(IConfigurationRoot config, ModelRepository repo, PlushieImageService imageService, DiscordSocketClient client)
         {
             this.config = config;
             this.repo = repo;
             this.imageService = imageService;
+            this.client = client;
         }
 
-        public async Task DrawPlushie(SqlConnection connection, IMessageChannel channel, IDiscordInteraction interaction = null)
+
+        public async Task DrawPlushie(SqlConnection connection, IMessageChannel channel, SocketUser user, IDiscordInteraction interaction = null)
         {
-            //var chr = await repo.GetCharacterAsync(connection, "REIMU");
-            var rotation = -20m + (decimal)(new Random(DateTime.Now.Millisecond).NextDouble() * 40);
-            //rotation *= 3;
-            var userPlushie = new UserPlushie()
-            {
-                CharacterId = "REIMU",
-                Rotation = rotation
-            };
-            Console.WriteLine(rotation);
-            var imageFile = await imageService.WritePlushieImageAsync(userPlushie);
-            if (interaction != null)
-                await interaction.FollowupWithFileAsync(imageFile.Stream, imageFile.FileName);
-            else
-                await channel.SendFileAsync(imageFile.Stream, imageFile.FileName);
+            var session = new PlushieDrawSession(channel, user, config, repo, client, TimeSpan.FromMinutes(10), null, imageService, interaction);
+            await session.PerformSessionAsync();
         }
 
     }

@@ -29,14 +29,78 @@ namespace PrideBot.Plushies
 
         public async Task<MemoryFile> WritePlushieImageAsync(UserPlushie userPlushie)
         {
-            using var charImage = new MagickImage(await File.ReadAllBytesAsync($"Assets/CharacterSprites/{userPlushie.CharacterId}.png"));
+            using var image = await GetPlushieImage(userPlushie.CharacterId, userPlushie.Rotation);
+            return await image.WriteToMemoryFileAsync("plushie");
+        }
+
+        public async Task<MemoryFile> WritePlushieImageAsync(UserPlushieChoice userPlushieChoice)
+        {
+            using var image = await GetPlushieImage(userPlushieChoice.CharacterId, userPlushieChoice.Rotation);
+            return await image.WriteToMemoryFileAsync("plushie");
+        }
+
+        public Task<MemoryFile> WritePlushieCollectionImageAsync(IEnumerable<UserPlushie> userPlushies)
+            => WritePlushieCollectionImageInternalAsync(userPlushies.Select(a => (a.CharacterId, a.Rotation)));
+
+        public Task<MemoryFile> WritePlushieCollectionImageAsync(IEnumerable<UserPlushieChoice> userPlushieChoices)
+            => WritePlushieCollectionImageInternalAsync(userPlushieChoices.Select(a => (a.CharacterId, a.Rotation)));
+
+        // input collection is (character id, rotation)
+        async Task<MemoryFile> WritePlushieCollectionImageInternalAsync(IEnumerable<(string, decimal)> plushieData)
+        {
+            using var image = await GetPlushieCollectionImage(plushieData);
+            return await image.WriteToMemoryFileAsync("plushies");
+        }
+
+        async Task<MagickImage> GetPlushieCollectionImage(IEnumerable<(string, decimal)> plushieData)
+        {
+            // change rotations
+            var flip = plushieData.FirstOrDefault().Item2 > 0;
+            var dataArray = plushieData.ToArray();
+            for (int i = 0; i < dataArray.Length; i++)
+            {
+            }
+
+            var imageTasks = new List<Task<MagickImage>>();
+            foreach (var data in plushieData)
+            {
+                var rotation = (decimal)Math.Abs(data.Item2) * (flip ? -1m : 1m);
+                imageTasks.Add(GetPlushieImage(data.Item1, rotation));
+                flip = !flip;
+            }
+            await Task.WhenAll(imageTasks);
+            var images = imageTasks
+                .Select(a => a.Result)
+                .ToArray();
+
+            // Create a blank image and composite every plushie image over it
+            var squeezeFactor = 96;
+            var resultImage = new MagickImage(MagickColors.Transparent, images.Sum(a => a.Width) - squeezeFactor * (images.Count() - 1), images.Max(a => a.Height));
+            for (int i = 0; i < images.Length; i++)
+            {
+                var image = images[i];
+                resultImage.Composite(image, Gravity.Northwest, images.Take(i).Sum(a => a.Width) - (squeezeFactor * i), resultImage.Height - image.Height, CompositeOperator.Over);
+            }
+
+            foreach (var image in images)
+            {
+                image.Dispose();
+            }
+            return resultImage;
+        }
+
+        async Task<MagickImage> GetPlushieImage(string characterId, decimal rotation)
+        {
+            var file = $"Assets/CharacterSprites/{characterId}.png";
+            if (!File.Exists(file))
+                file = $"Assets/CharacterSprites/DEFAULT.png";
+            var charImage = new MagickImage(await File.ReadAllBytesAsync(file));
             charImage.BackgroundColor = MagickColors.Transparent;
             charImage.Modulate(new Percentage(115), new Percentage(90), new Percentage(100));
-            charImage.Rotate((double)userPlushie.Rotation);
-            charImage.Extent(48, 48, Gravity.Center, MagickColors.Transparent);
-            charImage.InterpolativeResize(charImage.Width * 16, charImage.Height * 16, PixelInterpolateMethod.Nearest);
-
-            return await charImage.WriteToMemoryFileAsync("plushie");
+            charImage.Rotate((double)rotation);
+            charImage.Extent(48, 35, Gravity.Center, MagickColors.Transparent);
+            charImage.InterpolativeResize(charImage.Width * 4, charImage.Height * 4, PixelInterpolateMethod.Nearest);
+            return charImage;
         }
     }
 }
