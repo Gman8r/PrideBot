@@ -234,13 +234,13 @@ namespace PrideBot.Quizzes
                 overridePoints = pAchievement.DefaultScore;
             }
 
-            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, titleUrl: quizOpenedUrl, overridePoints: overridePoints);
+            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, DateTime.Now, titleUrl: quizOpenedUrl, overridePoints: overridePoints);
             var previousLog = await repo.GetLastQuizLogForUserAsync(connection, user.Id.ToString(), quizLog.Day.ToString());
             // Streak bonus
             if (quizLog.Correct && !user.IsGYNSage(config) && quizLog.Guesses == 1 && quizLog.Day >= int.Parse(config["firstquizstreakday"]))
             {
                 if (previousLog != null && previousLog.Correct && previousLog.Guesses == 1)
-                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "QUIZ_STREAK", client.CurrentUser, titleUrl: quizOpenedUrl);
+                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "QUIZ_STREAK", client.CurrentUser, DateTime.Now, titleUrl: quizOpenedUrl);
             }
 
             var guildUser = gyn.GetUser(user.Id);
@@ -283,7 +283,7 @@ namespace PrideBot.Quizzes
                 await repo.UpdateQuizLogAsync(connection, quizLog);
 
                 var achievement = await repo.GetAchievementAsync(connection, "QUIZ_PARTICIPATE");
-                Cancel(DialogueDict.Get("QUIZ_TIMEOUT", correctChoice, user.Queen(client), achievement.DefaultScore)
+                MarkCancelled(DialogueDict.Get("QUIZ_TIMEOUT", correctChoice, user.Queen(client), achievement.DefaultScore)
                     + "\n\n" + DialogueDict.Get("QUIZ_CLOSING"));
 
                 await Task.Delay(500);

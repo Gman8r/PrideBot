@@ -21,6 +21,7 @@ namespace PrideBot.Models
         public string PostGuildId { get; set; }
         public string PostChannelId { get; set; }
         public string PostMessageId { get; set; }
+        public decimal BonusMult { get; set; }
 
         public string GetMessageUrl() =>
             (PostMessageId == null || PostChannelId == null || PostGuildId == null)

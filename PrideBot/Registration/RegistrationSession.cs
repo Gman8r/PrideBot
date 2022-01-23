@@ -139,14 +139,14 @@ namespace PrideBot.Registration
 
                 var achievementId = GameHelper.IsEventOccuring(config) ? "REGISTER" : "PREREGISTER";
                 var achievement = await repo.GetAchievementAsync(connection, achievementId);
-                await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser);
+                await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, DateTime.Now);
 
                 // Reward points from before user registered if needed
                 var storedPoints = await repo.GetUserNonRegPoints(connection, dbUser.UserId);
                 if (storedPoints > 0)
                 {
                     var pointsAchievement = await repo.GetAchievementAsync(connection, "STORED");
-                    await scoringService.AddAndDisplayAchievementAsync(connection, user, pointsAchievement, client.CurrentUser, overridePoints: storedPoints);
+                    await scoringService.AddAndDisplayAchievementAsync(connection, user, pointsAchievement, client.CurrentUser, DateTime.Now, overridePoints: storedPoints);
                 }
 
                 // Give registered role

@@ -545,10 +545,11 @@ namespace PrideBot.Modules
                 .Select(a => $"{gyn.GetUser(ulong.Parse(a.UserId)).Mention} ({(UserShipTier)a.Tier})")
                 .ToList();
             //$", **{a.PointsEarnedByUser} {EmoteHelper.SPEmote}** earned for them");
+            var shipRarenessMult = await repo.GetScoreBalanceMultForShip(connection, ship.ShipId, DateTime.Now, null);
 
             var desc = (ship.Supporters > 0 || ship.PointsEarned > 0)
                 ? DialogueDict.Get("SHIP_SCORES_DESC", ship.GetDisplayName(),
-                    ((int)ship.Place).ToString() + MathHelper.GetPlacePrefix((int)ship.Place).ToString(), ship.PointsEarned, supporterLines.Count())
+                    ((int)ship.Place).ToString() + MathHelper.GetPlacePrefix((int)ship.Place).ToString(), ship.PointsEarned, supporterLines.Count(), shipRarenessMult)
                 : DialogueDict.Get("SHIP_SCORES_NO_POINTS");
 
 

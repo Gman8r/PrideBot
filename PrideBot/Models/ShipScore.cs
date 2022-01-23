@@ -9,5 +9,7 @@ namespace PrideBot.Models
         [PrimaryKey]
         public string ShipId { get; set; }
         public int Tier { get; set; }
+        public decimal TierMult { get; set; }
+        public decimal BalanceMult { get; set; }
     }
 }

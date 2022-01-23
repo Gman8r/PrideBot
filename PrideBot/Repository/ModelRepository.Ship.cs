@@ -56,6 +56,14 @@ namespace PrideBot.Repository
         public async Task<decimal> GetScoreRatioForShipTierAsync(SqlConnection conn, UserShipTier tier)
             => (decimal)(await new SqlCommand($"select dbo.fnGetScoreRatioForTier({(int)tier})", conn).ExecuteScalarAsync());
 
+        public async Task<decimal> GetActiveSypportersForShipTierAsync(SqlConnection conn, string shipId, DateTime since, string forceIncludeUserId)
+            => (decimal)(await new SqlCommand($"select dbo.fnGetActiveSupporterCount('{shipId}', '{since}'," +
+                $" {(forceIncludeUserId == null ? "null" : $"'{forceIncludeUserId}'")})", conn).ExecuteScalarAsync());
+
+        public async Task<decimal> GetScoreBalanceMultForShip(SqlConnection conn, string shipId, DateTime since, string forceIncludeUserId)
+            => (decimal)(await new SqlCommand($"select dbo.fnGetBalanceMultForShip('{shipId}', '{since}'," +
+                $" {(forceIncludeUserId == null ? "null" : $"'{forceIncludeUserId}'")})", conn).ExecuteScalarAsync());
+
         public async Task SwapShipTiersAsync(SqlConnection conn, string userId, UserShipTier tier1, UserShipTier tier2)
         {
             var command = new SqlCommand("SP_SWAP_SHIP_TIERS", conn);

@@ -55,6 +55,8 @@ namespace PrideBot
             return r;
         }
 
+        public static bool Approximately(this decimal x, decimal y, decimal a) => x >= y - a && x <= y + a;
+
         public static string ToPercent(decimal d) => ((int)(d * 100)).ToString();
 
         public static string GetPlacePrefix(int num)

@@ -40,14 +40,14 @@ namespace PrideBot.Game
             return $"{((int)ts.TotalHours).ToString("D2")}:{ts.Minutes.ToString("D2")}:{ts.Seconds.ToString("D2")}";
         }
 
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, DateTime timestamp, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
         {
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
-            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, overridePoints, titleUrl, ignoreIfNotRegistered, ignoreCooldown, dontPing, reportChannel);
+            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, timestamp, overridePoints, titleUrl, ignoreIfNotRegistered, ignoreCooldown, dontPing, reportChannel);
         }
 
         // Returns True if score was applied in some way
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, DateTime timestamp, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
         {
             if (overridePoints > 999)
                 throw new CommandException("Max score for an achievement is 999, WHY ARE YOU EVEN DOING THIS??");
@@ -60,16 +60,17 @@ namespace PrideBot.Game
             var dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
             var pointsEarned = overridePoints == 0 ? achievement.DefaultScore : overridePoints;
 
-            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarned, approver.Id.ToString(), ignoreCooldown);
+            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarned, approver.Id.ToString(), timestamp, ignoreCooldown);
             var scoreId = dbResult.ScoreId;
             var errorCode = dbResult.errorCode;
             var cooldownExpires = dbResult.CooldownExpires;
 
             if (achievement.Log)
             {
+                var dbScore = await repo.GetScoreAsync(connection, scoreId);
                 var dbShipScores = (await repo.GetShipScoresAsync(connection, scoreId)).ToArray();
 
-                var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, pointsEarned, dbShipScores, await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, dbResult);
+                var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, dbScore, dbShipScores, await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, dbResult);
                 var text = user.Mention + " Achievement! " + achievement.Emoji;// + " Achievement!";// + " " + achievement.Emoji;
 
                 if (errorCode == ModelRepository.AddScoreError.CooldownViolated)
@@ -80,6 +81,8 @@ namespace PrideBot.Game
                 }
                 else
                     embed.Item1.Author = null;
+
+                embed.Item1.WithTimestamp(new DateTimeOffset(timestamp));
 
                 var channel = client.GetGyn(config)
                         .GetChannelFromConfig(config, "achievementschannel") as IMessageChannel;
@@ -104,7 +107,7 @@ namespace PrideBot.Game
             {
                 try
                 {
-                    await (await approver.CreateDMChannelAsync()).SendMessageAsync("Heyyy! Just making sure you fill in the value on the 1CC table for that achievement, 'kayyy?\n https://docs.google.com/spreadsheets/d/1vdAQ1QvBsuJViY8pftYxZXfEP8HWkCzzIf0IhSJCJcY/edit#gid=0");
+                    await reportChannel.SendMessageAsync("Heyyy mod person! Just making sure you fill in the value on the 1CC table for that achievement!\n https://docs.google.com/spreadsheets/d/1vdAQ1QvBsuJViY8pftYxZXfEP8HWkCzzIf0IhSJCJcY/edit#gid=0");
                 }
                 catch
                 {
@@ -118,7 +121,7 @@ namespace PrideBot.Game
         }
 
         // returns (embed, ship image file)
-        public async Task<(EmbedBuilder, MemoryFile)> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, decimal basePointsEarned, ShipScore[] dbShipScores, UserShipCollection dbUserShips, IUser approver,
+        public async Task<(EmbedBuilder, MemoryFile)> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, Score dbScore, ShipScore[] dbShipScores, UserShipCollection dbUserShips, IUser approver,
             string titleUrl = null, ModelRepository.AddScoreResult result = null)
         {
             var errorCode = result?.errorCode ?? ModelRepository.AddScoreError.None;
@@ -134,11 +137,22 @@ namespace PrideBot.Game
             switch (errorCode)
             {
                 case (ModelRepository.AddScoreError.None):
-                    var scoreStr = "";
+                    
+                    // Base
+                    var scoreStr = $"💕 **{(int)Math.Round(dbScore.PointsEarned, 0)} Base**";
+                    if (!dbScore.BonusMult.Approximately(1.00m, .01m))
+                        scoreStr += $"  (x {dbScore.BonusMult} Plushie Effects)";
+
                     foreach (var shipScore in dbShipScores)
                     {
                         var userShip = dbUserShips.Get((UserShipTier)shipScore.Tier);
-                        scoreStr += $"{EmoteHelper.GetShipTierEmoji((UserShipTier)userShip.Tier)} **{shipScore.PointsEarned}** for **{userShip.GetDisplayName()}**\n";
+                        scoreStr += $"\n{EmoteHelper.GetShipTierEmoji((UserShipTier)userShip.Tier)} **{(int)Math.Round(shipScore.PointsEarned, 0)}** for **{userShip.GetDisplayName()}**";
+
+                        // Mults
+                        scoreStr += $"  (x{shipScore.TierMult} {(UserShipTier)shipScore.Tier})";
+                        scoreStr += $"  (x{shipScore.BalanceMult} Rarity)";
+                        if (!shipScore.BonusMult.Approximately(1.00m, .01m))
+                            scoreStr += $"  (x{shipScore.BonusMult} Plushie Effects)";
                     }
                     embed.AddField($"You feel your bond with your community grow stronger...\nYou've earned {EmoteHelper.SPEmote} !", scoreStr.Trim());
 
@@ -151,7 +165,7 @@ namespace PrideBot.Game
                     break;
 
                 case (ModelRepository.AddScoreError.UserNotRegistered):
-                    embed.Description += $"\n\n{ DialogueDict.Get("ACHIEVEMENT_NOT_REGISTERED", basePointsEarned, config.GetDefaultPrefix(), (client.GetGyn(config).GetChannelFromConfig(config, "ruleschannel") as ITextChannel).Mention)}";
+                    embed.Description += $"\n\n{ DialogueDict.Get("ACHIEVEMENT_NOT_REGISTERED", dbScore.PointsEarned, config.GetDefaultPrefix(), (client.GetGyn(config).GetChannelFromConfig(config, "ruleschannel") as ITextChannel).Mention)}";
                     break;
 
                 case (ModelRepository.AddScoreError.CooldownViolated):
@@ -209,7 +223,7 @@ namespace PrideBot.Game
 
 
                 await AddAndDisplayAchievementAsync(connection, user, achievement,
-                    reaction.User.IsSpecified ? reaction.User.Value : null, titleUrl: message.GetJumpUrl(), ignoreIfNotRegistered: false,
+                    reaction.User.IsSpecified ? reaction.User.Value : null, message.Timestamp.ToDateTime(), titleUrl: message.GetJumpUrl(), ignoreIfNotRegistered: false,
                     reportChannel: message.Channel);
 
                 await (message.AddReactionAsync(reaction.Emote));

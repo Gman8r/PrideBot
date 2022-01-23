@@ -38,6 +38,9 @@ namespace PrideBot
             return message;
         }
 
+        public static DateTime ToDateTime(this DateTimeOffset dto)
+            => DateTime.Now.AddMilliseconds((dto - DateTimeOffset.Now).TotalMilliseconds);
+
         public static string ConvertToErrorMessage(string message, bool isBotOwner)
         {
             var errorPrefix = isBotOwner ? "Insufficient, my lady. " : "Insufficient, sorry. ";

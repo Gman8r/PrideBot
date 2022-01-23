@@ -32,7 +32,7 @@ namespace PrideBot
 
         public IUser GetUser() => user;
         public bool IsCancelled { get; private set; }
-        public void Cancel(string message)
+        public void MarkCancelled(string message)
         {
             IsCancelled = true;
             cancellationMessage = message;
@@ -260,7 +260,7 @@ namespace PrideBot
             {
                 await Task.Delay(100);
                 if (DateTime.Now - startTime > timeout)
-                    Cancel(GetTimeoutMessage());
+                    MarkCancelled(GetTimeoutMessage());
                 if (IsCancelled)
                 {
                     throw new OperationCanceledException(cancellationMessage);
