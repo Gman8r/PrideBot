@@ -36,7 +36,6 @@ namespace PrideBot.Quizzes
         readonly LoggingService loggingService;
 
         SocketTextChannel quizChannel;
-        SocketTextChannel quizDiscussionChannel;
         SocketRole quizTakenRole;
         QuizSettings quizSettings;
 
@@ -70,7 +69,6 @@ namespace PrideBot.Quizzes
                 quizSettings = await GetQuizSettingsAsync();
                 var gyn = await client.AwaitGyn(config);
                 quizChannel = gyn.GetChannelFromConfig(config, "quizchannel") as SocketTextChannel;
-                quizDiscussionChannel = gyn.GetChannelFromConfig(config, "quizdiscussionchannel") as SocketTextChannel;
                 quizTakenRole = gyn.GetRoleFromConfig(config, "quiztakenrole");
 
                 while (true)
@@ -142,10 +140,13 @@ namespace PrideBot.Quizzes
                 .WithTitle("Daily Quiz Closed")
                 .WithDescription(DialogueDict.Get("DAILY_QUIZ_CLOSED", day));
 
+            var components = new ComponentBuilder()
+                .WithButton("💬 Discuss It!", $"QUIZ.D:{day},{-1}");
+
             quizSettings.open = false;
             await UpdateQuizSettingsAsync(quizSettings);
 
-            await quizChannel.SendMessageAsync(embed: embed.Build());
+            await quizChannel.SendMessageAsync(embed: embed.Build(), components: components.Build());
         }
 
 
@@ -159,13 +160,16 @@ namespace PrideBot.Quizzes
                 await member.RemoveRoleAsync(quizTakenRole);
             }
 
-            var oldPins = (await quizDiscussionChannel.GetPinnedMessagesAsync()).Select(msg => (msg.Channel, msg))
-                .Concat((await quizChannel.GetPinnedMessagesAsync()).Select(msg => (msg.Channel, msg)));
+            var oldPins = (await quizChannel.GetPinnedMessagesAsync()).Select(msg => (msg.Channel, msg));
             foreach (var pin in oldPins)
             {
                 var userMsg = await pin.Channel.GetMessageAsync(pin.msg.Id) as IUserMessage;
                 await userMsg.UnpinAsync();
             }
+
+            // TODO switch over
+            //var discussionThread = await quizChannel.CreateThreadAsync($"Quiz Discussion: Day {day}", ThreadType.PrivateThread, invitable: false);
+            var discussionThread = await quizChannel.CreateThreadAsync($"Quiz Discussion Day {day}", ThreadType.PublicThread);
 
             var quizzes = (await repo.GetQuizzesForDayAsync(connection, day.ToString())).ToList();
             var embed = EmbedHelper.GetEventEmbed(null, config, showUser: false)
@@ -173,8 +177,8 @@ namespace PrideBot.Quizzes
                 .WithDescription(DialogueDict.Get("DAILY_QUIZ_OPEN", day, config.GetDefaultPrefix()));
 
             var categoryField = new EmbedFieldBuilder()
-                .WithName("Hold")
-                .WithValue("Hold");
+                .WithName("PLACEHOLDER")
+                .WithValue("PLACEHOLDER");
             if (quizzes.Count() > 1)
             {
                 var fieldValue = "";
@@ -207,8 +211,10 @@ namespace PrideBot.Quizzes
             embed = GetQuizReviewEmbed(quizzes)
                 .WithTitle("Daily Quiz Review")
                 .WithDescription(DialogueDict.Get("DAILY_QUIZ_REVIEW", day));
-            var reviewMsg = await quizDiscussionChannel.SendMessageAsync(embed: embed.Build());
+            var reviewMsg = await discussionThread.SendMessageAsync(embed: embed.Build());
             await reviewMsg.PinAsync();
+
+
         }
 
         async Task<GuildSettings> GetGuildSettingsAsync(SqlConnection connection)

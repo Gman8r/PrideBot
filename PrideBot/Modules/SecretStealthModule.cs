@@ -35,6 +35,13 @@ namespace PrideBot.Modules
             this.commandHandler = commandHandler;
         }
 
+        [Command("lambda")]
+        [RequireContext(ContextType.Guild)]
+        public async Task What()
+        {
+            //var thread = await (Context.Channel as ITextChannel).CreateThreadAsync("robobot thread", ThreadType.PrivateThread, invitable: false);
+        }
+
         [Command("applyroles")]
         [RequireContext(ContextType.Guild)]
         public async Task Haha(params IGuildUser[] users)

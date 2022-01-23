@@ -45,7 +45,7 @@ namespace PrideBot
                             errorMessage = (errorReason.Substring("COMMANDEXCEPTION:".Count()));
                             if (errorMessage.StartsWith("EPHEMERAL:"))
                             {
-                                errorMessage = (errorReason.Substring("EPHEMERAL:".Count()));
+                                errorMessage = (errorMessage.Substring("EPHEMERAL:".Count()));
                                 ephemeral = true;
                             }
                         }

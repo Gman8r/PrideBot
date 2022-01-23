@@ -207,13 +207,19 @@ namespace PrideBot.Quizzes
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
 
             embed = GetEmbed();
-            embed.Title = correct ? $"✅ Kuh-rect!! ({new List<string>() { "Zeroth", "First", "Second", "Third" }[guesses]} Attempt)" : "❌ Incorrect";
+            embed.Title = correct
+                ? $"✅ Kuh-rect!! ({new List<string>() { "Zeroth", "First", "Second", "Third" }[guesses]} Attempt)"
+                : "❌ Incorrect";
             if (correct)
                 embed.Description = DialogueDict.Get($"QUIZ_CORRECT_{guesses}", achievement.DefaultScore);
             else
                 embed.Description = DialogueDict.Get($"QUIZ_INCORRECT", correctChoice, user.Queen(client), achievement.DefaultScore);
             embed.Description += "\n\n" + DialogueDict.Get("QUIZ_CLOSING");
-            await channel.SendMessageAsync(embed: embed.Build());
+
+            components = new ComponentBuilder()
+                .WithButton("💬 Discuss Today's Quiz!", $"QUIZ.D:{day},{chosenQuizIndex}");
+
+            await channel.SendMessageAsync(embed: embed.Build(), components: components.Build());
             await AddScoreAndFinish(connection, achievement);   
         }
 
@@ -240,21 +246,27 @@ namespace PrideBot.Quizzes
             if (quizLog.Correct && !user.IsGYNSage(config) && quizLog.Guesses == 1 && quizLog.Day >= int.Parse(config["firstquizstreakday"]))
             {
                 if (previousLog != null && previousLog.Correct && previousLog.Guesses == 1)
+                {
                     await scoringService.AddAndDisplayAchievementAsync(connection, user, "QUIZ_STREAK", client.CurrentUser, DateTime.Now, titleUrl: quizOpenedUrl);
+                    var embed = GetEmbed()
+                        .WithTitle("🔥 Streak!!")
+                        .WithDescription(DialogueDict.Get("QUIZ_STREAK"));
+                    await channel.SendMessageAsync(embed: embed.Build());
+                }
             }
 
-            var guildUser = gyn.GetUser(user.Id);
-            if (guildUser != null && availableQuizzes != null && availableQuizzes.Any())
-            {
-                await guildUser.AddRoleAsync(quizTakenRole);
-                //var msgText = DialogueDict.Get("DAILY_QUIZ_DISCUSSION_WELCOME", previousLog == null ? user.Mention : (guildUser.Nickname ?? guildUser.Username));
-                var msgText = DialogueDict.Get("DAILY_QUIZ_DISCUSSION_WELCOME", user.Mention);
-                if (availableQuizzes.Count > 1)
-                    msgText += "\n" + DialogueDict.Get("DAILY_QUIZ_DISCUSSION_CHOICE", chosenQuizIndex + 1, availableQuizzes[chosenQuizIndex].Category);
-                //if (previousLog == null)
-                //    msgText += "\n" + DialogueDict.Get("DAILY_QUIZ_DISCUSSION_REMINDER");
-                await discussionChannel.SendMessageAsync(msgText);//, allowedMentions: previousLog == null ? AllowedMentions.All : AllowedMentions.None);
-            }
+            //var guildUser = gyn.GetUser(user.Id);
+            //if (guildUser != null && availableQuizzes != null && availableQuizzes.Any())
+            //{
+            //    await guildUser.AddRoleAsync(quizTakenRole);
+            //    //var msgText = DialogueDict.Get("DAILY_QUIZ_DISCUSSION_WELCOME", previousLog == null ? user.Mention : (guildUser.Nickname ?? guildUser.Username));
+            //    var msgText = DialogueDict.Get("DAILY_QUIZ_DISCUSSION_WELCOME", user.Mention);
+            //    if (availableQuizzes.Count > 1)
+            //        msgText += "\n" + DialogueDict.Get("DAILY_QUIZ_DISCUSSION_CHOICE", chosenQuizIndex + 1, availableQuizzes[chosenQuizIndex].Category);
+            //    //if (previousLog == null)
+            //    //    msgText += "\n" + DialogueDict.Get("DAILY_QUIZ_DISCUSSION_REMINDER");
+            //    await discussionChannel.SendMessageAsync(msgText);//, allowedMentions: previousLog == null ? AllowedMentions.All : AllowedMentions.None);
+            //}
         }
 
         async Task RunTimer()
