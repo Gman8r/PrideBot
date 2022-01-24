@@ -144,9 +144,9 @@ namespace PrideBot.Plushies
                 plushieOptionRowBuilder.AddComponent(new ButtonBuilder()
                 {
                     Style = ButtonStyle.Secondary,
-                    Emote = new Emoji("🎁"),
-                    Label = "Give Away",
-                    CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Give, imageState)
+                    Emote = new Emoji("♻"),
+                    Label = "Trade",
+                    CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Trade, imageState)
                 }.Build());
                 // Clear selection
                 plushieOptionRowBuilder.AddComponent(new ButtonBuilder()

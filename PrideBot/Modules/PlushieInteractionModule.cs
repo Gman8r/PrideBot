@@ -34,14 +34,18 @@ namespace PrideBot.Modules
         private readonly ModelRepository repo;
         private readonly PlushieMenuService plushieMenuService;
         private readonly PlushieService plushieService;
+        private readonly DiscordSocketClient client;
+        private readonly PlushieImageService imageService;
 
-        public PlushieInteractionModule(IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, PlushieMenuService plushieMenuService, PlushieService plushieService)
+        public PlushieInteractionModule(IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, PlushieMenuService plushieMenuService, PlushieService plushieService, DiscordSocketClient client, PlushieImageService imageService)
         {
             this.config = config;
             this.provider = provider;
             this.repo = repo;
             this.plushieMenuService = plushieMenuService;
             this.plushieService = plushieService;
+            this.client = client;
+            this.imageService = imageService;
         }
 
         enum RepostAction
@@ -71,8 +75,13 @@ namespace PrideBot.Modules
                     selectedPlushieId = 0;
                     break;
                 case PlushieAction.Draw:
-                    await message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build());
+                    message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()).GetAwaiter();
                     await plushieService.DrawPlushie(connection, Context.Channel, Context.Interaction.User as SocketUser, Context.Interaction);
+                    break;
+                case PlushieAction.Trade:
+                    message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()).GetAwaiter();
+                    await plushieService.TradePlushieInSession(connection, Context.Channel, Context.Interaction.User as SocketUser, selectedPlushieId, provider, Context.Interaction);
+                    selectedPlushieId = 0;
                     break;
                 case PlushieAction.Pawn:
 

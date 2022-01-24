@@ -58,5 +58,12 @@ namespace PrideBot.Plushies
             await session.PerformSessionAsync();
         }
 
+        public async Task TradePlushieInSession(SqlConnection connection, IMessageChannel channel, SocketUser user, int selectedPlushieId1, IServiceProvider provider, IDiscordInteraction interaction = null)
+        {
+            var session = new PlushieTradeSession(channel, user, config, repo, client,
+                new TimeSpan(0, 10, 0), null, imageService, interaction, provider, connection, selectedPlushieId1);
+            await session.PerformSessionAsync();
+        }
+
     }
 }

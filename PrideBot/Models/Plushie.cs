@@ -14,5 +14,9 @@ namespace PrideBot.Models
         public string Description { get; set; }
         public PlushieContext Context { get; set; }
         public decimal Weight { get; set; }
+
+        [DontPushToDatabase]
+        // I am NOT adding this in everywhere so here
+        public bool Flip => (int)(Weight * 10m) % 2 == 0;
     }
 }

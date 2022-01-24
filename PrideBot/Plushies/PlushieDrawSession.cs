@@ -79,7 +79,7 @@ namespace PrideBot.Plushies
                 var choiceId = int.Parse(response.InteractionResponse.Data.Values.FirstOrDefault());
                 var choice = choices.FirstOrDefault(a => a.UserPlushieChoiceId == choiceId);
                 var newDay = GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay() : 0; // in case user waits around forever idk
-                var result = await repo.AttemptAddUserPlushieAsync(connection, userId, choice.PlushieId, choice.CharacterId, newDay, choice.Rotation, choiceId);
+                var result = await repo.AttemptAddUserPlushieAsync(connection, userId, null, userId, choice.PlushieId, choice.CharacterId, newDay, choice.Rotation, PlushieTransaction.Drawn, choiceId);
 
                 switch(result.Error)
                 {

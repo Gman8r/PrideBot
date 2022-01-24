@@ -40,6 +40,8 @@ namespace PrideBot.Modules
         public async Task What()
         {
             //var thread = await (Context.Channel as ITextChannel).CreateThreadAsync("robobot thread", ThreadType.PrivateThread, invitable: false);
+            //var user = Context.Guild.GetUser(253190116972036097);
+            //await thread.SendMessageAsync($"hi!! {user.Mention} hi!!!");
         }
 
         [Command("applyroles")]
@@ -69,7 +71,7 @@ namespace PrideBot.Modules
 
         //[Command("postteaser")]
         //[Alias("postteaser")]
-        //public async Task PostTeaser(ITextChannel channel)
+        //public async Task PostTeaser(ITextChannel channel, string username, string content)
         //{
         //    var webhook = (await channel.GetWebhooksAsync())
         //        .FirstOrDefault(a => a.Creator.Id == Context.Client.CurrentUser.Id);
@@ -81,7 +83,7 @@ namespace PrideBot.Modules
         //    }
 
         //    var client = new DiscordWebhookClient(webhook);
-        //    await client.SendFileAsync("whosthatpokemon.gif", "@everyone");
+        //    await client.SendMessageAsync(content, username: username);
         //}
 
         async Task ReapplyBans(SocketGuild guild)

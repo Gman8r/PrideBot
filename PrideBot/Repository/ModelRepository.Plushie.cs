@@ -12,8 +12,11 @@ namespace PrideBot.Repository
     public partial class ModelRepository
     {
 
-        public async Task<IEnumerable<Plushie>> GetPlushieAsync(SqlConnection conn, string plushieId)
-        => (await new SqlCommand($"select * from VI_PLUSHIES where PLUSHIE_ID = '{plushieId}'", conn).ExecuteReaderAsync()).As<Plushie>();
+        public async Task<Plushie> GetPlushieAsync(SqlConnection conn, string plushieId)
+        => (await new SqlCommand($"select * from VI_PLUSHIES where PLUSHIE_ID = '{plushieId}'", conn).ExecuteReaderAsync()).As<Plushie>().FirstOrDefault();
+
+        public async Task<UserPlushie> GetUserPlushieAsync(SqlConnection conn, int userPlushieId)
+        => (await new SqlCommand($"select * from VI_USER_PLUSHIES where USER_PLUSHIE_ID = {userPlushieId}", conn).ExecuteReaderAsync()).As<UserPlushie>().FirstOrDefault();
 
         public async Task<IEnumerable<UserPlushie>> GetAllUserPlushiesForUserAsync(SqlConnection conn, string userId)
         => (await new SqlCommand($"select * from VI_USER_PLUSHIES where USER_ID = '{userId}'", conn).ExecuteReaderAsync()).As<UserPlushie>();
@@ -67,15 +70,18 @@ namespace PrideBot.Repository
             UnknownError = 99
         }
 
-        public async Task<AddPlushieResult> AttemptAddUserPlushieAsync(SqlConnection conn, string userId, string plushieId, string characteId, int day, decimal rotation, int userPlushieChoiceId = 0)
+        public async Task<AddPlushieResult> AttemptAddUserPlushieAsync(SqlConnection conn, string userId, string senderId, string originalUserId, string plushieId, string characterId, int day, decimal rotation, PlushieTransaction source, int userPlushieChoiceId = 0)
         {
             var command = new SqlCommand("SP_ADD_USER_PLUSHIE", conn);
             command.CommandType = CommandType.StoredProcedure;
             command.Parameters.Add(new SqlParameter("@USER_ID", userId));
+            command.Parameters.Add(new SqlParameter("@SENDER_ID", (object)senderId ?? DBNull.Value));
+            command.Parameters.Add(new SqlParameter("@ORIGINAL_USER_ID", originalUserId));
             command.Parameters.Add(new SqlParameter("@PLUSHIE_ID", plushieId));
-            command.Parameters.Add(new SqlParameter("@CHARACTER_ID", characteId));
+            command.Parameters.Add(new SqlParameter("@CHARACTER_ID", characterId));
             command.Parameters.Add(new SqlParameter("@DAY", day));
             command.Parameters.Add(new SqlParameter("@ROTATION", rotation));
+            command.Parameters.Add(new SqlParameter("@SOURCE", (int)source));
             command.Parameters.Add(new SqlParameter("@USER_PLUSHIE_CHOICE_ID", userPlushieChoiceId));
 
             var plushieIdParam = new SqlParameter();
@@ -92,6 +98,74 @@ namespace PrideBot.Repository
 
             await command.ExecuteNonQueryAsync();
             return new AddPlushieResult((int)plushieIdParam.Value, (AddPlushieError)errorCodeParam.Value);
+        }
+
+        public class TradePlushiesResult
+        {
+            public int NewUserPlushieId1 { get; }
+            public int NewUserPlushieId2 { get; }
+            public TradePlushiesError Error { get; }
+
+            public TradePlushiesResult(int newUserPlushieId1, int newUserPlushieId2, TradePlushiesError error)
+            {
+                NewUserPlushieId1 = newUserPlushieId1;
+                NewUserPlushieId2 = newUserPlushieId2;
+                Error = error;
+            }
+        }
+
+        public enum TradePlushiesError
+        {
+            None = 0,
+            OneOrBothPlushiesMissing = 1,
+            UnknownError = 99
+        }
+
+        public async Task<TradePlushiesResult> AttemptTradeUserPlushiesAsync(SqlConnection conn, string userPlushieId1, string userPlushieId2, DateTime timestamp)
+        {
+            var command = new SqlCommand("SP_TRADE_USER_PLUSHIES", conn);
+            command.CommandType = CommandType.StoredProcedure;
+            command.Parameters.Add(new SqlParameter("@USER_PLUSHIE_ID_1", userPlushieId1));
+            command.Parameters.Add(new SqlParameter("@USER_PLUSHIE_ID_2", userPlushieId2));
+            command.Parameters.Add(new SqlParameter("@TIMESTAMP", timestamp));
+
+            var plushieId1Param = new SqlParameter();
+            plushieId1Param.ParameterName = "@NEW_USER_PLUSHIE_ID_1";
+            plushieId1Param.Direction = ParameterDirection.Output;
+            plushieId1Param.DbType = DbType.Int32;
+            command.Parameters.Add(plushieId1Param);
+
+            var plushieId2Param = new SqlParameter();
+            plushieId2Param.ParameterName = "@NEW_USER_PLUSHIE_ID_2";
+            plushieId2Param.Direction = ParameterDirection.Output;
+            plushieId2Param.DbType = DbType.Int32;
+            command.Parameters.Add(plushieId2Param);
+
+            var errorCodeParam = new SqlParameter();
+            errorCodeParam.ParameterName = "@ERROR_CODE";
+            errorCodeParam.Direction = ParameterDirection.Output;
+            errorCodeParam.DbType = DbType.Int32;
+            command.Parameters.Add(errorCodeParam);
+
+            await command.ExecuteNonQueryAsync();
+            return new TradePlushiesResult((int)plushieId1Param.Value, (int)plushieId2Param.Value, (TradePlushiesError)errorCodeParam.Value);
+        }
+
+        public async Task<StandardTransactionError> AttemptDepleteUserPlushieAsync(SqlConnection conn, string userPlushieId, PlushieTransaction fate)
+        {
+            var command = new SqlCommand("SP_DEPLETE_USER_PLUSHIE", conn);
+            command.CommandType = CommandType.StoredProcedure;
+            command.Parameters.Add(new SqlParameter("@USER_PLUSHIE_ID", userPlushieId));
+            command.Parameters.Add(new SqlParameter("@FATE", (int)fate));
+
+            var errorCodeParam = new SqlParameter();
+            errorCodeParam.ParameterName = "@ERROR_CODE";
+            errorCodeParam.Direction = ParameterDirection.Output;
+            errorCodeParam.DbType = DbType.Int32;
+            command.Parameters.Add(errorCodeParam);
+
+            await command.ExecuteNonQueryAsync();
+            return (StandardTransactionError)errorCodeParam.Value;
         }
     }
 }

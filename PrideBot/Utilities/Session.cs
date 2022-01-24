@@ -87,7 +87,7 @@ namespace PrideBot
             this.client = client;
         }
 
-        private async Task ReactionAdded(Cacheable<IUserMessage, ulong> msg, Cacheable<IMessageChannel, ulong> chnl, SocketReaction reaction)
+        protected virtual Task ReactionAdded(Cacheable<IUserMessage, ulong> msg, Cacheable<IMessageChannel, ulong> chnl, SocketReaction reaction)
         {
             if (currentPrompt == null
                 || chnl.Id != channel.Id
@@ -95,13 +95,14 @@ namespace PrideBot
                 || !currentPrompt.AcceptsEmote
                 || msg.Id != currentPrompt.BotMessage.Id
                 || reaction.UserId != user.Id
-                || !currentPrompt.EmoteChoices.Select(a => a.ToString()).Contains(reaction.Emote.ToString())) return;
+                || !currentPrompt.EmoteChoices.Select(a => a.ToString()).Contains(reaction.Emote.ToString())) return Task.CompletedTask;
 
             currentPrompt.IsEntered = true;
             currentPrompt.EmoteResponse = reaction.Emote;
+            return Task.CompletedTask;
         }
 
-        private Task MesageReceived(IMessage message)
+        protected virtual Task MesageReceived(IMessage message)
         {
             if (currentPrompt == null
                 || message.Channel.Id != channel.Id
@@ -114,7 +115,7 @@ namespace PrideBot
             return Task.CompletedTask;
         }
 
-        private Task InteractionCreated(SocketInteraction interaction)
+        protected virtual Task InteractionCreated(SocketInteraction interaction)
         {
             if (currentPrompt == null
                 || currentPrompt.IsEntered
