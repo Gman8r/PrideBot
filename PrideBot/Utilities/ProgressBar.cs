@@ -10,7 +10,7 @@ namespace PrideBot
 {
     public class ProgressBar
     {
-        public const string SignatureEmote = "💗";
+        public const string SignatureEmote = "🧸";
         public const string TransparentEmote = "<:transparent:805664623318925403>";
         public const string ErrorEmote = "<:haniWhat:809543471449767946>";
         private const decimal ProgressPerHaniwa = .1m;

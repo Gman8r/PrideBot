@@ -59,8 +59,9 @@ namespace PrideBot.Plushies
         public async Task<IUserMessage> PostPlushieMenuAsync(SqlConnection connection, IGuildUser user, IMessageChannel channel)
         {
             var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, user.Id.ToString());
+            var inEffectPlushies = await repo.GetInEffectUserPlushiesForUserAsync(connection, user.Id.ToString(), DateTime.Now);
             var components = await GenerateComponentsAsync(connection, userPlushies, user.Id, 0, string.Join(".", userPlushies.Select(a => a.UserPlushieId)));
-            var embedData = await  GenerateEmbedAsync(user, userPlushies);
+            var embedData = await  GenerateEmbedAsync(user, userPlushies, inEffectPlushies);
             var embed = embedData.Item1;
             var file = embedData.Item2;
             if (file != null)
@@ -69,7 +70,7 @@ namespace PrideBot.Plushies
                 return await channel.SendMessageAsync(user.Mention, embed: embed.Build(), components: components?.Build());
         }
 
-        public async Task<(EmbedBuilder, MemoryFile)> GenerateEmbedAsync(IGuildUser user, IEnumerable<UserPlushie> userPlushies, string overrideImageUrl = null)
+        public async Task<(EmbedBuilder, MemoryFile)> GenerateEmbedAsync(IGuildUser user, IEnumerable<UserPlushie> userPlushies, IEnumerable<UserPlushie> inEffectPlushies, string overrideImageUrl = null)
         {
             var imageFile = userPlushies.Any() && overrideImageUrl == null
                 ? await imageService.WritePlushieCollectionImageAsync(userPlushies)
@@ -85,8 +86,28 @@ namespace PrideBot.Plushies
             {
                 embed.AddField($"{plushie.Name} ({plushie.CharacterName})", plushie.Description);
             }
+            var inEfectString = "";
+            foreach (var plushie in inEffectPlushies)
+            {
+                inEfectString += $"\n**{plushie.Name}**";
+                if (plushie.DurationHours > 0)
+                {
+                    var timeRemaining = plushie.ExpirationTimestamp - DateTime.Now;
+                    inEfectString += $" - {(int)timeRemaining.TotalHours}h:{timeRemaining.Minutes}m Remaining";
+                }
+                if (plushie.Uses > 1)
+                {
+                    inEfectString += $" - {plushie.RemainingUses} {(plushie.RemainingUses == 1 ? "Use" : "Uses")} Remaining";
+                }
+                else if (plushie.Uses == 1)
+                {
+                    inEfectString += $" - Standby";
+                }
+                inEfectString += $"\n- *{plushie.Description}*";
+            }
+            if (!string.IsNullOrWhiteSpace(inEfectString))
+                embed.AddField("Plushies In Effect:", inEfectString);
             return (embed, imageFile);
-
         }
 
         public async Task<ComponentBuilder> GenerateComponentsAsync(SqlConnection connection, IEnumerable<UserPlushie> userPlushies, ulong userId, int selectedPlushieId, string imageState)
@@ -129,7 +150,7 @@ namespace PrideBot.Plushies
                 {
                     Style = ButtonStyle.Primary,
                     Emote = new Emoji("⚡"),
-                    Label = "Use Now",
+                    Label = "Activate Now",
                     CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Use, imageState)
                 }.Build());
                 // Sell button

@@ -24,6 +24,10 @@ namespace PrideBot.Repository
         public async Task<IEnumerable<UserPlushie>> GetOwnedUserPlushiesForUserAsync(SqlConnection conn, string userId)
         => (await new SqlCommand($"select * from VI_USER_PLUSHIES where USER_ID = '{userId}' and FATE = {(int)PlushieTransaction.None}", conn).ExecuteReaderAsync()).As<UserPlushie>();
 
+        public async Task<IEnumerable<UserPlushie>> GetInEffectUserPlushiesForUserAsync(SqlConnection conn, string userId, DateTime timestamp)
+        => (await new SqlCommand($"select * from VI_USER_PLUSHIES where USER_ID = '{userId}' and FATE = {(int)PlushieTransaction.Using}" +
+            $" and dbo.fnUserCardInEffect(USER_PLUSHIE_ID, '{timestamp}') = 'Y'", conn).ExecuteReaderAsync()).As<UserPlushie>();
+
         public async Task<IEnumerable<UserPlushie>> GetActiveUserPlushiesForUserAsync(SqlConnection conn, string userId)
         => (await new SqlCommand($"select * from VI_USER_PLUSHIES where USER_ID = '{userId}' and FATE = {(int)PlushieTransaction.Using}", conn).ExecuteReaderAsync()).As<UserPlushie>();
 
@@ -59,6 +63,36 @@ namespace PrideBot.Repository
             {
                 UserPlushieId = userPlushieId;
                 Error = error;
+            }
+
+            // forgive the discrepancy of this being here, i just had the idea of putting them in this class rn an dont have time to change the rest kjaskfjska
+            public Result CheckErrors(bool throwCommandExceptions = true)
+            {
+                string errorMessage = null;
+                switch (Error)
+                {
+                    case ModelRepository.AddPlushieError.CantReceivePlushies:
+                        errorMessage = DialogueDict.Get("PLUSHIE_DRAWN_ALREADY");
+                        break;
+                    case ModelRepository.AddPlushieError.CantSelectPlushieChoice:
+                        errorMessage = DialogueDict.Get("PLUSHIE_CANT_CHOOSE");
+                        break;
+                    case ModelRepository.AddPlushieError.UnknownError:
+                        errorMessage = DialogueDict.Get("EXCEPTION");
+                        break;
+                    default:
+                        break;
+                }
+
+                if (errorMessage != null)
+                {
+                    if (throwCommandExceptions)
+                        throw new CommandException(errorMessage);
+                    else
+                        return Result.Error(errorMessage);
+                }
+                else
+                    return Result.Success();
             }
         }
 
@@ -151,12 +185,13 @@ namespace PrideBot.Repository
             return new TradePlushiesResult((int)plushieId1Param.Value, (int)plushieId2Param.Value, (TradePlushiesError)errorCodeParam.Value);
         }
 
-        public async Task<StandardTransactionError> AttemptDepleteUserPlushieAsync(SqlConnection conn, string userPlushieId, PlushieTransaction fate)
+        public async Task<StandardTransactionError> AttemptRemoveUserPlushieAsync(SqlConnection conn, int userPlushieId, PlushieTransaction fate, DateTime timestamp)
         {
-            var command = new SqlCommand("SP_DEPLETE_USER_PLUSHIE", conn);
+            var command = new SqlCommand("SP_REMOVE_USER_PLUSHIE", conn);
             command.CommandType = CommandType.StoredProcedure;
             command.Parameters.Add(new SqlParameter("@USER_PLUSHIE_ID", userPlushieId));
             command.Parameters.Add(new SqlParameter("@FATE", (int)fate));
+            command.Parameters.Add(new SqlParameter("@TIMESTAMP", timestamp));
 
             var errorCodeParam = new SqlParameter();
             errorCodeParam.ParameterName = "@ERROR_CODE";
@@ -166,6 +201,62 @@ namespace PrideBot.Repository
 
             await command.ExecuteNonQueryAsync();
             return (StandardTransactionError)errorCodeParam.Value;
+        }   
+
+        public async Task<StandardTransactionError> ActivateUserPlushieAsync(SqlConnection conn, int userPlushieId, DateTime timestamp)
+        {
+            var command = new SqlCommand("SP_ACTIVATE_USER_PLUSHIE", conn);
+            command.CommandType = CommandType.StoredProcedure;
+            command.Parameters.Add(new SqlParameter("@USER_PLUSHIE_ID", userPlushieId));
+            command.Parameters.Add(new SqlParameter("@TIMESTAMP", timestamp));
+
+            var errorCodeParam = new SqlParameter();
+            errorCodeParam.ParameterName = "@ERROR_CODE";
+            errorCodeParam.Direction = ParameterDirection.Output;
+            errorCodeParam.DbType = DbType.Int32;
+            command.Parameters.Add(errorCodeParam);
+
+            await command.ExecuteNonQueryAsync();
+            return (StandardTransactionError)errorCodeParam.Value;
+        }
+
+
+        public class DepletePlushieResult
+        {
+            public bool FullyDepleted { get; }
+            public StandardTransactionError Error { get; }
+            public DepletePlushieResult(bool fullyDepleted, StandardTransactionError error)
+            {
+                FullyDepleted = fullyDepleted;
+                Error = error;
+            }
+        }
+
+        public async Task<DepletePlushieResult> DepleteUserPlushieAsync(SqlConnection conn, int userPlushieId, DateTime timestamp, bool forceRemove, PlushieUseContext contextType, string context)
+        {
+            var command = new SqlCommand("SP_DEPLETE_USER_PLUSHIE", conn);
+            command.CommandType = CommandType.StoredProcedure;
+            command.Parameters.Add(new SqlParameter("@USER_PLUSHIE_ID", userPlushieId));
+            command.Parameters.Add(new SqlParameter("@TIMESTAMP", timestamp));
+            command.Parameters.Add(new SqlParameter("@FORCE_REMOVE", forceRemove));
+            command.Parameters.Add(new SqlParameter("@CONTEXT_TYPE", (int)contextType));
+            command.Parameters.Add(new SqlParameter("@CONTEXT", context));
+
+            var fullyDepletedParam = new SqlParameter();
+            fullyDepletedParam.ParameterName = "@FULLY_DEPLETED";
+            fullyDepletedParam.Direction = ParameterDirection.Output;
+            fullyDepletedParam.DbType = DbType.String;
+            fullyDepletedParam.Size = 1;
+            command.Parameters.Add(fullyDepletedParam);
+
+            var errorCodeParam = new SqlParameter();
+            errorCodeParam.ParameterName = "@ERROR_CODE";
+            errorCodeParam.Direction = ParameterDirection.Output;
+            errorCodeParam.DbType = DbType.Int32;
+            command.Parameters.Add(errorCodeParam);
+
+            await command.ExecuteNonQueryAsync();
+            return new DepletePlushieResult(fullyDepletedParam.Value.ToString().Equals("Y"), (StandardTransactionError)errorCodeParam.Value);
         }
     }
 }

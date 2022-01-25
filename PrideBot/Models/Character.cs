@@ -13,6 +13,7 @@ namespace PrideBot.Models
         public string FirstName { get; set; }
         public string Category { get; set; }
         public string Family { get; set; }
+        public string PlushieId { get; set; }
 
         // Debug fields
         [DontPushToDatabase]

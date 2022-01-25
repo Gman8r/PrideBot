@@ -81,17 +81,7 @@ namespace PrideBot.Plushies
                 var newDay = GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay() : 0; // in case user waits around forever idk
                 var result = await repo.AttemptAddUserPlushieAsync(connection, userId, null, userId, choice.PlushieId, choice.CharacterId, newDay, choice.Rotation, PlushieTransaction.Drawn, choiceId);
 
-                switch(result.Error)
-                {
-                    case ModelRepository.AddPlushieError.CantReceivePlushies:
-                        throw new CommandException(DialogueDict.Get("PLUSHIE_DRAWN_ALREADY"));
-                    case ModelRepository.AddPlushieError.CantSelectPlushieChoice:
-                        throw new CommandException(DialogueDict.Get("PLUSHIE_CANT_CHOOSE"));
-                    case ModelRepository.AddPlushieError.UnknownError:
-                        throw new CommandException(DialogueDict.Get("EXCEPTION"));
-                    default:
-                        break;
-                }
+                result.CheckErrors();
 
                 var resultFile = await imageService.WritePlushieImageAsync(choice);
                 var resultEmbed = EmbedHelper.GetEventEmbed(user, config)

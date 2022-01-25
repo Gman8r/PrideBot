@@ -36,8 +36,9 @@ namespace PrideBot.Modules
         private readonly PlushieService plushieService;
         private readonly DiscordSocketClient client;
         private readonly PlushieImageService imageService;
+        private readonly PlushieEffectService plushieEffectService;
 
-        public PlushieInteractionModule(IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, PlushieMenuService plushieMenuService, PlushieService plushieService, DiscordSocketClient client, PlushieImageService imageService)
+        public PlushieInteractionModule(IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, PlushieMenuService plushieMenuService, PlushieService plushieService, DiscordSocketClient client, PlushieImageService imageService, PlushieEffectService plushieEffectService)
         {
             this.config = config;
             this.provider = provider;
@@ -46,6 +47,7 @@ namespace PrideBot.Modules
             this.plushieService = plushieService;
             this.client = client;
             this.imageService = imageService;
+            this.plushieEffectService = plushieEffectService;
         }
 
         enum RepostAction
@@ -71,7 +73,8 @@ namespace PrideBot.Modules
             switch (action)
             {
                 case PlushieAction.Use:
-                    await Context.Interaction.FollowupAsync("bababa u used it");
+                    var userPlushie = await repo.GetUserPlushieAsync(connection, selectedPlushieId);
+                    await plushieEffectService.ActivatePlushie(connection, Context.Interaction.User as IGuildUser, userPlushie, Context.Channel, Context.Interaction);
                     selectedPlushieId = 0;
                     break;
                 case PlushieAction.Draw:
@@ -84,7 +87,7 @@ namespace PrideBot.Modules
                     selectedPlushieId = 0;
                     break;
                 case PlushieAction.Pawn:
-
+                    // TODO
                     //var session = new 
                     //var dbCharacters = await repo.GetAllCharactersAsync(connection);
                     //var shipResult = await RegistrationSession.ParseShipAsync(connection, repo, shipName, dbCharacters);
@@ -111,7 +114,8 @@ namespace PrideBot.Modules
             }
 
             var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, Context.User.Id.ToString());
-            await HandleUpdateAsync(connection, userPlushies, selectedPlushieId, imageState, repostAction);
+            var inEffectPlushies = await repo.GetInEffectUserPlushiesForUserAsync(connection, Context.User.Id.ToString(), DateTime.Now);
+            await HandleUpdateAsync(connection, userPlushies, inEffectPlushies, selectedPlushieId, imageState, repostAction);
             connection?.Close();
         }
 
@@ -131,11 +135,12 @@ namespace PrideBot.Modules
             if (!userPlushies.Any(a => a.UserPlushieId == selectedPlushieId))
                 selectedPlushieId = 0;
 
+            var inEffectPlushies = await repo.GetInEffectUserPlushiesForUserAsync(connection, Context.User.Id.ToString(), DateTime.Now);
 
-            await HandleUpdateAsync(connection, userPlushies, selectedPlushieId, imageState, RepostAction.Edit);
+            await HandleUpdateAsync(connection, userPlushies, inEffectPlushies, selectedPlushieId, imageState, RepostAction.Edit);
         }
 
-        async Task HandleUpdateAsync(SqlConnection connection, IEnumerable<UserPlushie> userPlushies, int selectedPlushieId, string imageState, RepostAction repostAction)
+        async Task HandleUpdateAsync(SqlConnection connection, IEnumerable<UserPlushie> userPlushies, IEnumerable<UserPlushie> inEffectPlushies, int selectedPlushieId, string imageState, RepostAction repostAction)
         {
             if (repostAction != RepostAction.DontPost)
             {
@@ -146,7 +151,7 @@ namespace PrideBot.Modules
                 var overrideImageFile = newImageState.Equals(imageState)
                     ? (message.Embeds.FirstOrDefault().Image.HasValue ? message.Embeds.FirstOrDefault().Image.Value.Url : null)
                     : null;
-                var embedData = await plushieMenuService.GenerateEmbedAsync(Context.User as IGuildUser, userPlushies, overrideImageFile);
+                var embedData = await plushieMenuService.GenerateEmbedAsync(Context.User as IGuildUser, userPlushies, inEffectPlushies, overrideImageFile);
                 var embed = embedData.Item1;
                 var file = embedData.Item2;
                 imageState = newImageState;

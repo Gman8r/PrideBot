@@ -70,6 +70,7 @@ namespace PrideBot
                 provider.GetRequiredService<AnnouncementService>();
                 provider.GetRequiredService<SnakeGame>();
                 provider.GetRequiredService<LeaderboardService>();
+                provider.GetRequiredService<MiscMessageReactionService>();
                 provider.GetRequiredService<BullshitService>();
             }
             else
@@ -127,6 +128,7 @@ namespace PrideBot
             .AddSingleton<Plushies.PlushieMenuService>()
             .AddSingleton<Plushies.PlushieService>()
             .AddSingleton<Plushies.PlushieImageService>()
+            .AddSingleton<Plushies.PlushieEffectService>()
             .AddSingleton(Configuration);             // Add the configuration to the collection
 
             Console.WriteLine();
@@ -142,6 +144,7 @@ namespace PrideBot
                 .AddSingleton<UserRegisteredCache>()
                 .AddSingleton<ChatScoringService>()
                 .AddSingleton<VoiceScoringService>()
+                .AddSingleton<MiscMessageReactionService>()
                 .AddSingleton<SnakeGame>()
                 .AddSingleton<LeaderboardImageGenerator>()
                 .AddSingleton<BullshitService>()

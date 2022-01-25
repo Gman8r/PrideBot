@@ -36,9 +36,9 @@ namespace PrideBot
 
         public static EmbedBuilder GetEventErrorEmbed(IUser user, string description, DiscordSocketClient client, bool showUser = true)
         {
-            var title = "Hold Up";
-            if (client != null && user != null && user is SocketUser sUser)
-                title = $"Hold Up {sUser.Queen(client)}";
+            var title = "Watch It! 🖐";
+            //if (client != null && user != null && user is SocketUser sUser)
+            //    title = $"Hold Up {sUser.Queen(client)}";
             var embed = new EmbedBuilder()
                 .WithTitle(title)
                 .WithDescription(description)

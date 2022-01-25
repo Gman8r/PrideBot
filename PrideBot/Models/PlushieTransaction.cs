@@ -10,6 +10,6 @@ namespace PrideBot.Models
         Drawn = 1,
         Traded = 2,
         Using = 3,
-        Used = 4
+        Done = 4
     }
 }

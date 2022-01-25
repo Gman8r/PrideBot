@@ -26,11 +26,13 @@ namespace PrideBot
 
         public static string ConvertToResultMessage(string message, string honorific, bool sendEmote = true)
         {
-            var breakAt = message.IndexOfAny(new char[] { '.' , '!' });
-            if (breakAt >= 0)
-                message = message.Substring(0, breakAt) + $" {honorific}" + message.Substring(breakAt);
-            else
-                message += $" {honorific}!";
+            //var breakAt = message.IndexOfAny(new char[] { '.' , '!' });
+            //if (breakAt >= 0)
+            //    message = message.Substring(0, breakAt) + $" {honorific}" + message.Substring(breakAt);
+            //else
+            //    message += $" {honorific}!";
+
+            message += " 🏆";
 
             if (sendEmote)
                 message = $"{ProgressBar.SignatureEmote} {message}";

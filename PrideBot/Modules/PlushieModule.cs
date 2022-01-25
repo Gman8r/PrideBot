@@ -56,13 +56,25 @@ namespace PrideBot.Modules
 
         [Command("getplushie")]
         [Summary("Get da plushie")]
-        //[RequireRegistration]
-        //[RequireSingleSession]
-        //[ValidEventPeriods(EventPeriod.DuringEvent)]
+        [RequireRegistration]
+        [RequireSingleSession]
+        [ValidEventPeriods(EventPeriod.DuringEvent | EventPeriod.BeforeEvent)]
         public async Task DrawPlushie()
         {
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
             await plushieService.DrawPlushie(connection, Context.Channel, Context.User);
+        }
+
+        [Command("giveplushie")]
+        [Summary("Admin command !!")]
+        [RequireSage]
+        //[RequireSingleSession]
+        //[ValidEventPeriods(EventPeriod.DuringEvent)]
+        public async Task GivePlushie(SocketGuildUser user, string characterId)
+        {
+            using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
+            await plushieService.GiveUserPlushie(connection, Context.Channel, user, characterId);
+            await ReplyResultAsync("Done!");
         }
     }
 }

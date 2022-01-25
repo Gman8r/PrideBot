@@ -65,5 +65,14 @@ namespace PrideBot.Plushies
             await session.PerformSessionAsync();
         }
 
+
+        public async Task GiveUserPlushie(SqlConnection connection, IMessageChannel channel, IUser user, string characterId)
+        {
+            var character = await repo.GetCharacterAsync(connection, characterId);
+            var result = await repo.AttemptAddUserPlushieAsync(connection, user.Id.ToString(), null, user.Id.ToString(), character.PlushieId, characterId,
+                GameHelper.GetEventDay(), 0m, PlushieTransaction.Drawn);
+            result.CheckErrors();
+        }
+
     }
 }

@@ -20,5 +20,9 @@ namespace PrideBot.Models
         public string OriginalUserId{ get; set; }
         public DateTime Timestamp { get; set; }
         public DateTime RemovedTimestamp { get; set; }  // Removed is when the card is no longer in the player's card menu
+
+        //fields for after use
+        public DateTime ExpirationTimestamp { get; set; }
+        public int RemainingUses { get; set; }
     }
 }
