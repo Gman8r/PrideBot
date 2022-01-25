@@ -6,8 +6,11 @@ namespace PrideBot.Models
 {
     public enum PlushieUseContext
     {
-        Timeout = 0,
-        Achievement = 1,
-        Quiz = 2
+        None = 0,
+        Score = 1,
+        ShipScore = 2,
+        Quiz = 3,
+        Timeout = 4,
+        Message = 5,
     }
 }

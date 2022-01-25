@@ -102,7 +102,7 @@ namespace PrideBot.Quizzes
 
                 var connection = repo.GetDatabaseConnection();
                 await connection.OpenAsync();
-                await scoringService.AddAndDisplayAchievementAsync(connection, user, "STARBOARD", client.CurrentUser, DateTime.Now, titleUrl: message.GetJumpUrl());
+                await scoringService.AddAndDisplayAchievementAsync(connection, user, "STARBOARD", client.CurrentUser, DateTime.Now, userMessage, titleUrl: message.GetJumpUrl());
             }
             catch (Exception e)
             {

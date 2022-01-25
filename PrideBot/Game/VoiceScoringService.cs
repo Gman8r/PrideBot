@@ -168,7 +168,7 @@ namespace PrideBot.Quizzes
                                     {
                                         using var connection = repo.GetDatabaseConnection();
                                         await connection.OpenAsync();
-                                        await scoringService.AddAndDisplayAchievementAsync(connection, user, "VOICE", client.CurrentUser, DateTime.Now);
+                                        await scoringService.AddAndDisplayAchievementAsync(connection, user, "VOICE", client.CurrentUser, DateTime.Now, null);
                                     }
                                 }
 
@@ -183,7 +183,7 @@ namespace PrideBot.Quizzes
                                     {
                                         using var connection = repo.GetDatabaseConnection();
                                         await connection.OpenAsync();
-                                        await scoringService.AddAndDisplayAchievementAsync(connection, user, "STREAM", client.CurrentUser, DateTime.Now);
+                                        await scoringService.AddAndDisplayAchievementAsync(connection, user, "STREAM", client.CurrentUser, DateTime.Now, null);
                                     }
                                 }
 

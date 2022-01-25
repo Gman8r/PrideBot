@@ -40,14 +40,14 @@ namespace PrideBot.Game
             return $"{((int)ts.TotalHours).ToString("D2")}:{ts.Minutes.ToString("D2")}:{ts.Seconds.ToString("D2")}";
         }
 
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, DateTime timestamp, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
         {
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
-            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, timestamp, overridePoints, titleUrl, ignoreIfNotRegistered, ignoreCooldown, dontPing, reportChannel);
+            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, timestamp, message, overridePoints, titleUrl, ignoreIfNotRegistered, ignoreCooldown, dontPing, reportChannel);
         }
 
         // Returns True if score was applied in some way
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, DateTime timestamp, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
         {
             if (overridePoints > 999)
                 throw new CommandException("Max score for an achievement is 999, WHY ARE YOU EVEN DOING THIS??");
@@ -60,9 +60,16 @@ namespace PrideBot.Game
             var dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
             var pointsEarned = overridePoints == 0 ? achievement.DefaultScore : overridePoints;
 
-            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarned, approver.Id.ToString(), timestamp, ignoreCooldown);
-            var scoreId = dbResult.ScoreId;
+            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarned, approver.Id.ToString(), timestamp, ignoreCooldown,
+                ((message?.Channel ?? null) as IGuildChannel)?.Guild.Id.ToString(), message?.Channel.Id.ToString(), message?.Id.ToString());
+            var scoreId = dbResult.ScoreId; 
             var errorCode = dbResult.errorCode;
+            if (errorCode == ModelRepository.AddScoreError.Unknown)
+            {
+                var embed = EmbedHelper.GetEventErrorEmbed(user, DialogueDict.Get("EXCEPTION"), client);
+                await reportChannel.SendMessageAsync(embed: embed.Build());
+                return errorCode;
+            }
             var cooldownExpires = dbResult.CooldownExpires;
 
             if (achievement.Log)
@@ -92,15 +99,15 @@ namespace PrideBot.Game
                     ? await channel.SendMessageAsync(text, embed: embed.Item1.Build())
                     : await channel.SendFileAsync(embed.Item2.Stream, embed.Item2.FileName, text, embed: embed.Item1.Build());
 
-                // Update database score with post data
-                if (!string.IsNullOrEmpty(scoreId) && int.Parse(scoreId) > 0)
-                {
-                    var score = await repo.GetScoreAsync(connection, scoreId);
-                    score.PostGuildId = (post.Channel as IGuildChannel)?.Guild.Id.ToString();
-                    score.PostChannelId = post.Channel?.Id.ToString();
-                    score.PostMessageId = post.Id.ToString();
-                    await repo.UpdateScoreAsync(connection, score);
-                }
+                //// Update database score with post data
+                //if (!string.IsNullOrEmpty(scoreId) && int.Parse(scoreId) > 0)
+                //{
+                //    var score = await repo.GetScoreAsync(connection, scoreId);
+                //    score.PostGuildId = (post.Channel as IGuildChannel)?.Guild.Id.ToString();
+                //    score.PostChannelId = post.Channel?.Id.ToString();
+                //    score.PostMessageId = post.Id.ToString();
+                //    await repo.UpdateScoreAsync(connection, score);
+                //}
             }
 
             if (approver != null && errorCode != ModelRepository.AddScoreError.CooldownViolated && achievement.AchievementId.ToLower().StartsWith("1cc"))
@@ -223,7 +230,7 @@ namespace PrideBot.Game
 
 
                 await AddAndDisplayAchievementAsync(connection, user, achievement,
-                    reaction.User.IsSpecified ? reaction.User.Value : null, message.Timestamp.ToDateTime(), titleUrl: message.GetJumpUrl(), ignoreIfNotRegistered: false,
+                    reaction.User.IsSpecified ? reaction.User.Value : null, message.Timestamp.ToDateTime(), message, titleUrl: message.GetJumpUrl(), ignoreIfNotRegistered: false,
                     reportChannel: message.Channel);
 
                 await (message.AddReactionAsync(reaction.Emote));

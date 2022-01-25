@@ -102,7 +102,7 @@ namespace PrideBot.Game
                 {
                     var connection = repo.GetDatabaseConnection();
                     await connection.OpenAsync();
-                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "CHAT", client.CurrentUser, DateTime.Now);
+                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "CHAT", client.CurrentUser, DateTime.Now, message);
                 }
 
             }

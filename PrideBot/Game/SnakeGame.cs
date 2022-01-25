@@ -96,7 +96,7 @@ namespace PrideBot.Quizzes
                     await mainClient.GetUser(ulong.Parse(config["ids:owner"])).AttemptSendDMAsync(provider, $"UH OH too soon for more tsuchi. Check the logs!!");
                 }
                 else
-                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "SNAKE", tsuchiClient.CurrentUser, DateTime.Now);
+                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "SNAKE", tsuchiClient.CurrentUser, DateTime.Now, null);
             }).GetAwaiter();
             return Task.CompletedTask;
         }

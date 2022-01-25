@@ -57,10 +57,11 @@ namespace PrideBot.Repository
         {
             None = 0,
             UserNotRegistered = 1,
-            CooldownViolated = 2
+            CooldownViolated = 2,
+            Unknown = 99
         }
 
-        public async Task<AddScoreResult> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, decimal pointsEarned, string approverId, DateTime timestamp, bool ignoreCooldown)
+        public async Task<AddScoreResult> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, decimal pointsEarned, string approverId, DateTime timestamp, bool ignoreCooldown, string postGuilId, string postChannelId, string postMessageId)
         {
             var command = new SqlCommand("SP_ADD_SCORE", conn);
             command.CommandType = CommandType.StoredProcedure;
@@ -69,6 +70,9 @@ namespace PrideBot.Repository
             command.Parameters.Add(new SqlParameter("@TIMESTAMP", timestamp));
             command.Parameters.Add(new SqlParameter("@POINTS_EARNED", pointsEarned));
             command.Parameters.Add(new SqlParameter("@APPROVER", approverId));
+            command.Parameters.Add(new SqlParameter("@POST_GUILD_ID", postGuilId));
+            command.Parameters.Add(new SqlParameter("@POST_CHANNEL_ID", postChannelId));
+            command.Parameters.Add(new SqlParameter("@POST_MESSAGE_ID", postMessageId));
             command.Parameters.Add(new SqlParameter("@IGNORE_COOLDOWN", ignoreCooldown ? "Y" : "N"));
             var scoreIdParam = new SqlParameter();
             scoreIdParam.ParameterName = "@SCORE_ID";
