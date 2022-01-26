@@ -61,7 +61,7 @@ namespace PrideBot.Game
             var pointsEarned = overridePoints == 0 ? achievement.DefaultScore : overridePoints;
 
             var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarned, approver.Id.ToString(), timestamp, ignoreCooldown,
-                ((message?.Channel ?? null) as IGuildChannel)?.Guild.Id.ToString(), message?.Channel.Id.ToString(), message?.Id.ToString());
+                ((message?.Channel ?? null) as IGuildChannel)?.Guild.Id.ToString() ?? "", message?.Channel.Id.ToString() ?? "", message?.Id.ToString() ?? "");
             var scoreId = dbResult.ScoreId; 
             var errorCode = dbResult.errorCode;
             if (errorCode == ModelRepository.AddScoreError.Unknown)
@@ -148,7 +148,7 @@ namespace PrideBot.Game
                     // Base
                     var scoreStr = $"💕 **{(int)Math.Round(dbScore.PointsEarned, 0)} Base**";
                     if (!dbScore.BonusMult.Approximately(1.00m, .01m))
-                        scoreStr += $"  (x {dbScore.BonusMult} Plushie Effects)";
+                        scoreStr += $"  ( {dbScore.BonusMult}x Plushie Effects)";
 
                     foreach (var shipScore in dbShipScores)
                     {
@@ -156,10 +156,10 @@ namespace PrideBot.Game
                         scoreStr += $"\n{EmoteHelper.GetShipTierEmoji((UserShipTier)userShip.Tier)} **{(int)Math.Round(shipScore.PointsEarned, 0)}** for **{userShip.GetDisplayName()}**";
 
                         // Mults
-                        scoreStr += $"  (x{shipScore.TierMult} {(UserShipTier)shipScore.Tier})";
-                        scoreStr += $"  (x{shipScore.BalanceMult} Rarity)";
+                        scoreStr += $"  ({shipScore.TierMult}x {(UserShipTier)shipScore.Tier})";
+                        scoreStr += $"  ({shipScore.BalanceMult}x Rarity)";
                         if (!shipScore.BonusMult.Approximately(1.00m, .01m))
-                            scoreStr += $"  (x{shipScore.BonusMult} Plushie Effects)";
+                            scoreStr += $"  ({shipScore.BonusMult}x Plushie Effects)";
                     }
                     embed.AddField($"You feel your bond with your community grow stronger...\nYou've earned {EmoteHelper.SPEmote} !", scoreStr.Trim());
 

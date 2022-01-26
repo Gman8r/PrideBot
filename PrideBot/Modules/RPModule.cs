@@ -26,11 +26,13 @@ namespace PrideBot.Modules
     [Name("RP")]
     public class RPModule : PrideModuleBase
     {
-        private IConfigurationRoot config;
+        private readonly IConfigurationRoot config;
+        private readonly RpImageService imageService;
 
-        public RPModule(IConfigurationRoot config)
+        public RPModule(IConfigurationRoot config, RpImageService imageService)
         {
             this.config = config;
+            this.imageService = imageService;
         }
 
 
@@ -61,6 +63,29 @@ namespace PrideBot.Modules
             await chatSessions[Context.User.Id].DisposeAsync();
             chatSessions.Remove(Context.User.Id);
             await ReplyResultAsync("Chat session ended.");
+        }
+
+
+        [Command("text")]
+        public async Task YellowText([Remainder]string phrase = null)
+        {
+            var file = await imageService.WriteTestTextAsync(Context.Client.CurrentUser.GetAvatarUrl(size: 128), phrase);
+            if (!string.IsNullOrWhiteSpace(phrase))
+            {
+                var embed = EmbedHelper.GetEventEmbed(null, config)
+                    .WithDescription("blablabla")
+                    //.WithThumbnailUrl(Context.Client.CurrentUser.GetAvatarUrl())
+                    .WithAttachedImageUrl(file);
+                await Context.Channel.SendFileAsync(file.Stream, file.FileName, embed: embed.Build());
+            }
+            else
+            {
+                var embed = EmbedHelper.GetEventEmbed(null, config)
+                    .WithDescription("blablabla")
+                    .WithThumbnailUrl(Context.Client.CurrentUser.GetAvatarUrl());
+                    //.WithAttachedImageUrl(file);
+                await Context.Channel.SendMessageAsync(embed: embed.Build());
+            }
         }
 
     }

@@ -154,7 +154,13 @@ namespace PrideBot.Quizzes
                 choicesComponents.WithButton(" ", i.ToString(), ButtonStyle.Secondary, EmoteHelper.GetLetterEmote((char)('A' + i)));
             }
 
+            var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, user.Id.ToString());
+            var halfPlushie = userPlushies.FirstOrDefault(a => a.PlushieId.Equals("QUIZ_HALF"));
+            if (halfPlushie != null)
+                choicesComponents.WithButton("Remove 2 Options (Use Plushie)", "QUIZ_HALF", ButtonStyle.Secondary, new Emoji("2️⃣"));
+
             response = await SendResponseAsync(embed: embed, components: choicesComponents, acceptsText: false);
+            var quizMessage = response.BotMessage;
             RunTimer().GetAwaiter();
             var attemptsLeft = 3;
             quizLog.Guess1 = null;
@@ -163,8 +169,43 @@ namespace PrideBot.Quizzes
             while (attemptsLeft > 0)
             {
                 await AwaitCurrentResponseAsync();
-                var chosenIndex = int.Parse(response.InteractionResponse.Data.CustomId);
+                if (response.InteractionResponse.Data.CustomId.Equals("QUIZ_HALF"))  // plushie
+                {
+                    if (quizLog.Guess1 == null)
+                    {
+                        var wrongIndexPool = choices
+                            .Select(a => choices.IndexOf(a))
+                            .Where(a => a != correctIndex)
+                            .ToList();
+                        for (int i = 0; i < 2; i++)
+                        {
+                            var strikeout = wrongIndexPool[rand.Next() % wrongIndexPool.Count];
+                            wrongIndexPool.Remove(strikeout);
 
+                            // Disable button with matching index
+                            var newButton = (choicesComponents.ActionRows.FirstOrDefault().Components[strikeout] as ButtonComponent)
+                                .ToBuilder().WithDisabled(true).Build();
+                            choicesComponents.ActionRows.FirstOrDefault().Components[strikeout] = newButton;
+                            // and strikeout choice in embed
+                            var strikeoutText = embed.Fields.Last().Value.ToString().Trim().Split('\n')[strikeout].Trim();
+                            embed.Fields.Last().Value = embed.Fields.Last().Value.ToString().Replace(strikeoutText, $"~~{strikeoutText}~~");
+                        }
+                        await response.BotMessage.ModifyAsync(a =>
+                        {
+                            a.Embed = embed.Build();
+                            a.Components = choicesComponents.Build();
+                        });
+                        await repo.DepleteUserPlushieAsync(connection, halfPlushie.UserPlushieId, DateTime.Now, false, PlushieUseContext.Quiz, quiz.QuizId.ToString());
+                        await channel.SendMessageAsync(DialogueDict.Get($"QUIZ_PLUSHIE_HALF"));
+                    }
+                    else
+                    {
+                        await channel.SendMessageAsync(DialogueDict.Get($"QUIZ_PLUSHIE_HALF_FAIL"));
+                    }
+                    continue;
+                }
+
+                var chosenIndex = int.Parse(response.InteractionResponse.Data.CustomId);
                 var chosenLetter = ((char)('A' + chosenIndex)).ToString();
 
                 if (new List<string>() { quizLog.Guess1, quizLog.Guess2, quizLog.Guess3 }.Contains(choices[chosenIndex]))
@@ -220,10 +261,10 @@ namespace PrideBot.Quizzes
                 .WithButton("💬 Discuss Today's Quiz!", $"QUIZ.D:{day},{chosenQuizIndex}");
 
             await channel.SendMessageAsync(embed: embed.Build(), components: components.Build());
-            await AddScoreAndFinish(connection, achievement);   
+            await AddScoreAndFinish(connection, achievement, quizMessage);
         }
 
-        async Task AddScoreAndFinish(SqlConnection connection, Achievement achievement)
+        async Task AddScoreAndFinish(SqlConnection connection, Achievement achievement, IMessage quizMessage)
         {
 
             var gyn = client.GetGyn(config);
@@ -240,14 +281,14 @@ namespace PrideBot.Quizzes
                 overridePoints = pAchievement.DefaultScore;
             }
 
-            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, DateTime.Now, null, titleUrl: quizOpenedUrl, overridePoints: overridePoints);
+            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, DateTime.Now, quizMessage, titleUrl: quizOpenedUrl, overridePoints: overridePoints);
             var previousLog = await repo.GetLastQuizLogForUserAsync(connection, user.Id.ToString(), quizLog.Day.ToString());
             // Streak bonus
             if (quizLog.Correct && !user.IsGYNSage(config) && quizLog.Guesses == 1 && quizLog.Day >= int.Parse(config["firstquizstreakday"]))
             {
                 if (previousLog != null && previousLog.Correct && previousLog.Guesses == 1)
                 {
-                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "QUIZ_STREAK", client.CurrentUser, DateTime.Now, null, titleUrl: quizOpenedUrl);
+                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "QUIZ_STREAK", client.CurrentUser, DateTime.Now, quizMessage, titleUrl: quizOpenedUrl);
                     var embed = GetEmbed()
                         .WithTitle("🔥 Streak!!")
                         .WithDescription(DialogueDict.Get("QUIZ_STREAK"));
@@ -299,7 +340,7 @@ namespace PrideBot.Quizzes
                     + "\n\n" + DialogueDict.Get("QUIZ_CLOSING"));
 
                 await Task.Delay(500);
-                await AddScoreAndFinish(connection, achievement);
+                await AddScoreAndFinish(connection, achievement, currentPrompt?.BotMessage);
             }
         }
     }

@@ -114,6 +114,8 @@ namespace PrideBot.Plushies
         {
             var cBuilder = new ComponentBuilder();
             cBuilder.ActionRows = new List<ActionRowBuilder>();
+            var selectedPlushie = userPlushies
+                .FirstOrDefault(a => a.UserPlushieId == selectedPlushieId);
 
             // Dropdown
             var dropdownBuilder = new ActionRowBuilder();
@@ -146,12 +148,14 @@ namespace PrideBot.Plushies
             {
                 // Use button
 
+                var canUse = selectedPlushie.Context.Equals("CARD_MENU");
                 plushieOptionRowBuilder.AddComponent(new ButtonBuilder()
                 {
                     Style = ButtonStyle.Primary,
                     Emote = new Emoji("⚡"),
-                    Label = "Activate Now",
-                    CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Use, imageState)
+                    Label = canUse ? "Activate Now" : "Can't Activate Here",
+                    CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Use, imageState),
+                    IsDisabled = !canUse
                 }.Build());
                 // Sell button
                 plushieOptionRowBuilder.AddComponent(new ButtonBuilder()

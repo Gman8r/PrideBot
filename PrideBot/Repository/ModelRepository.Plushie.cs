@@ -43,6 +43,10 @@ namespace PrideBot.Repository
         public async Task<bool> CanUserReceivePlushieAsync(SqlConnection conn, string userId)
         => (await new SqlCommand($"select dbo.fnUserCanReceivePlushie('{userId}')", conn).ExecuteScalarAsync()).ToString().Equals("Y");
 
+        public async Task<int> AddPlushieUseLog(SqlConnection conn, int userPlushieId, PlushieUseContext contextType, string context, DateTime timestamp)
+        => await new SqlCommand($"insert into PLUSHIE_EFFECT_LOG (USER_PLUSHIE_ID, CONTEXT_TYPE, CONTEXT, TIMESTAMP)" +
+            $" values({userPlushieId}, {(int)contextType}, '{context}', '{timestamp}')", conn).ExecuteNonQueryAsync();
+
         public async Task UpdatePlushieChoicesForUserAsync(SqlConnection conn, string userId, int day, bool forceUpdate = false)
         {
             var command = new SqlCommand("SP_UPDATE_PLUSHIE_CHOICES_FOR_USER", conn);
@@ -232,15 +236,13 @@ namespace PrideBot.Repository
             }
         }
 
-        public async Task<DepletePlushieResult> DepleteUserPlushieAsync(SqlConnection conn, int userPlushieId, DateTime timestamp, bool forceRemove, PlushieUseContext contextType, string context)
+        public async Task<DepletePlushieResult> DepleteUserPlushieAsync(SqlConnection conn, int userPlushieId, DateTime timestamp, bool forceRemove, PlushieUseContext contextType, string context, bool logUse = true)
         {
             var command = new SqlCommand("SP_DEPLETE_USER_PLUSHIE", conn);
             command.CommandType = CommandType.StoredProcedure;
             command.Parameters.Add(new SqlParameter("@USER_PLUSHIE_ID", userPlushieId));
             command.Parameters.Add(new SqlParameter("@TIMESTAMP", timestamp));
             command.Parameters.Add(new SqlParameter("@FORCE_REMOVE", forceRemove));
-            command.Parameters.Add(new SqlParameter("@CONTEXT_TYPE", (int)contextType));
-            command.Parameters.Add(new SqlParameter("@CONTEXT", context));
 
             var fullyDepletedParam = new SqlParameter();
             fullyDepletedParam.ParameterName = "@FULLY_DEPLETED";
@@ -256,6 +258,10 @@ namespace PrideBot.Repository
             command.Parameters.Add(errorCodeParam);
 
             await command.ExecuteNonQueryAsync();
+
+            if (logUse)
+                await AddPlushieUseLog(conn, userPlushieId, contextType, context, timestamp);
+
             return new DepletePlushieResult(fullyDepletedParam.Value.ToString().Equals("Y"), (StandardTransactionError)errorCodeParam.Value);
         }
     }

@@ -14,7 +14,7 @@ namespace PrideBot.Models
         public string Description { get; set; }
         public int Uses { get; set; }
         public int DurationHours { get; set; }
-        public PlushieContext Context { get; set; }
+        public string Context { get; set; }
         public decimal Weight { get; set; }
 
         [DontPushToDatabase]
