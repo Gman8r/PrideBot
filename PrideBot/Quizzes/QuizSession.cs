@@ -195,7 +195,7 @@ namespace PrideBot.Quizzes
                             a.Embed = embed.Build();
                             a.Components = choicesComponents.Build();
                         });
-                        await repo.DepleteUserPlushieAsync(connection, halfPlushie.UserPlushieId, DateTime.Now, false, PlushieUseContext.Quiz, quiz.QuizId.ToString());
+                        await repo.DepleteUserPlushieAsync(connection, halfPlushie.UserPlushieId, DateTime.Now, false, PlushieEffectContext.Quiz, quiz.QuizId.ToString());
                         await channel.SendMessageAsync(DialogueDict.Get($"QUIZ_PLUSHIE_HALF"));
                     }
                     else
@@ -235,6 +235,7 @@ namespace PrideBot.Quizzes
                 attemptsLeft--;
             }
 
+            response.BotMessage.ModifyAsync(a => a.Components = response.BotMessage.Components.ToBuilder().WithAllDisabled(true).Build()).GetAwaiter();
             sessionComplete = true;
             if (IsCancelled)
                 return;

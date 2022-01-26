@@ -50,7 +50,8 @@ namespace PrideBot
                             }
                         }
                         else
-                            errorMessage = DialogueDict.Get("EXCEPTION");
+                            errorMessage = errorReason;
+                            //errorMessage = DialogueDict.Get("EXCEPTION");
                     }
                 }
 

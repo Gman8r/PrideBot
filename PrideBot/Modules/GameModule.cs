@@ -101,69 +101,69 @@ namespace PrideBot.Modules
         }
 
 
-        [Command("users")]
-        public async Task Users()
-        {
-            using var typing = Context.Channel.EnterTypingState();
-            using var connection = repo.GetDatabaseConnection();
-            await connection.OpenAsync();
-            var allShips = (await repo.GetAllShipsAsync(connection))
-                .Where(a => a.PointsEarned > 0);
-            var ships = allShips;
-            //.OrderByDescending(a => a.PointsEarned)
-            //.Take(20);
-            var scores = await repo.GetAllShipScoresAsync(connection);
-            var achievements = await repo.GetAllAchievementsAsync(connection);
+        //[Command("users")]
+        //public async Task Users()
+        //{
+        //    using var typing = Context.Channel.EnterTypingState();
+        //    using var connection = repo.GetDatabaseConnection();
+        //    await connection.OpenAsync();
+        //    var allShips = (await repo.GetAllShipsAsync(connection))
+        //        .Where(a => a.PointsEarned > 0);
+        //    var ships = allShips;
+        //    //.OrderByDescending(a => a.PointsEarned)
+        //    //.Take(20);
+        //    var scores = await repo.GetAllShipScoresAsync(connection);
+        //    var achievements = await repo.GetAllAchievementsAsync(connection);
 
-            var userIds = scores
-                .GroupBy(a => a.UserId)
-                .Select(a => ulong.Parse(a.Key))
-                .OrderBy(a => a);
-            //var users = userIds
-            //    .Select(a => Context.Client.GetGyn(config).GetUser(a));
+        //    var userIds = scores
+        //        .GroupBy(a => a.UserId)
+        //        .Select(a => ulong.Parse(a.Key))
+        //        .OrderBy(a => a);
+        //    //var users = userIds
+        //    //    .Select(a => Context.Client.GetGyn(config).GetUser(a));
 
 
-            var chid = 842885896756002816;
-            var ch = await Context.Client.Rest.GetDMChannelAsync(842885896756002816);
-            var sfskf = await Context.Client.GetDMChannelAsync(842885896756002816);
+        //    var chid = 842885896756002816;
+        //    var ch = await Context.Client.Rest.GetDMChannelAsync(842885896756002816);
+        //    var sfskf = await Context.Client.GetDMChannelAsync(842885896756002816);
 
-            var data = new List<IList<object>>();
-            var header = new List<object>() { "" };
-            data.Add(header);
-            var gyn = Context.Client.GetGyn(config);
-            var dmChannels = await Context.Client.GetDMChannelsAsync();
-            var dm2 = await Context.Client.Rest.GetDMChannelsAsync();
-            foreach (var id in userIds)
-            {
-                var user = gyn.GetUser(id);
-                var name = user?.Nickname ?? user?.Username ?? "Unknown User";
-                name += $" ({id})";
-                header.Add(name);
-                var dmChannel = dm2
-                    .FirstOrDefault(a => a.Users.Select(a => a.Id).Contains(id));
-                if (dmChannel == null)
-                {
+        //    var data = new List<IList<object>>();
+        //    var header = new List<object>() { "" };
+        //    data.Add(header);
+        //    var gyn = Context.Client.GetGyn(config);
+        //    var dmChannels = await Context.Client.GetDMChannelsAsync();
+        //    var dm2 = await Context.Client.Rest.GetDMChannelsAsync();
+        //    foreach (var id in userIds)
+        //    {
+        //        var user = gyn.GetUser(id);
+        //        var name = user?.Nickname ?? user?.Username ?? "Unknown User";
+        //        name += $" ({id})";
+        //        header.Add(name);
+        //        var dmChannel = dm2
+        //            .FirstOrDefault(a => a.Users.Select(a => a.Id).Contains(id));
+        //        if (dmChannel == null)
+        //        {
 
-                }
-            }
+        //        }
+        //    }
 
-            foreach (var ship in ships)
-            {
-                var row = new List<object>() { ship.GetDisplayName() };
-                var shipScores = scores.Where(a => a.ShipId.Equals(ship.ShipId));
-                foreach (var uid in userIds)
-                {
-                    var sum = shipScores
-                        .Where(a => a.UserId.Equals(uid.ToString()))
-                        .Sum(a => a.PointsEarned);
-                    row.Add(sum);
-                }
-                data.Add(row);
-            }
+        //    foreach (var ship in ships)
+        //    {
+        //        var row = new List<object>() { ship.GetDisplayName() };
+        //        var shipScores = scores.Where(a => a.ShipId.Equals(ship.ShipId));
+        //        foreach (var uid in userIds)
+        //        {
+        //            var sum = shipScores
+        //                .Where(a => a.UserId.Equals(uid.ToString()))
+        //                .Sum(a => a.PointsEarned);
+        //            row.Add(sum);
+        //        }
+        //        data.Add(row);
+        //    }
 
-            await sheetsService.UpdateDataAsync("1bH24HKQ8Y6qWKbGlDW0YACCVuLreJeN6INCwPnsTQgs", $"A1:YY1001", data as IList<IList<object>>);
-            await ReplyAsync("FUcking DID IT!");
-        }
+        //    await sheetsService.UpdateDataAsync("1bH24HKQ8Y6qWKbGlDW0YACCVuLreJeN6INCwPnsTQgs", $"A1:YY1001", data as IList<IList<object>>);
+        //    await ReplyAsync("FUcking DID IT!");
+        //}
 
         // TODO this is the old simulation code
         //[Command("review")]
@@ -459,16 +459,16 @@ namespace PrideBot.Modules
                 .WithThumbnailUrl(user.GetServerAvatarUrlOrDefault())
                 .WithTitle($"Score Overview")
                 .WithDescription(user == Context.User
-                ? "Heyyy, I pulled some cosmic data about how your pairings are doing!"
-                : $"'Kayy, here's how {(user as SocketGuildUser)?.Nickname ?? user.Username}'s pairings are doing!")
+                ? DialogueDict.Get("SCORES_VIEW_SELF")
+                : DialogueDict.Get("SCORES_VIEW_OTHER", (user as SocketGuildUser)?.Nickname ?? user.Username))
                 .WithFooter(new EmbedFooterBuilder()
                     .WithText(user.Id.ToString()));
             var spEmote = EmoteHelper.SPEmote;
 
-            //var guildSettings = await repo.GetGuildSettings(connection, config["ids:gyn"]);
-            var leaderboardRevealed = true;
+            var guildSettings = await repo.GetGuildSettings(connection, config["ids:gyn"]);
+            var leaderboardRevealed = guildSettings.LeaderboardAvailable;
             if (!leaderboardRevealed)
-                embed.Description += " But HMM I can only see so much right now, it'll take some time before I can get you the full picture!";
+                embed.Description += " " + DialogueDict.Get("SCORES_VIEW_BLOCKED");
 
             //foreach (var ship in dbShips)
             //{
@@ -491,13 +491,13 @@ namespace PrideBot.Modules
             {
                 embed.AddField($"__**{ship.GetDisplayName()}:**__",
                     $"Currently **{(leaderboardRevealed ? (ship.Place.ToString() + MathHelper.GetPlacePrefix((int)ship.Place)) : "??th")}**" +
-                    $" with **{(leaderboardRevealed ? ship.PointsEarned.ToString() : "???")} {spEmote}**" +
-                    $" (**{ship.PointsEarnedByUser}** from you)");
+                    $" with **{(leaderboardRevealed ? ((int)Math.Round(ship.PointsEarned)).ToString() : "???")} {spEmote}**" +
+                    $" (**{(int)Math.Round(ship.PointsEarnedByUser)}** from you)");
             }
 
             embed.AddField($"Your {EmoteHelper.SPEmote} Totals for This Event:",
-                $"From Combined Achievements: **{dbUser.PointsEarned} {EmoteHelper.SPEmote}**" +
-                $"\nTotal Contributed to Pairings: **{dbUser.PointsGivenToShips} {EmoteHelper.SPEmote}**");
+                $"From Combined Achievements: **{(int)Math.Round(dbUser.PointsEarned)} {EmoteHelper.SPEmote}**" +
+                $"\nTotal Contributed to Pairings: **{(int)Math.Round(dbUser.PointsGivenToShips)} {EmoteHelper.SPEmote}**");
 
             var recentScores = await repo.GetRecentScoresForUserAsync(connection, dbUser.UserId);
             if (recentScores.Any())

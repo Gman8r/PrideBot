@@ -40,14 +40,14 @@ namespace PrideBot.Game
             return $"{((int)ts.TotalHours).ToString("D2")}:{ts.Minutes.ToString("D2")}:{ts.Seconds.ToString("D2")}";
         }
 
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null, IEnumerable<UserPlushie> appliedPlushies = null)
         {
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
-            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, timestamp, message, overridePoints, titleUrl, ignoreIfNotRegistered, ignoreCooldown, dontPing, reportChannel);
+            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, timestamp, message, overridePoints, titleUrl, ignoreIfNotRegistered, ignoreCooldown, dontPing, reportChannel, appliedPlushies);
         }
 
         // Returns True if score was applied in some way
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null, IEnumerable<UserPlushie> appliedPlushies = null)
         {
             if (overridePoints > 999)
                 throw new CommandException("Max score for an achievement is 999, WHY ARE YOU EVEN DOING THIS??");
@@ -56,12 +56,14 @@ namespace PrideBot.Game
 
             var achievementChannel = client.GetGyn(config)
                 .GetChannelFromConfig(config, "achievementschannel") as ITextChannel;;
+            appliedPlushies ??= new List<UserPlushie>();
 
             var dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
             var pointsEarned = overridePoints == 0 ? achievement.DefaultScore : overridePoints;
 
             var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarned, approver.Id.ToString(), timestamp, ignoreCooldown,
                 ((message?.Channel ?? null) as IGuildChannel)?.Guild.Id.ToString() ?? "", message?.Channel.Id.ToString() ?? "", message?.Id.ToString() ?? "");
+
             var scoreId = dbResult.ScoreId; 
             var errorCode = dbResult.errorCode;
             if (errorCode == ModelRepository.AddScoreError.Unknown)
@@ -77,7 +79,15 @@ namespace PrideBot.Game
                 var dbScore = await repo.GetScoreAsync(connection, scoreId);
                 var dbShipScores = (await repo.GetShipScoresAsync(connection, scoreId)).ToArray();
 
-                var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, dbScore, dbShipScores, await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, dbResult);
+                // Add applied plushies as plushie effect logs so we fetch them alongside the ones the db applies
+                foreach (var plushie in appliedPlushies)
+                {
+                    await repo.AddPlushieEffectLog(connection, plushie.UserPlushieId, PlushieEffectContext.Score, scoreId, DateTime.Now);
+                }
+
+                var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, dbScore, dbShipScores,
+                    await repo.GetPlushieEffectLogsForScoreAsync(connection, int.Parse(scoreId)),
+                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, dbResult);
                 var text = user.Mention + " Achievement! " + achievement.Emoji;// + " Achievement!";// + " " + achievement.Emoji;
 
                 if (errorCode == ModelRepository.AddScoreError.CooldownViolated)
@@ -128,7 +138,7 @@ namespace PrideBot.Game
         }
 
         // returns (embed, ship image file)
-        public async Task<(EmbedBuilder, MemoryFile)> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, Score dbScore, ShipScore[] dbShipScores, UserShipCollection dbUserShips, IUser approver,
+        public async Task<(EmbedBuilder, MemoryFile)> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, Score dbScore, ShipScore[] dbShipScores, IEnumerable<PlushieEffectLog> plushiEffectLogs, UserShipCollection dbUserShips, IUser approver,
             string titleUrl = null, ModelRepository.AddScoreResult result = null)
         {
             var errorCode = result?.errorCode ?? ModelRepository.AddScoreError.None;
@@ -146,7 +156,7 @@ namespace PrideBot.Game
                 case (ModelRepository.AddScoreError.None):
                     
                     // Base
-                    var scoreStr = $"💕 **{(int)Math.Round(dbScore.PointsEarned, 0)} Base**";
+                    var scoreStr = $"💕 **{(int)Math.Round(dbScore.PointsEarned, 0)} Earned**";
                     if (!dbScore.BonusMult.Approximately(1.00m, .01m))
                         scoreStr += $"  ( {dbScore.BonusMult}x Plushie Effects)";
 
@@ -162,6 +172,15 @@ namespace PrideBot.Game
                             scoreStr += $"  ({shipScore.BonusMult}x Plushie Effects)";
                     }
                     embed.AddField($"You feel your bond with your community grow stronger...\nYou've earned {EmoteHelper.SPEmote} !", scoreStr.Trim());
+
+                    // plushie effects field
+                    if (plushiEffectLogs.Any())
+                    {
+                        var plushieEffects = plushiEffectLogs
+                            .GroupBy(a => a.PlushieName);
+                        embed.AddField("Plushies In Effect:", string.Join("\n", plushieEffects
+                            .Select(a => $"🧸 {(a.Count() > 1 ? $"**x{a.Count()}** " : "")}{a.Key}")));
+                    }
 
                     var scores = Enumerable.Range(0, 3)
                         .Select(a => "+" + ((int)(Math.Round(dbShipScores

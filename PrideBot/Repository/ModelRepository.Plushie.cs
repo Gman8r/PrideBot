@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Data;
+using Discord;
 
 namespace PrideBot.Repository
 {
@@ -48,7 +49,17 @@ namespace PrideBot.Repository
         public async Task<bool> CanUserReceivePlushieAsync(SqlConnection conn, string userId)
         => (await new SqlCommand($"select dbo.fnUserCanReceivePlushie('{userId}')", conn).ExecuteScalarAsync()).ToString().Equals("Y");
 
-        public async Task<int> AddPlushieUseLog(SqlConnection conn, int userPlushieId, PlushieUseContext contextType, string context, DateTime timestamp)
+        public async Task<IEnumerable<PlushieEffectLog>> GetPlushieEffectLogsForScoreAsync(SqlConnection conn, int scoreId)
+        => (await new SqlCommand($"select * from VI_PLUSHIE_EFFECT_LOG" +
+            $" where (CONTEXT_TYPE = {(int)PlushieEffectContext.Score} or CONTEXT_TYPE = {(int)PlushieEffectContext.ShipScore}) and CONTEXT = '{scoreId}'", conn).ExecuteReaderAsync()).As<PlushieEffectLog>();
+
+        public async Task<IEnumerable<PlushieEffectLog>> GetPlushieEffectLogsForUserPlushieAsync(SqlConnection conn, int userPlushieId)
+        => (await new SqlCommand($"select * from VI_PLUSHIE_EFFECT_LOG where USER_PLUSHIE_ID = {userPlushieId}", conn).ExecuteReaderAsync()).As<PlushieEffectLog>();
+
+        public async Task<IEnumerable<PlushieEffectLog>> GetAllPlushieEffectLogsAsync(SqlConnection conn)
+        => (await new SqlCommand($"select * from VI_PLUSHIE_EFFECT_LOG", conn).ExecuteReaderAsync()).As<PlushieEffectLog>();
+
+        public async Task<int> AddPlushieEffectLog(SqlConnection conn, int userPlushieId, PlushieEffectContext contextType, string context, DateTime timestamp)
         => await new SqlCommand($"insert into PLUSHIE_EFFECT_LOG (USER_PLUSHIE_ID, CONTEXT_TYPE, CONTEXT, TIMESTAMP)" +
             $" values({userPlushieId}, {(int)contextType}, '{context}', '{timestamp}')", conn).ExecuteNonQueryAsync();
 
@@ -240,7 +251,33 @@ namespace PrideBot.Repository
             }
         }
 
-        public async Task<DepletePlushieResult> DepleteUserPlushieAsync(SqlConnection conn, int userPlushieId, DateTime timestamp, bool forceRemove, PlushieUseContext contextType, string context, bool logUse = true)
+        // dont run this parallel pls!
+        public async Task<UserPlushie> ForceAddPlushieAsync(SqlConnection conn, string userId, string characterId, string plushieId, decimal rotation)
+        {
+            var insertPlushie = new UserPlushie()
+            {
+                CharacterId = characterId,
+                PlushieId = plushieId,
+                UserId = userId,
+                Source = PlushieTransaction.Plushie,
+                Fate = PlushieTransaction.None,
+                DrawnDay = 0,
+                Rotation = rotation,
+                OriginalUserId = userId,
+                Timestamp = DateTime.Now
+            };
+
+            var command = DatabaseHelper.GetInsertCommand(conn, insertPlushie, "USER_PLUSHIES");
+            await command.ExecuteNonQueryAsync();
+            // now we have to do a bit of manual work to GET the userplushie we just made
+            var newUserPlushie = (await GetAllUserPlushiesForUserAsync(conn, userId))
+                .Where(a => a.CharacterId.Equals(characterId) && a.Fate == PlushieTransaction.None)
+                .OrderBy(a => a.Timestamp)
+                .Last();
+            return newUserPlushie;
+        }
+
+        public async Task<DepletePlushieResult> DepleteUserPlushieAsync(SqlConnection conn, int userPlushieId, DateTime timestamp, bool forceRemove, PlushieEffectContext contextType, string context, bool logUse = true)
         {
             var command = new SqlCommand("SP_DEPLETE_USER_PLUSHIE", conn);
             command.CommandType = CommandType.StoredProcedure;
@@ -264,7 +301,7 @@ namespace PrideBot.Repository
             await command.ExecuteNonQueryAsync();
 
             if (logUse)
-                await AddPlushieUseLog(conn, userPlushieId, contextType, context, timestamp);
+                await AddPlushieEffectLog(conn, userPlushieId, contextType, context, timestamp);
 
             return new DepletePlushieResult(fullyDepletedParam.Value.ToString().Equals("Y"), (StandardTransactionError)errorCodeParam.Value);
         }

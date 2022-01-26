@@ -63,6 +63,12 @@ namespace PrideBot.Plushies
                 case "COPY_CAT":
                     await CopyCatAsync(connection, user, userPlushie, channel, interaction);
                     break;
+                case "MYSTERY_MEDICINE":
+                    await MysteryMedicineAsync(connection, user, userPlushie, channel, interaction);
+                    break;
+                case "RANDOM_RESET":
+                    await RandomResetAsync(connection, user, userPlushie, channel, interaction);
+                    break;
                 default:
                     await repo.ActivateUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now);
                     embed = EmbedHelper.GetEventEmbed(user, config)
@@ -76,6 +82,11 @@ namespace PrideBot.Plushies
                         await interaction.FollowupAsync(user.Mention, embed: embed.Build());
                     break;
             }
+        }
+
+        async Task MysteryMedicineAsync(SqlConnection connection, IGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction)
+        {
+
         }
 
         async Task CopyCatAsync(SqlConnection connection, IGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction)
@@ -94,51 +105,44 @@ namespace PrideBot.Plushies
                 .WithDescription(DialogueDict.Get("PLUSHIE_COPYCAT", lastUsed.CharacterName));
             var msg = await channel.SendMessageAsync(embed: embed.Build());
 
-            // deplete copy cat and create a brand new plushie from scratch (don't wanna mess with any of the procedures)
-            var newGuy = new UserPlushie()
-            {
-                CharacterId = lastUsed.CharacterId,
-                PlushieId = lastUsed.PlushieId,
-                UserId = user.Id.ToString(),
-                Source = PlushieTransaction.Plushie,
-                Fate = PlushieTransaction.None,
-                DrawnDay = 0,
-                OriginalUserId = user.Id.ToString(),
-                Timestamp = DateTime.Now
-            };
-            var command = DatabaseHelper.GetInsertCommand(connection, newGuy, "USER_PLUSHIES");
-            await command.ExecuteNonQueryAsync();
+            // deplete copy cat first
+            await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
 
-            // problem is now we have to do a bit of manual work to GET the id we just made
-            var newUserPlushie = (await repo.GetAllUserPlushiesForUserAsync(connection, user.Id.ToString()))
-                .Where(a => a.CharacterId.Equals(lastUsed.CharacterId) && a.Fate == PlushieTransaction.None)
-                .OrderBy(a => a.Timestamp)
-                .Last();
-            // And the circle of life goes on
+            // add a new user plushie from it
+            var newUserPlushie = await repo.ForceAddPlushieAsync(connection, user.Id.ToString(), lastUsed.CharacterId, lastUsed.PlushieId, lastUsed.Rotation);
+   
+            // And activate
             await ActivatePlushie(connection, user, newUserPlushie, channel, interaction);
 
-            await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieUseContext.Message, msg.Id.ToString());
         }
 
-        async Task FactoryResetAsync(SqlConnection connection, IGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction)
+        async Task RandomResetAsync(SqlConnection connection, IGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction)
         {
             // Get random character id for a plushie, using the algorithm in the db
-            string characterId;
-            Plushie plushie;
-            do
+            var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, user.Id.ToString());
+            if (!userPlushies.Any())
+                throw new CommandException(DialogueDict.Get("PLUSHIE_RESET_NONE"));
+            var seletedCharacterId = await repo.GetRandomPlushieCharacterAsync(connection, user.Id.ToString());
+            var selectedPlushie = await repo.GetPlushieFromCharaterAsync(connection, seletedCharacterId);
+            var selectedCharacter = await repo.GetCharacterAsync(connection, seletedCharacterId);
+
+            var embed = EmbedHelper.GetEventEmbed(user, config)
+                .WithTitle("Resetting! ❓")
+                .WithDescription(DialogueDict.Get("PLUSHIE_RESET_START", selectedCharacter.Name));
+            var msg = await channel.SendMessageAsync(embed: embed.Build());
+            using var typing = channel.EnterTypingState();
+
+            //await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
+            foreach (var ownedPlushie in userPlushies)
             {
-                characterId = await repo.GetRandomPlushieCharacterAsync(connection, user.Id.ToString());
-                plushie = await repo.GetPlushieFromCharaterAsync(connection, characterId);
+                await repo.DepleteUserPlushieAsync(connection, ownedPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
+                await repo.ForceAddPlushieAsync(connection, user.Id.ToString(), selectedCharacter.CharacterId, selectedPlushie.PlushieId, ownedPlushie.Rotation);
             }
-            while (plushie.Context.Equals("CARD_MENU"));    // lol cope
 
-            // TODO finish this i got distracted
-
-            // Update the user plushie to have our selected character 
-            userPlushie.CharacterId = characterId;
-            var command = DatabaseHelper.GetUpdateCommand(connection, plushie, "PLUSHIES");
-            // re-fetch
-
+            embed = EmbedHelper.GetEventEmbed(user, config)
+                .WithTitle("Reset! ❗")
+                .WithDescription(DialogueDict.Get("PLUSHIE_RESET_DONE", selectedCharacter.Name));
+            await channel.SendMessageAsync(embed: embed.Build());
         }
 
         async Task AdvancedMathematicsAsync(SqlConnection connection, IGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction)
@@ -174,8 +178,8 @@ namespace PrideBot.Plushies
                 .WithDescription(tutorial);
             var msg = await interaction.FollowupAsync(embed: embed.Build());
 
-            var scoreResult = await scoringService.AddAndDisplayAchievementAsync(connection, user, "PLUSHIE_MATH", client.CurrentUser, DateTime.Now, msg, pointsTotal, msg.GetJumpUrl());
-            await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieUseContext.Message, msg.Id.ToString());
+            var scoreResult = await scoringService.AddAndDisplayAchievementAsync(connection, user, "PLUSHIE_MATH", client.CurrentUser, DateTime.Now, msg, pointsTotal, msg.GetJumpUrl(), appliedPlushies: new List<UserPlushie>() { userPlushie });
+            await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
         }
     }
 }

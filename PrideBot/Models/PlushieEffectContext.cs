@@ -4,7 +4,7 @@ using System.Text;
 
 namespace PrideBot.Models
 {
-    public enum PlushieUseContext
+    public enum PlushieEffectContext
     {
         None = 0,
         Score = 1,
