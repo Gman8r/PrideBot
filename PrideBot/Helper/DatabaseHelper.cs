@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -41,15 +42,7 @@ namespace PrideBot
                     value = (record[i] ?? "N").Equals("Y");
                 else
                     value = record.IsDBNull(i) ? null : record[i];
-                try
-                {
-
                 property.SetValue(result, value);
-                }
-                catch (Exception e)
-                {
-                    var aasf = 1;
-                }
             }
             return result;
         }
@@ -57,18 +50,22 @@ namespace PrideBot
         public static SqlCommand GetInsertCommand<T>(SqlConnection conn, T obj, string tableName)
         {
             var fields = new Dictionary<string, object>();
-            foreach (var property in typeof(T).GetProperties())
+            foreach (var property in typeof(T).GetProperties()
+                .Where(p => p.DeclaringType == typeof(T)))
             {
-                if (typeof(T).BaseType != null)
-                {
-                    // Ignore superclass when pushing
-                    if (typeof(T).BaseType.GetProperties().Contains(property))
-                        continue;
-                }
+                //if (typeof(T).BaseType != null)
+                //{
+                //    // Ignore superclass when pushing
+                //    var props = typeof(T).BaseType.GetProperties();
+                //    if (typeof(T).BaseType.GetProperties().Any(a => a.Name.Equals(property.Name)))
+                //        continue;
+                //}
                 var key = CamelCaseNameToSql(property.Name);
                 var value = property.GetValue(obj);
                 if (value != null && value.GetType() == typeof(bool))
                     value = (bool)value ? "Y" : "N";
+                if (value is DateTime dt && dt < new DateTime(1800, 1, 1))
+                    value = DBNull.Value;
                 if (!property.CustomAttributes.Any(a => a.AttributeType == typeof(DontPushToDatabaseAttribute)))
                     fields[key] = value;
 
@@ -81,6 +78,7 @@ namespace PrideBot
             foreach (var field in fields.Where(a => a.Value != null))
             {
                 command.Parameters.AddWithValue("@" + field.Key, field.Value);
+                query = query.Replace("@" + field.Key, $"'{field.Value ?? "null"}'");
             }
 
             return command;
@@ -90,7 +88,8 @@ namespace PrideBot
         {
             var fields = new Dictionary<string, object>();
             var primaryKeys = new Dictionary<string, object>();
-            foreach (var property in typeof(T).GetProperties())
+            foreach (var property in typeof(T).GetProperties()
+                .Where(p => p.DeclaringType == typeof(T)))
             {
                 var key = CamelCaseNameToSql(property.Name);
                 var value = property.GetValue(obj);
@@ -98,12 +97,14 @@ namespace PrideBot
                     value = (bool)value ? "Y" : "N";
                 if (property.CustomAttributes.Any(a => a.AttributeType == typeof(PrimaryKeyAttribute)))
                     primaryKeys[key] = value;
-                if (typeof(T).BaseType != null)
-                {
-                    // Ignore superclass when pushing
-                    if (typeof(T).BaseType.GetProperties().Contains(property))
-                        continue;
-                }
+                //if (typeof(T).BaseType != null)
+                //{
+                //    // Ignore superclass when pushing
+                //    if (typeof(T).BaseType.GetProperties().Any(a => a.Name.Equals(property.Name)))
+                //        continue;
+                //}
+                if (value is DateTime dt && dt < new DateTime(1800, 1, 1))
+                    value = DBNull.Value;
                 if (!property.CustomAttributes.Any(a => a.AttributeType == typeof(DontPushToDatabaseAttribute)))
                     fields[key] = value;
             }
