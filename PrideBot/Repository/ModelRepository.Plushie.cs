@@ -15,6 +15,11 @@ namespace PrideBot.Repository
         public async Task<Plushie> GetPlushieAsync(SqlConnection conn, string plushieId)
         => (await new SqlCommand($"select * from VI_PLUSHIES where PLUSHIE_ID = '{plushieId}'", conn).ExecuteReaderAsync()).As<Plushie>().FirstOrDefault();
 
+        public async Task<Plushie> GetPlushieFromCharaterAsync(SqlConnection conn, string characterId)
+        => (await new SqlCommand($"select p.PLUSHIE_ID from VI_CHARACTERS c" +
+            $" left join VI_PLUSHIES p on c.PLUSHIE_ID = p.PLUSHIE_ID" +
+            $" where c.CHARACTER_ID = '{characterId}'", conn).ExecuteReaderAsync()).As<Plushie>().FirstOrDefault();
+
         public async Task<UserPlushie> GetUserPlushieAsync(SqlConnection conn, int userPlushieId)
         => (await new SqlCommand($"select * from VI_USER_PLUSHIES where USER_PLUSHIE_ID = {userPlushieId}", conn).ExecuteReaderAsync()).As<UserPlushie>().FirstOrDefault();
 
@@ -224,7 +229,6 @@ namespace PrideBot.Repository
             return (StandardTransactionError)errorCodeParam.Value;
         }
 
-
         public class DepletePlushieResult
         {
             public bool FullyDepleted { get; }
@@ -263,6 +267,23 @@ namespace PrideBot.Repository
                 await AddPlushieUseLog(conn, userPlushieId, contextType, context, timestamp);
 
             return new DepletePlushieResult(fullyDepletedParam.Value.ToString().Equals("Y"), (StandardTransactionError)errorCodeParam.Value);
+        }
+
+        public async Task<string> GetRandomPlushieCharacterAsync(SqlConnection conn, string userId)
+        {
+            var command = new SqlCommand("SP_GET_RANDOM_PLUSHIE_CHARACTER", conn);
+            command.CommandType = CommandType.StoredProcedure;
+            command.Parameters.Add(new SqlParameter("@USER_ID", userId));
+
+            var characterIdParam = new SqlParameter();
+            characterIdParam.ParameterName = "@CHARACTER_ID";
+            characterIdParam.Direction = ParameterDirection.Output;
+            characterIdParam.DbType = DbType.String;
+            characterIdParam.Size = 50;
+            command.Parameters.Add(characterIdParam);
+
+            await command.ExecuteNonQueryAsync();
+            return characterIdParam.Value.ToString();
         }
     }
 }

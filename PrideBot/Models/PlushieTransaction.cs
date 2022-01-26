@@ -10,6 +10,7 @@ namespace PrideBot.Models
         Drawn = 1,
         Traded = 2,
         Using = 3,
-        Done = 4
+        Done = 4,
+        Plushie
     }
 }

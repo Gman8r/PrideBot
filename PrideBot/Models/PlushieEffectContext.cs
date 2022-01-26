@@ -12,5 +12,6 @@ namespace PrideBot.Models
         Quiz = 3,
         Timeout = 4,
         Message = 5,
+        Interaction  = 6
     }
 }

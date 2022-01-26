@@ -75,6 +75,7 @@ namespace PrideBot.Modules
             switch (action)
             {
                 case PlushieAction.Use:
+                    message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()).GetAwaiter();
                     var userPlushie = await repo.GetUserPlushieAsync(connection, selectedPlushieId);
                     try
                     {
