@@ -51,7 +51,7 @@ namespace PrideBot.Events
 
         MagickImage GetYellowTextImage(string phrase)
         {
-            var textWidth = (int)(120 * Mult128);
+            var textWidth = (int)(130 * Mult128);
             var textColor = new MagickColor(255, 254, 65, 255);
             var outlineColor = MagickColors.Black;
             var outlineWidth = 6.0 * Mult128;
