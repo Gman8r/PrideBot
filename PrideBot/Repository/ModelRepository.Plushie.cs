@@ -205,7 +205,7 @@ namespace PrideBot.Repository
 
             await command.ExecuteNonQueryAsync();
             return (StandardTransactionError)errorCodeParam.Value;
-        }   
+        }
 
         public async Task<StandardTransactionError> ActivateUserPlushieAsync(SqlConnection conn, int userPlushieId, DateTime timestamp)
         {

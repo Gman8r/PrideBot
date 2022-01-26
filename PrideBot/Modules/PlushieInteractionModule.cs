@@ -37,8 +37,9 @@ namespace PrideBot.Modules
         private readonly DiscordSocketClient client;
         private readonly PlushieImageService imageService;
         private readonly PlushieEffectService plushieEffectService;
+        private readonly CommandErrorReportingService errorReportingService;
 
-        public PlushieInteractionModule(IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, PlushieMenuService plushieMenuService, PlushieService plushieService, DiscordSocketClient client, PlushieImageService imageService, PlushieEffectService plushieEffectService)
+        public PlushieInteractionModule(IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, PlushieMenuService plushieMenuService, PlushieService plushieService, DiscordSocketClient client, PlushieImageService imageService, PlushieEffectService plushieEffectService, CommandErrorReportingService errorReportingService)
         {
             this.config = config;
             this.provider = provider;
@@ -48,6 +49,7 @@ namespace PrideBot.Modules
             this.client = client;
             this.imageService = imageService;
             this.plushieEffectService = plushieEffectService;
+            this.errorReportingService = errorReportingService;
         }
 
         enum RepostAction
@@ -74,7 +76,14 @@ namespace PrideBot.Modules
             {
                 case PlushieAction.Use:
                     var userPlushie = await repo.GetUserPlushieAsync(connection, selectedPlushieId);
-                    await plushieEffectService.ActivatePlushie(connection, Context.Interaction.User as IGuildUser, userPlushie, Context.Channel, Context.Interaction);
+                    try
+                    {
+                        await plushieEffectService.ActivatePlushie(connection, Context.Interaction.User as IGuildUser, userPlushie, Context.Channel, Context.Interaction);
+                    }
+                    catch (Exception e)
+                    {
+                        await errorReportingService.ReportErrorAsync(Context.User, Context.Channel, "plushies", e.Message, e is CommandException, Context.Interaction);
+                    }
                     selectedPlushieId = 0;
                     break;
                 case PlushieAction.Draw:
