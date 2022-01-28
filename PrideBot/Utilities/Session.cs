@@ -157,7 +157,7 @@ namespace PrideBot
             }
             catch (OperationCanceledException e)
             {
-                var embed = EmbedHelper.GetEventEmbed(user, config, showUser: false)
+                var embed = EmbedHelper.GetEventEmbed(user, config)
                     .WithTitle("Session Cancelled")
                     .WithDescription(cancellationMessage);
                 await channel.SendMessageAsync(embed: embed.Build());

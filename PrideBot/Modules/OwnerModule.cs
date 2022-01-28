@@ -20,6 +20,7 @@ using PrideBot.Models;
 using PrideBot.Repository;
 using PrideBot.Events;
 using PrideBot.Game;
+using PrideBot.Quizzes;
 
 namespace PrideBot.Modules
 {
@@ -33,8 +34,9 @@ namespace PrideBot.Modules
         readonly IConfigurationRoot config;
         readonly LeaderboardImageGenerator leaderboardImageGenerator;
         readonly SceneDialogueService sceneDialogueService;
+        readonly SnakeGame snakeGame;
 
-        public OwnerModule(ModelRepository repo, AnnouncementService announcementService, LeaderboardService leaderboardService, IConfigurationRoot config, LeaderboardImageGenerator leaderboardImageGenerator, SceneDialogueService sceneDialogueService)
+        public OwnerModule(ModelRepository repo, AnnouncementService announcementService, LeaderboardService leaderboardService, IConfigurationRoot config, LeaderboardImageGenerator leaderboardImageGenerator, SceneDialogueService sceneDialogueService, SnakeGame snakeGame)
         {
             this.repo = repo;
             this.announcementService = announcementService;
@@ -42,6 +44,7 @@ namespace PrideBot.Modules
             this.config = config;
             this.leaderboardImageGenerator = leaderboardImageGenerator;
             this.sceneDialogueService = sceneDialogueService;
+            this.snakeGame = snakeGame;
         }
 
         [Command("announceintro")]
@@ -80,6 +83,14 @@ namespace PrideBot.Modules
         public async Task RunScene(string sceneId)
         {
             await sceneDialogueService.PerformCutscene(sceneId);
+        }
+
+        [Command("tsuchiconnect")]
+        public async Task TsuchiConect()
+        {
+            await snakeGame.SetLastSnakeDayAsync(GameHelper.GetEventDay() - 1);
+            snakeGame.SetNextSnakeTime(DateTime.Now);
+            await ReplyResultAsync("Done!");
         }
     }
 }

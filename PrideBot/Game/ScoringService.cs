@@ -40,14 +40,14 @@ namespace PrideBot.Game
             return $"{((int)ts.TotalHours).ToString("D2")}:{ts.Minutes.ToString("D2")}:{ts.Seconds.ToString("D2")}";
         }
 
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null, IEnumerable<UserPlushie> appliedPlushies = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null, UserPlushie appliedPlushie = null, List<UserPlushie> appliedPlushies = null)
         {
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
-            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, timestamp, message, overridePoints, titleUrl, ignoreIfNotRegistered, ignoreCooldown, dontPing, reportChannel, appliedPlushies);
+            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, timestamp, message, overridePoints, titleUrl, ignoreIfNotRegistered, ignoreCooldown, dontPing, reportChannel, appliedPlushie, appliedPlushies);
         }
 
         // Returns True if score was applied in some way
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null, IEnumerable<UserPlushie> appliedPlushies = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null, UserPlushie appliedPlushie = null, List<UserPlushie> appliedPlushies = null)
         {
             if (overridePoints > 999)
                 throw new CommandException("Max score for an achievement is 999, WHY ARE YOU EVEN DOING THIS??");
@@ -57,14 +57,22 @@ namespace PrideBot.Game
             var achievementChannel = client.GetGyn(config)
                 .GetChannelFromConfig(config, "achievementschannel") as ITextChannel;;
             appliedPlushies ??= new List<UserPlushie>();
+            if (appliedPlushie != null)
+                appliedPlushies.Insert(0, appliedPlushie);
 
             var dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
             var pointsEarned = overridePoints == 0 ? achievement.DefaultScore : overridePoints;
 
-            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarned, approver.Id.ToString(), timestamp, ignoreCooldown,
+            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarned, approver.Id.ToString(), timestamp, ignoreCooldown, DateTime.Parse(config["eventstart"]), GameHelper.GetEventDay(timestamp),
                 ((message?.Channel ?? null) as IGuildChannel)?.Guild.Id.ToString() ?? "", message?.Channel.Id.ToString() ?? "", message?.Id.ToString() ?? "");
 
-            var scoreId = dbResult.ScoreId; 
+
+            // for timed cooldowns just forget it and leave silently
+            if (dbResult.errorCode == ModelRepository.AddScoreError.CooldownViolated
+                && (achievement.CooldownDaysPerUnit == 0 || achievement.CooldownUsesPerUnit == 0))
+                return dbResult.errorCode;
+
+            var scoreId = dbResult.ScoreId;
             var errorCode = dbResult.errorCode;
             if (errorCode == ModelRepository.AddScoreError.Unknown)
             {
@@ -87,19 +95,18 @@ namespace PrideBot.Game
 
                 var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, dbScore, dbShipScores,
                     await repo.GetPlushieEffectLogsForScoreAsync(connection, int.Parse(scoreId)),
-                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, titleUrl, dbResult);
+                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, timestamp, titleUrl, dbResult);
                 var text = user.Mention + " Achievement! " + achievement.Emoji;// + " Achievement!";// + " " + achievement.Emoji;
 
                 if (errorCode == ModelRepository.AddScoreError.CooldownViolated)
-                    text = user.Mention + ((user is SocketUser sUser) ? $" Hold Up {sUser.Queen(client)}!" : " Hold Up!");
+                    text = user.Mention + "Watch It 🖐";
+                    //text = user.Mention + ((user is SocketUser sUser) ? $" Hold Up {sUser.Queen(client)}!" : " Hold Up!");
                 if (dontPing || !achievement.Ping || !dbUser.PingForAchievements)
                 {
                     text = null;
                 }
                 else
                     embed.Item1.Author = null;
-
-                embed.Item1.WithTimestamp(new DateTimeOffset(timestamp));
 
                 var channel = client.GetGyn(config)
                         .GetChannelFromConfig(config, "achievementschannel") as IMessageChannel;
@@ -138,7 +145,7 @@ namespace PrideBot.Game
         }
 
         // returns (embed, ship image file)
-        public async Task<(EmbedBuilder, MemoryFile)> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, Score dbScore, ShipScore[] dbShipScores, IEnumerable<PlushieEffectLog> plushiEffectLogs, UserShipCollection dbUserShips, IUser approver,
+        public async Task<(EmbedBuilder, MemoryFile)> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, Score dbScore, ShipScore[] dbShipScores, IEnumerable<PlushieEffectLog> plushiEffectLogs, UserShipCollection dbUserShips, IUser approver, DateTime timestamp, 
             string titleUrl = null, ModelRepository.AddScoreResult result = null)
         {
             var errorCode = result?.errorCode ?? ModelRepository.AddScoreError.None;
@@ -146,7 +153,8 @@ namespace PrideBot.Game
                 .WithTitle($"{achievement.Emoji} {(errorCode == ModelRepository.AddScoreError.CooldownViolated ? "Cooldown Required" : "Challenge Completed")}" +
                 $": {achievement.Description}!")
                 .WithDescription(DialogueDict.GenerateEmojiText(achievement.Flavor))
-                .WithUrl(titleUrl);
+                .WithUrl(titleUrl)
+                .WithTimestamp(timestamp);
             if (approver != null)
                 embed.Footer.Text += $" | {user.Id} | Approver: {approver.Username}#{approver.Discriminator} ({approver.Id})";
 
@@ -195,7 +203,17 @@ namespace PrideBot.Game
                     break;
 
                 case (ModelRepository.AddScoreError.CooldownViolated):
-                    embed.Description = DialogueDict.Get("ACHIEVEMENT_COOLDOWN_VIOLATED", achievement.CooldownHours, GetCooldownRemainingStr(result.CooldownExpires));
+                    if (achievement.CooldownDaysPerUnit > 0 && achievement.CooldownUsesPerUnit > 0)
+                    {
+                        var daysLeft = GameHelper.GetEventDay(result.CooldownExpires) - GameHelper.GetEventDay(timestamp);
+                        embed.Description = DialogueDict.Get("COOLDOWN_VIOLATED_UNITS", achievement.CooldownUsesPerUnit, achievement.CooldownDaysPerUnit,
+                            daysLeft == 1 ? "tomorrow" : $"in {daysLeft} days");
+                    }
+                    else
+                    {
+                        // fuck it we're silent for time-based ones now. You gonna cry about it??
+                        //embed.Description = DialogueDict.Get("ACHIEVEMENT_COOLDOWN_VIOLATED", achievement.CooldownHours, GetCooldownRemainingStr(result.CooldownExpires));
+                    }
                     break;
 
                 default:

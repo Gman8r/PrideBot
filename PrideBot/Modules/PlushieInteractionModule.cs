@@ -36,10 +36,9 @@ namespace PrideBot.Modules
         private readonly PlushieService plushieService;
         private readonly DiscordSocketClient client;
         private readonly PlushieImageService imageService;
-        private readonly PlushieEffectService plushieEffectService;
         private readonly CommandErrorReportingService errorReportingService;
 
-        public PlushieInteractionModule(IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, PlushieMenuService plushieMenuService, PlushieService plushieService, DiscordSocketClient client, PlushieImageService imageService, PlushieEffectService plushieEffectService, CommandErrorReportingService errorReportingService)
+        public PlushieInteractionModule(IConfigurationRoot config, IServiceProvider provider, ModelRepository repo, PlushieMenuService plushieMenuService, PlushieService plushieService, DiscordSocketClient client, PlushieImageService imageService, CommandErrorReportingService errorReportingService)
         {
             this.config = config;
             this.provider = provider;
@@ -48,7 +47,6 @@ namespace PrideBot.Modules
             this.plushieService = plushieService;
             this.client = client;
             this.imageService = imageService;
-            this.plushieEffectService = plushieEffectService;
             this.errorReportingService = errorReportingService;
         }
 
@@ -61,6 +59,7 @@ namespace PrideBot.Modules
 
         // Handle buttons in plushie menu
         [ComponentInteraction("PLUSHMENU.B:*,*,*,*")]
+        [RequireSingleSessionInteraction]
         public async Task PlushieMenuButton(string userIdStr, string selectedIdStr, string actionStr, string imageState)
         {
             await DeferAsync();
@@ -72,27 +71,22 @@ namespace PrideBot.Modules
             var message = (Context.Interaction as SocketMessageComponent).Message;
             var repostAction = RepostAction.Edit;
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
+            var awaitTasks = new List<Task>();
+            var sUser = client.GetGuild((Context.Channel as IGuildChannel).Guild.Id).GetUser(Context.User.Id);
             switch (action)
             {
                 case PlushieAction.Use:
-                    message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()).GetAwaiter();
+                    awaitTasks.Add(message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()));
                     var userPlushie = await repo.GetUserPlushieAsync(connection, selectedPlushieId);
-                    try
-                    {
-                        await plushieEffectService.ActivatePlushie(connection, Context.Interaction.User as IGuildUser, userPlushie, Context.Channel, Context.Interaction);
-                    }
-                    catch (Exception e)
-                    {
-                        await errorReportingService.ReportErrorAsync(Context.User, Context.Channel, "plushies", e.Message, e is CommandException, Context.Interaction);
-                    }
+                    await plushieService.ActivateUserPlushie(connection, sUser, userPlushie, Context.Channel, Context.Interaction);
                     selectedPlushieId = 0;
                     break;
                 case PlushieAction.Draw:
-                    message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()).GetAwaiter();
+                    awaitTasks.Add(message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()));
                     await plushieService.DrawPlushie(connection, Context.Channel, Context.Interaction.User as SocketUser, Context.Interaction);
                     break;
                 case PlushieAction.Trade:
-                    message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()).GetAwaiter();
+                    awaitTasks.Add(message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()));
                     await plushieService.TradePlushieInSession(connection, Context.Channel, Context.Interaction.User as SocketUser, selectedPlushieId, provider, Context.Interaction);
                     selectedPlushieId = 0;
                     break;
@@ -122,6 +116,7 @@ namespace PrideBot.Modules
                 default:
                     break;
             }
+            await Task.WhenAll(awaitTasks);
 
             var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, Context.User.Id.ToString());
             var inEffectPlushies = await repo.GetInEffectUserPlushiesForUserAsync(connection, Context.User.Id.ToString(), DateTime.Now);
@@ -131,6 +126,7 @@ namespace PrideBot.Modules
 
         // Handle select menu in plushie menu
         [ComponentInteraction("PLUSHMENU.S:*,*,*,*")]
+        [RequireSingleSessionInteraction]
         public async Task PlushieMenuSelect(string userIdStr, string oldSelectedIdStr, string actionStr, string imageState, string[] selectedPlushieIds)
         {
             await DeferAsync();
@@ -187,7 +183,8 @@ namespace PrideBot.Modules
                             a.Components = components?.Build();
                             a.Embed = embed.Build();
                             a.Attachments = new List<FileAttachment>();
-                        }); 
+                        });
+                        var x = 0;
                     }
                 }
                 else if (repostAction == RepostAction.Post)

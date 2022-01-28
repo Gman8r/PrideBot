@@ -58,7 +58,7 @@ namespace PrideBot.Events
 
         private Task JoinedGuild(SocketGuild guild)
         {
-            IntroAnnouncementAsync(guild).GetAwaiter();
+            //IntroAnnouncementAsync(guild).GetAwaiter();
             return Task.CompletedTask;
         }
 

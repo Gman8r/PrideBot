@@ -61,7 +61,7 @@ namespace PrideBot.Repository
             Unknown = 99
         }
 
-        public async Task<AddScoreResult> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, decimal pointsEarned, string approverId, DateTime timestamp, bool ignoreCooldown, string postGuilId, string postChannelId, string postMessageId)
+        public async Task<AddScoreResult> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, decimal pointsEarned, string approverId, DateTime timestamp, bool ignoreCooldown, DateTime eventStart, int eventDay, string postGuilId, string postChannelId, string postMessageId)
         {
             var command = new SqlCommand("SP_ADD_SCORE", conn);
             command.CommandType = CommandType.StoredProcedure;
@@ -74,21 +74,27 @@ namespace PrideBot.Repository
             command.Parameters.Add(new SqlParameter("@POST_CHANNEL_ID", postChannelId));
             command.Parameters.Add(new SqlParameter("@POST_MESSAGE_ID", postMessageId));
             command.Parameters.Add(new SqlParameter("@IGNORE_COOLDOWN", ignoreCooldown ? "Y" : "N"));
+            command.Parameters.Add(new SqlParameter("@EVENT_START", eventStart));
+            command.Parameters.Add(new SqlParameter("@EVENT_DAY", eventDay));
+
             var scoreIdParam = new SqlParameter();
             scoreIdParam.ParameterName = "@SCORE_ID";
             scoreIdParam.Direction = ParameterDirection.Output;
             scoreIdParam.DbType = DbType.Int32;
             command.Parameters.Add(scoreIdParam);
+
             var errorCodeParam = new SqlParameter();
             errorCodeParam.ParameterName = "@ERROR_CODE";
             errorCodeParam.Direction = ParameterDirection.Output;
             errorCodeParam.DbType = DbType.Int32;
             command.Parameters.Add(errorCodeParam);
+
             var cooldownExpiresParam = new SqlParameter();
             cooldownExpiresParam.ParameterName = "@COOLDOWN_EXPIRES";
             cooldownExpiresParam.Direction = ParameterDirection.Output;
             cooldownExpiresParam.DbType = DbType.Date;
             command.Parameters.Add(cooldownExpiresParam);
+
             await command.ExecuteNonQueryAsync();
             return new AddScoreResult(scoreIdParam.Value.ToString(), (AddScoreError)errorCodeParam.Value,
                 cooldownExpiresParam.Value is DBNull nullCdParam ? DateTime.Now : (DateTime)cooldownExpiresParam.Value);

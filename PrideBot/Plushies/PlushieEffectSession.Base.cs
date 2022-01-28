@@ -1,92 +1,131 @@
 ﻿using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
-using Discord.Webhook;
-using Discord.Audio;
-using Discord.Net;
-using Discord.Rest;
-
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+using PrideBot.Game;
+using PrideBot.Models;
+using PrideBot.Repository;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-
-using Discord.Commands;
-using Discord.WebSocket;
-using Discord.Webhook;
-using Discord.Audio;
-using Discord.Net;
-using Discord.Rest;
-
-using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.IO;
-using System.IO.Compression;
-using Microsoft.Extensions.Configuration;
-using System.Net;
-using Microsoft.Data.SqlClient;
-using PrideBot.Models;
-using PrideBot.Repository;
-using PrideBot.Quizzes;
-using PrideBot.Game;
-using PrideBot.Registration;
 
 namespace PrideBot.Plushies
 {
-    public partial class PlushieEffectService
+    public partial class PlushieEffectSession : Session
     {
         readonly IConfigurationRoot config;
         readonly ModelRepository repo;
         readonly PlushieImageService imageService;
         readonly DiscordSocketClient client;
         readonly ScoringService scoringService;
+        readonly SqlConnection connection;
+        readonly IGuildUser user;
+        readonly UserPlushie userPlushie;
+        readonly IMessageChannel channel;
 
-        public PlushieEffectService(IConfigurationRoot config, ModelRepository repo, PlushieImageService imageService, DiscordSocketClient client, ScoringService scoringService)
+        IDiscordInteraction interaction;
+
+        public PlushieEffectSession(IMessageChannel channel, SocketGuildUser user, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ModelRepository repo, PlushieImageService imageService, ScoringService scoringService, SqlConnection connection, UserPlushie userPlushie, IDiscordInteraction interaction = null) : base(channel, user, config, client, timeout, originmessage)
         {
             this.config = config;
             this.repo = repo;
             this.imageService = imageService;
             this.client = client;
             this.scoringService = scoringService;
+            this.connection = connection;
+            this.user = user;
+            this.userPlushie = userPlushie;
+            this.channel = channel;
+            this.interaction = interaction;
         }
 
-        public async Task ActivatePlushie(SqlConnection connection, IGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction = null)
+        protected override async Task PerformSessionInternalAsync()
         {
-            EmbedBuilder embed;
-            switch(userPlushie.PlushieId)
+            var embed = EmbedHelper.GetEventEmbed(user, config)
+                .WithTitle("Use This Plushie?")
+                .WithDescription(DialogueDict.Get("PLUSHIE_CONFIRM_ACTIVATE", userPlushie.CharacterName, userPlushie.Name));
+            var yesNoComponents = new ComponentBuilder()
+                .WithButton("Yeah!", "YES", ButtonStyle.Success, new Emoji("👍"))
+                .WithButton("Hmm, Not Right Now", "NO", ButtonStyle.Secondary, new Emoji("❌"));
+            var response = await SendAndAwaitNonTextResponseAsync(embed: embed, components: yesNoComponents, interaction: interaction);
+            if (response.IsNo)
             {
-                case "ADVANCED_MATHEMATICS":
-                    await AdvancedMathematicsAsync(connection, user, userPlushie, channel, interaction);
-                    break;
-                case "COPY_CAT":
-                    await CopyCatAsync(connection, user, userPlushie, channel, interaction);
-                    break;
-                case "MYSTERY_MEDICINE":
-                    await MysteryMedicineAsync(connection, user, userPlushie, channel, interaction);
-                    break;
-                case "CLEARANCE_SALE":
-                    await ClearanceSaleAsync(connection, user, userPlushie, channel, interaction);
-                    break;
-                case "RANDOM_RESET":
-                    await RandomResetAsync(connection, user, userPlushie, channel, interaction);
-                    break;
-                default:
-                    await repo.ActivateUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now);
+                MarkCancelled("Laters then 🧸");
+                throw new OperationCanceledException();
+            }
+            if (!userPlushie.StacksSelf)
+            {
+                var alreadyActive = (await repo.GetInEffectUserPlushiesForUserAsync(connection, user.Id.ToString(), DateTime.Now))
+                    .Where(a => a.PlushieId.Equals(userPlushie.PlushieId));
+                if (alreadyActive.Any())
+                {
                     embed = EmbedHelper.GetEventEmbed(user, config)
-                        .WithTitle("Activated!!")
-                        .WithDescription(userPlushie.DurationHours > 0
-                        ? DialogueDict.Get("PLUSHIE_ACTIVATED_DURATION", userPlushie.CharacterName, userPlushie.DurationHours)
-                        : DialogueDict.Get("PLUSHIE_ACTIVATED_USES", userPlushie.CharacterName));
-                    if (interaction == null)
-                        await channel.SendMessageAsync(user.Mention, embed: embed.Build());
-                    else
-                        await interaction.FollowupAsync(user.Mention, embed: embed.Build());
-                    break;
+                        .WithTitle("Hey Hold Up! ⏱")
+                        .WithDescription(DialogueDict.Get("PLUSHIE_CANT_STACK"));
+                    response = await SendAndAwaitNonTextResponseAsync(embed: embed, components: yesNoComponents, interaction: interaction);
+                    if (response.IsNo)
+                    {
+                        MarkCancelled("Laters then 🧸");
+                        throw new OperationCanceledException();
+                    }
+                }
+            }
+            interaction = response.InteractionResponse;
+
+            await ActivatePlushieAsync(userPlushie);
+        }
+
+        async Task ActivatePlushieAsync(UserPlushie userPlushie)
+        {
+            try
+            {
+                switch (userPlushie.PlushieId)
+                {
+                    case "ADVANCED_MATHEMATICS":
+                        await AdvancedMathematicsAsync(userPlushie);
+                        break;
+                    case "COPY_CAT":
+                        await CopyCatAsync(userPlushie);
+                        break;
+                    case "MYSTERY_MEDICINE":
+                        await MysteryMedicineAsync(userPlushie);
+                        break;
+                    case "CLEARANCE_SALE":
+                        await ClearanceSaleAsync(userPlushie);
+                        break;
+                    case "FACTORY_RESET":
+                        await RandomResetAsync(userPlushie);
+                        break;
+                    default:
+                        await ActivatePlushieDefaultAsync(userPlushie);
+                        break;
+                }
+            }
+            catch (CommandException e)
+            {
+                var embed = EmbedHelper.GetEventErrorEmbed(user, e.ParsedMessage, client);
+                await interaction.FollowupAsync(embed: embed.Build());
             }
         }
-        async Task ClearanceSaleAsync(SqlConnection connection, IGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction)
+
+        async Task ActivatePlushieDefaultAsync(UserPlushie userPlushie)
+        {
+            await repo.ActivateUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now);
+            var embed = EmbedHelper.GetEventEmbed(user, config)
+                .WithTitle("Activated!!")
+                .WithDescription(userPlushie.DurationHours > 0
+                ? DialogueDict.Get("PLUSHIE_ACTIVATED_DURATION", userPlushie.CharacterName, userPlushie.DurationHours)
+                : DialogueDict.Get("PLUSHIE_ACTIVATED_USES", userPlushie.CharacterName));
+            if (interaction == null)
+                await channel.SendMessageAsync(embed: embed.Build());
+            else
+                await interaction.FollowupAsync(embed: embed.Build());
+        }
+
+        async Task ClearanceSaleAsync(UserPlushie userPlushie)
         {
             // get other plushies
             var otherPlushies = (await repo.GetOwnedUserPlushiesForUserAsync(connection, user.Id.ToString()))
@@ -99,24 +138,29 @@ namespace PrideBot.Plushies
             var pointsPerCard = await repo.GetClearanceSaleCardValueAsync(connection);
             var pointTotal = pointsPerCard * otherPlushies.Count();
             var embed = EmbedHelper.GetEventEmbed(user, config)
-                .WithTitle("🎆 BAM! Goodbye, All!")
+                .WithTitle("BAM! 🎆 Goodbye, All! 👋")
                 .WithDescription(DialogueDict.Get("PLUSHIE_CLEARANCE_SELL", otherPlushies.Count(), pointTotal));
             var msg = await channel.SendMessageAsync(embed: embed.Build());
 
             // grant score for achievement
-            await scoringService.AddAndDisplayAchievementAsync(connection, user, "PLUSHIE_MEDICINE", client.CurrentUser, DateTime.Now,
+            await scoringService.AddAndDisplayAchievementAsync(connection, user, "PLUSHIE_CLEARANCE", client.CurrentUser, DateTime.Now,
                 msg, pointTotal, msg.GetJumpUrl(), appliedPlushie: userPlushie);
 
             // deplete plushie
             await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
+            // and the rest
+            foreach (var otherPlushie in otherPlushies)
+            {
+                await repo.DepleteUserPlushieAsync(connection, otherPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
+            }
         }
 
-        async Task MysteryMedicineAsync(SqlConnection connection, IGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction)
+        async Task MysteryMedicineAsync(UserPlushie userPlushie)
         {
             // get random value
             var pointTotal = await repo.GetMysteryMedicineMultAsync(connection);
             var embed = EmbedHelper.GetEventEmbed(user, config)
-                .WithTitle("⁉ What A Strange Taste!")
+                .WithTitle("What A Strange Taste! ⁉")
                 .WithDescription(DialogueDict.Get("PLUSHIE_MEDICINE_GET", pointTotal));
             var msg = await channel.SendMessageAsync(embed: embed.Build());
 
@@ -128,11 +172,12 @@ namespace PrideBot.Plushies
             await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
         }
 
-        async Task CopyCatAsync(SqlConnection connection, IGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction)
+        async Task CopyCatAsync(UserPlushie userPlushie)
         {
             var lastUsed = (await repo.GetAllUserPlushiesForUserAsync(connection, user.Id.ToString()))
                 .Where(a => (a.Fate == PlushieTransaction.Using || a.Fate == PlushieTransaction.Done)
                     && a.RemovedTimestamp != null
+                    && a.Context.Equals("CARD_MENU")
                     && !a.PlushieId.Equals("COPY_CAT")) // no self-copies
                 .OrderBy(a => a.RemovedTimestamp)
                 .LastOrDefault();
@@ -140,7 +185,7 @@ namespace PrideBot.Plushies
                 throw new CommandException(DialogueDict.Get("PLUSHIE_COPYCAT_NONE"));
 
             var embed = EmbedHelper.GetEventEmbed(user, config)
-                .WithTitle("😽 Copying!")
+                .WithTitle("Copying! 😽")
                 .WithDescription(DialogueDict.Get("PLUSHIE_COPYCAT", lastUsed.CharacterName));
             var msg = await channel.SendMessageAsync(embed: embed.Build());
 
@@ -149,24 +194,24 @@ namespace PrideBot.Plushies
 
             // add a new user plushie from it
             var newUserPlushie = await repo.ForceAddPlushieAsync(connection, user.Id.ToString(), lastUsed.CharacterId, lastUsed.PlushieId, lastUsed.Rotation);
-   
+
             // And activate
-            await ActivatePlushie(connection, user, newUserPlushie, channel, interaction);
+            await ActivatePlushieAsync(newUserPlushie);
 
         }
 
-        async Task RandomResetAsync(SqlConnection connection, IGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction)
+        async Task RandomResetAsync(UserPlushie userPlushie)
         {
             // Get random character id for a plushie, using the algorithm in the db
             var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, user.Id.ToString());
-            if (!userPlushies.Any(a => a.UserPlushieId.Equals(a.UserPlushieId.Equals(userPlushie.UserPlushieId))))
+            if (!userPlushies.Any(a => !a.UserPlushieId.Equals(userPlushie.UserPlushieId)))
                 throw new CommandException(DialogueDict.Get("PLUSHIE_RESET_NONE"));
             var seletedCharacterId = await repo.GetRandomPlushieCharacterAsync(connection, user.Id.ToString());
             var selectedPlushie = await repo.GetPlushieFromCharaterAsync(connection, seletedCharacterId);
             var selectedCharacter = await repo.GetCharacterAsync(connection, seletedCharacterId);
 
             var embed = EmbedHelper.GetEventEmbed(user, config)
-                .WithTitle("❓ Resetting!")
+                .WithTitle("Resetting! ❓")
                 .WithDescription(DialogueDict.Get("PLUSHIE_RESET_START", selectedCharacter.Name));
             var msg = await channel.SendMessageAsync(embed: embed.Build());
             using var typing = channel.EnterTypingState();
@@ -174,7 +219,7 @@ namespace PrideBot.Plushies
             // deplete this card
             await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
             // for all cards that Aren't this one
-            foreach (var ownedPlushie in userPlushies.Where(a => a.UserPlushieId.Equals(a.UserPlushieId.Equals(userPlushie.UserPlushieId))))
+            foreach (var ownedPlushie in userPlushies.Where(a => !a.UserPlushieId.Equals(userPlushie.UserPlushieId)))
             {
                 // deplete card
                 await repo.DepleteUserPlushieAsync(connection, ownedPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
@@ -183,12 +228,12 @@ namespace PrideBot.Plushies
             }
 
             embed = EmbedHelper.GetEventEmbed(user, config)
-                .WithTitle("❗ Reset!")
+                .WithTitle("Reset! 🙈")
                 .WithDescription(DialogueDict.Get("PLUSHIE_RESET_DONE", selectedCharacter.Name));
             await channel.SendMessageAsync(embed: embed.Build());
         }
 
-        async Task AdvancedMathematicsAsync(SqlConnection connection, IGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction)
+        async Task AdvancedMathematicsAsync(UserPlushie userPlushie)
         {
             var allShips = await repo.GetAllShipsAsync(connection);
             var userShips = await repo.GetUserShipsAsync(connection, user.Id.ToString());

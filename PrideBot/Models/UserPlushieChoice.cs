@@ -16,5 +16,9 @@ namespace PrideBot.Models
         public string CharacterId { get; set; }
         public decimal Rotation { get; set; }
         public int Day { get; set; }
+
+        [DontPushToDatabase]
+        // I am NOT adding this in everywhere so here
+        public bool Flip => new Random((int)Rotation).Next() % 2 == 0;
     }
 }

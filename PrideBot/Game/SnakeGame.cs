@@ -25,7 +25,7 @@ using PrideBot.Registration;
 
 namespace PrideBot.Quizzes
 {
-    class SnakeGame
+    public class SnakeGame
     {
         readonly ModelRepository repo;
         readonly IConfigurationRoot config;
@@ -39,6 +39,8 @@ namespace PrideBot.Quizzes
 
         SocketVoiceChannel tsuchiConnectedChannel;
         DateTime nextSnakeTime;
+
+        public void SetNextSnakeTime(DateTime dt) { nextSnakeTime = dt; }
 
         public SnakeGame(ModelRepository repo, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, LoggingService loggingService, UserRegisteredCache userReg, TokenConfig tokenConfig, IServiceProvider provider)
         {
@@ -91,12 +93,23 @@ namespace PrideBot.Quizzes
                 if (DateTime.Now.Day == (await GetLastSnakeDayAsync()))
                 {
                     var achievementChannel = mainClient.GetGyn(config).GetChannelFromConfig(config, "achievementschannel") as ITextChannel;
-                    var embed = EmbedHelper.GetEventErrorEmbed(user, "UHHH hmm that's not right, Tsuchi should be asleep still! Please contact a mod, 'kaysies?", mainClient);
+                    var embed = EmbedHelper.GetEventErrorEmbed(user, "Hmm that's not right, Tsuchi should be asleep still! Please contact a mod.?", mainClient);
                     await achievementChannel.SendMessageAsync(user.Mention, embed: embed.Build());
                     await mainClient.GetUser(ulong.Parse(config["ids:owner"])).AttemptSendDMAsync(provider, $"UH OH too soon for more tsuchi. Check the logs!!");
                 }
                 else
-                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "SNAKE", tsuchiClient.CurrentUser, DateTime.Now, null);
+                {
+                    try
+                    {
+                        await scoringService.AddAndDisplayAchievementAsync(connection, user, "SNAKE", tsuchiClient.CurrentUser, DateTime.Now, null);
+                    }
+                    catch(Exception e)
+                    {
+                        var x = 0;
+                        throw;
+                    }
+                }
+
             }).GetAwaiter();
             return Task.CompletedTask;
         }
@@ -171,7 +184,7 @@ namespace PrideBot.Quizzes
                     {
                         await Task.Delay(60000);
                     }
-                    var nextSnakeTime = GetSnakeTime((await GetLastSnakeDayAsync()) == DateTime.Now.Day ? DateTime.Now.Day + 1 : DateTime.Now.Day,
+                    nextSnakeTime = GetSnakeTime((await GetLastSnakeDayAsync()) == DateTime.Now.Day ? DateTime.Now.Day + 1 : DateTime.Now.Day,
                         await GetVoiceMinutesAsync(), rand);
 
                     if (nextSnakeTime <= DateTime.Now)

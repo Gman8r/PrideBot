@@ -42,13 +42,15 @@ namespace PrideBot.Plushies
         readonly ModelRepository repo;
         readonly PlushieImageService imageService;
         readonly DiscordSocketClient client;
+        readonly ScoringService scoringService;
 
-        public PlushieService(IConfigurationRoot config, ModelRepository repo, PlushieImageService imageService, DiscordSocketClient client)
+        public PlushieService(IConfigurationRoot config, ModelRepository repo, PlushieImageService imageService, DiscordSocketClient client, ScoringService scoringService)
         {
             this.config = config;
             this.repo = repo;
             this.imageService = imageService;
             this.client = client;
+            this.scoringService = scoringService;
         }
 
 
@@ -72,6 +74,13 @@ namespace PrideBot.Plushies
             var result = await repo.AttemptAddUserPlushieAsync(connection, user.Id.ToString(), null, user.Id.ToString(), character.PlushieId, characterId,
                 GameHelper.GetEventDay(), 0m, PlushieTransaction.Drawn);
             result.CheckErrors();
+        }
+
+        public async Task ActivateUserPlushie(SqlConnection connection, SocketGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction = null)
+        {
+            var session = new PlushieEffectSession(channel, user, config, client, new TimeSpan(0, 10, 0), null, repo, imageService, scoringService, connection,
+                userPlushie, interaction);
+            await session.PerformSessionAsync();
         }
 
     }

@@ -47,7 +47,7 @@ namespace PrideBot.Modules
         [Summary("Make da menu")]
         [ValidEventPeriods(EventPeriod.DuringEvent)]
         //[RequireRegistration]
-        //[RequireSingleSession]
+        [RequireSingleSession]
         public async Task Plushie()
         {
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
@@ -73,7 +73,14 @@ namespace PrideBot.Modules
         public async Task GivePlushie(SocketGuildUser user, string characterId)
         {
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
-            await plushieService.GiveUserPlushie(connection, Context.Channel, user, characterId);
+            try
+            {
+                await plushieService.GiveUserPlushie(connection, Context.Channel, user, characterId);
+            }
+            catch (Exception e)
+            {
+                var x = 0;
+            }
             await ReplyResultAsync("Done!");
         }
     }

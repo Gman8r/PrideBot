@@ -23,6 +23,8 @@ namespace PrideBot.Models
         public string PostMessageId { get; set; }
         public decimal BonusMult { get; set; }
 
+        public bool CooldownNullified { get; set; }
+
         public string GetMessageUrl() =>
             (PostMessageId == null || PostChannelId == null || PostGuildId == null)
             ? null

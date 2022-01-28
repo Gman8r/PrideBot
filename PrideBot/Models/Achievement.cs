@@ -17,5 +17,7 @@ namespace PrideBot.Models
         public bool Log { get; set; }
         public bool Manual { get; set; }
         public bool Ping { get; set; }
+        public int CooldownUsesPerUnit { get; set; }
+        public int CooldownDaysPerUnit { get; set; }
     }
 }

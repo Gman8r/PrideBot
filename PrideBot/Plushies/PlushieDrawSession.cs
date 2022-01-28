@@ -37,6 +37,10 @@ namespace PrideBot.Plushies
                 throw new CommandException(DialogueDict.Get(key));
             }
 
+            var canReceivePlushie = await repo.CanUserReceivePlushieAsync(connection, userId);
+            if (!canReceivePlushie)
+                throw new CommandException(DialogueDict.Get("PLUSHIE_CANT_RECEIVE"));
+
             await repo.UpdatePlushieChoicesForUserAsync(connection, userId, day);
             var choices = await repo.GetPlushieChoicesForuserAsync(connection, userId, day);
 
@@ -73,7 +77,12 @@ namespace PrideBot.Plushies
             var response = await SendAndAwaitNonTextResponseAsync(user.Mention, embed: embed, components: components, interaction: interaction, file: imageFile);
 
             if (response.IsNo)
-                await response.InteractionResponse.FollowupAsync(DialogueDict.Get("PLUSHIE_DRAW_CANCEL"));
+            {
+                embed = EmbedHelper.GetEventEmbed(user, config)
+                    .WithTitle("Nevermind?")
+                    .WithDescription(DialogueDict.Get("PLUSHIE_DRAW_CANCEL"));
+                await response.InteractionResponse.FollowupAsync();
+            }
             else
             {
                 var choiceId = int.Parse(response.InteractionResponse.Data.Values.FirstOrDefault());
@@ -88,6 +97,10 @@ namespace PrideBot.Plushies
                     .WithTitle("BOOM! Plushie!")
                     .WithDescription(DialogueDict.Get("PLUSHIE_DRAWN"))
                     .WithAttachedThumbnailUrl(resultFile);
+                if (interaction == null)
+                    resultEmbed.Description += "\n\n" + DialogueDict.Get("GETPLUSHIE_PROMPT", config.GetDefaultPrefix());
+                else
+                    resultEmbed.Description += "\n\n" + DialogueDict.Get("GETPLUSHIE_SCROLLUP");
                 await response.InteractionResponse.FollowupWithFileAsync(resultFile.Stream, resultFile.FileName, embed: resultEmbed.Build());
             }
         }

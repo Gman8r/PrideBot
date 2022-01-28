@@ -166,13 +166,15 @@ namespace PrideBot.Quizzes
             quizLog.Guess1 = null;
             quizLog.Guess2 = null;
             quizLog.Guess3 = null;
+            var cutInHalf = false;
             while (attemptsLeft > 0)
             {
                 await AwaitCurrentResponseAsync();
                 if (response.InteractionResponse.Data.CustomId.Equals("QUIZ_HALF"))  // plushie
                 {
-                    if (quizLog.Guess1 == null)
+                    if (quizLog.Guess1 == null && !cutInHalf)
                     {
+                        cutInHalf = true;
                         var wrongIndexPool = choices
                             .Select(a => choices.IndexOf(a))
                             .Where(a => a != correctIndex)
@@ -190,6 +192,13 @@ namespace PrideBot.Quizzes
                             var strikeoutText = embed.Fields.Last().Value.ToString().Trim().Split('\n')[strikeout].Trim();
                             embed.Fields.Last().Value = embed.Fields.Last().Value.ToString().Replace(strikeoutText, $"~~{strikeoutText}~~");
                         }
+                        var plushieButton = choicesComponents.ActionRows.FirstOrDefault().Components
+                            .FirstOrDefault(a => a.CustomId.Equals("QUIZ_HALF")) as ButtonComponent;
+                        var newPlushieButton = plushieButton
+                            .ToBuilder().WithDisabled(true).Build();
+                        choicesComponents.ActionRows.FirstOrDefault().Components
+                            [choicesComponents.ActionRows.FirstOrDefault().Components.IndexOf(plushieButton)] = newPlushieButton;
+
                         await response.BotMessage.ModifyAsync(a =>
                         {
                             a.Embed = embed.Build();

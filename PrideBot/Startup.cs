@@ -129,7 +129,6 @@ namespace PrideBot
             .AddSingleton<RpImageService>()
             .AddSingleton<Plushies.PlushieService>()
             .AddSingleton<Plushies.PlushieImageService>()
-            .AddSingleton<Plushies.PlushieEffectService>()
             .AddSingleton(Configuration);             // Add the configuration to the collection
 
             Console.WriteLine();

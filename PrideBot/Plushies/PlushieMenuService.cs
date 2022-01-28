@@ -76,7 +76,7 @@ namespace PrideBot.Plushies
                 ? await imageService.WritePlushieCollectionImageAsync(userPlushies)
                 : null;
             var embed = EmbedHelper.GetEventEmbed(user, config)
-                .WithTitle("Plushies 🧸")
+                .WithTitle("Plushies! 🧸")
                 .WithDescription(DialogueDict.Get(userPlushies.Any() ? "PLUSHIE_MENU_DESCRIPTION" : "PLUSHIE_MENU_DESCRIPTION_EMPTY"));
             if (overrideImageUrl != null)
                 embed.WithImageUrl(overrideImageUrl);
@@ -165,10 +165,10 @@ namespace PrideBot.Plushies
                     Label = "Pawn",
                     CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Pawn, imageState)
                 }.Build());
-                // Give button
+                // Trade button
                 plushieOptionRowBuilder.AddComponent(new ButtonBuilder()
                 {
-                    Style = ButtonStyle.Secondary,
+                    Style = ButtonStyle.Primary,
                     Emote = new Emoji("♻"),
                     Label = "Trade",
                     CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Trade, imageState)

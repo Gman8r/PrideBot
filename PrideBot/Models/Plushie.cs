@@ -16,9 +16,6 @@ namespace PrideBot.Models
         public int DurationHours { get; set; }
         public string Context { get; set; }
         public decimal Weight { get; set; }
-
-        [DontPushToDatabase]
-        // I am NOT adding this in everywhere so here
-        public bool Flip => (int)(Weight * 10m) % 2 == 0;
+        public bool StacksSelf { get; set; }
     }
 }

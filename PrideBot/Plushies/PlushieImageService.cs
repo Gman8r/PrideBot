@@ -93,10 +93,15 @@ namespace PrideBot.Plushies
                 file = $"Assets/CharacterSprites/DEFAULT.png";
             var charImage = new MagickImage(await File.ReadAllBytesAsync(file));
             charImage.BackgroundColor = MagickColors.Transparent;
-            charImage.Modulate(new Percentage(115), new Percentage(90), new Percentage(100));
-            if (flip)
-                charImage.Flop();
+            if (!characterId.ToUpper().Contains("YURIKO"))
+            {
+                charImage.Modulate(new Percentage(125), new Percentage(80), new Percentage(100));
+                if (flip)
+                    charImage.Flop();
+            }
             charImage.Rotate((double)rotation);
+            if (characterId.ToUpper().Contains("YURIKO"))
+                return charImage;
             charImage.Extent(48, 35, Gravity.Center, MagickColors.Transparent);
             charImage.InterpolativeResize(charImage.Width * 4, charImage.Height * 4, PixelInterpolateMethod.Nearest);
             return charImage;

@@ -43,15 +43,15 @@ namespace PrideBot
                         if (errorReason.StartsWith("COMMANDEXCEPTION:"))
                         {
                             errorMessage = (errorReason.Substring("COMMANDEXCEPTION:".Count()));
-                            if (errorMessage.StartsWith("EPHEMERAL:"))
-                            {
-                                errorMessage = (errorMessage.Substring("EPHEMERAL:".Count()));
-                                ephemeral = true;
-                            }
                         }
                         else
-                            errorMessage = errorReason;
-                            //errorMessage = DialogueDict.Get("EXCEPTION");
+                            errorMessage = errorReason.Substring(0, 4000);
+                        //errorMessage = DialogueDict.Get("EXCEPTION");
+                    }
+                    if (errorMessage.StartsWith("EPHEMERAL:"))
+                    {
+                        errorMessage = (errorMessage.Substring("EPHEMERAL:".Count()));
+                        ephemeral = true;
                     }
                 }
 
@@ -62,9 +62,14 @@ namespace PrideBot
                 {
                     if (interaction != null)
                     {
-                        await interaction.FollowupAsync(embed:
-                            EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(errorMessage), client as DiscordSocketClient).Build(),
-                            ephemeral: ephemeral);
+                        if (interaction.HasResponded)
+                            await interaction.FollowupAsync(embed:
+                                EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(errorMessage), client as DiscordSocketClient).Build(),
+                                ephemeral: ephemeral);
+                        else
+                            await interaction.RespondAsync(embed:
+                                EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(errorMessage), client as DiscordSocketClient).Build(),
+                                ephemeral: ephemeral);
                     }
                     else
                     {

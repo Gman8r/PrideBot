@@ -433,6 +433,7 @@ namespace PrideBot.Modules
         [Alias("score")]
         [RequireRegistration]
         [Summary("Views your ships and how well they're doing!")]
+        [ValidEventPeriods(EventPeriod.DuringEvent | EventPeriod.AfterEvent)]
         [Priority(1)]
         public async Task Score()
         {
@@ -495,9 +496,12 @@ namespace PrideBot.Modules
                     $" (**{(int)Math.Round(ship.PointsEarnedByUser)}** from you)");
             }
 
-            embed.AddField($"Your {EmoteHelper.SPEmote} Totals for This Event:",
-                $"From Combined Achievements: **{(int)Math.Round(dbUser.PointsEarned)} {EmoteHelper.SPEmote}**" +
-                $"\nTotal Contributed to Pairings: **{(int)Math.Round(dbUser.PointsGivenToShips)} {EmoteHelper.SPEmote}**");
+            if (leaderboardRevealed)
+            {
+                embed.AddField($"Your {EmoteHelper.SPEmote} Totals for This Event:",
+                    $"From Combined Achievements: **{(int)Math.Round(dbUser.PointsEarned)} {EmoteHelper.SPEmote}**" +
+                    $"\nTotal Contributed to Pairings: **{(int)Math.Round(dbUser.PointsGivenToShips)} {EmoteHelper.SPEmote}**");
+            }
 
             var recentScores = await repo.GetRecentScoresForUserAsync(connection, dbUser.UserId);
             if (recentScores.Any())
@@ -520,6 +524,7 @@ namespace PrideBot.Modules
         [Command("shipscore")]
         [Alias("shipscores")]
         [RequireRegistration]
+        [ValidEventPeriods(EventPeriod.DuringEvent | EventPeriod.AfterEvent)]
         [Summary("Views the place and SP count of a particular pairing!")]
         public async Task ShipScore([Remainder] string shipName)
         {

@@ -10,6 +10,7 @@ namespace PrideBot.Models
         [PrimaryKey]
         public int UserPlushieId { get; set; }
         public PlushieEffectContext ContetType { get; set; }
+        public int Tier { get; set; }
         public string Context { get; set; }
         public DateTime Timestamp { get; set; }
         [DontPushToDatabase]

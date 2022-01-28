@@ -23,6 +23,10 @@ namespace PrideBot.Models
         public DateTime Timestamp { get; set; }
         public DateTime RemovedTimestamp { get; set; }  // Removed is when the card is no longer in the player's card menu
 
+        [DontPushToDatabase]
+        // I am NOT adding this in everywhere so here
+        public bool Flip => new Random((int)Rotation).Next() % 2 == 0;
+
         //fields for after use
         [DontPushToDatabase]
         public DateTime ExpirationTimestamp { get; set; }

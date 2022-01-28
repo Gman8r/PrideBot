@@ -122,7 +122,7 @@ namespace PrideBot.Quizzes
                 }
 
                 if (currentDay == 0)
-                    currentDay = DateTime.Now.Day;
+                    currentDay = GameHelper.GetEventDay();
 
                 var guild = client.GetGyn(config);
                 var minMinutes = int.Parse(config["voiechatminutes"]);
