@@ -57,6 +57,19 @@ namespace PrideBot.Modules
             Post
         }
 
+
+        // Get a plushie in the first-time registration menu
+        [ComponentInteraction("PLUSHIEREG.*")]
+        [RequireSingleSessionInteraction]
+        public async Task PlushieDrawReg(string userIdStr)
+        {
+            await DeferAsync();
+            VerifyUser(userIdStr);
+            var sUser = client.GetGyn(config).GetUser(Context.User.Id);
+            using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
+            await plushieService.DrawPlushie(connection, Context.Channel, sUser, Context.Interaction, isRegistration: true);
+        }
+
         // Handle buttons in plushie menu
         [ComponentInteraction("PLUSHMENU.B:*,*,*,*")]
         [RequireSingleSessionInteraction]

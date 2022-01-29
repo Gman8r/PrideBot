@@ -95,7 +95,7 @@ namespace PrideBot.Plushies
             charImage.BackgroundColor = MagickColors.Transparent;
             if (!characterId.ToUpper().Contains("YURIKO"))
             {
-                charImage.Modulate(new Percentage(125), new Percentage(80), new Percentage(100));
+                charImage.Modulate(new Percentage(115), new Percentage(90), new Percentage(100));
                 if (flip)
                     charImage.Flop();
             }

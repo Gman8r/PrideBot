@@ -61,9 +61,9 @@ namespace PrideBot.Game
                 appliedPlushies.Insert(0, appliedPlushie);
 
             var dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
-            var pointsEarned = overridePoints == 0 ? achievement.DefaultScore : overridePoints;
+            var pointsEarnedBase = overridePoints == 0 ? achievement.DefaultScore : overridePoints;
 
-            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarned, approver.Id.ToString(), timestamp, ignoreCooldown, DateTime.Parse(config["eventstart"]), GameHelper.GetEventDay(timestamp),
+            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarnedBase, approver.Id.ToString(), timestamp, ignoreCooldown, DateTime.Parse(config["eventstart"]), GameHelper.GetEventDay(timestamp), client.GetGyn(config).Id.ToString(),
                 ((message?.Channel ?? null) as IGuildChannel)?.Guild.Id.ToString() ?? "", message?.Channel.Id.ToString() ?? "", message?.Id.ToString() ?? "");
 
 
@@ -95,7 +95,9 @@ namespace PrideBot.Game
 
                 var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, dbScore, dbShipScores,
                     await repo.GetPlushieEffectLogsForScoreAsync(connection, int.Parse(scoreId)),
-                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, timestamp, titleUrl, dbResult);
+                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, timestamp, pointsEarnedBase,
+                    await repo.GetGuildSettings(connection, client.GetGyn(config).Id.ToString()),
+                    titleUrl, dbResult);
                 var text = user.Mention + " Achievement! " + achievement.Emoji;// + " Achievement!";// + " " + achievement.Emoji;
 
                 if (errorCode == ModelRepository.AddScoreError.CooldownViolated)
@@ -145,7 +147,7 @@ namespace PrideBot.Game
         }
 
         // returns (embed, ship image file)
-        public async Task<(EmbedBuilder, MemoryFile)> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, Score dbScore, ShipScore[] dbShipScores, IEnumerable<PlushieEffectLog> plushiEffectLogs, UserShipCollection dbUserShips, IUser approver, DateTime timestamp, 
+        public async Task<(EmbedBuilder, MemoryFile)> GenerateAchievementEmbedAsync(IUser user, User dbUser, Achievement achievement, string scoreId, Score dbScore, ShipScore[] dbShipScores, IEnumerable<PlushieEffectLog> plushiEffectLogs, UserShipCollection dbUserShips, IUser approver, DateTime timestamp, decimal pointsEarnedBase, GuildSettings guildSettings, 
             string titleUrl = null, ModelRepository.AddScoreResult result = null)
         {
             var errorCode = result?.errorCode ?? ModelRepository.AddScoreError.None;
@@ -164,7 +166,7 @@ namespace PrideBot.Game
                 case (ModelRepository.AddScoreError.None):
                     
                     // Base
-                    var scoreStr = $"💕 **{(int)Math.Round(dbScore.PointsEarned, 0)} Earned**";
+                    var scoreStr = $"💕 **{(int)Math.Round(dbScore.PointsEarned, 0)} Granted**";
                     if (!dbScore.BonusMult.Approximately(1.00m, .01m))
                         scoreStr += $"  ( {dbScore.BonusMult}x Plushie Effects)";
 
@@ -175,11 +177,12 @@ namespace PrideBot.Game
 
                         // Mults
                         scoreStr += $"  ({shipScore.TierMult}x {(UserShipTier)shipScore.Tier})";
-                        scoreStr += $"  ({shipScore.BalanceMult}x Rarity)";
                         if (!shipScore.BonusMult.Approximately(1.00m, .01m))
                             scoreStr += $"  ({shipScore.BonusMult}x Plushie Effects)";
+                        if (guildSettings.ShipAutobalance)
+                            scoreStr += $"  (+ {shipScore.BalanceBonus} Rarity Bonus)";
                     }
-                    embed.AddField($"You feel your bond with your community grow stronger...\nYou've earned {EmoteHelper.SPEmote} !", scoreStr.Trim());
+                    embed.AddField($"You feel empowered by your success...\nYou've earned {(int)Math.Round(pointsEarnedBase, 0)} {EmoteHelper.SPEmote} !", scoreStr.Trim());
 
                     // plushie effects field
                     if (plushiEffectLogs.Any())

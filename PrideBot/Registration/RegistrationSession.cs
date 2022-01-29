@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using PrideBot.Game;
+using PrideBot.Graphics;
 
 namespace PrideBot.Registration
 {
@@ -72,8 +73,8 @@ namespace PrideBot.Registration
             var embed = GetEmbed()
                 .WithTitle(userHasRegistered ? "Edit Your Registration!" : "Registration Time!")
                 .WithDescription(userHasRegistered
-                ? DialogueDict.Get("REGISTRATION_EDIT", user.Queen(client))
-                : DialogueDict.Get("REGISTRATION_WELCOME", user.Queen(client), config.GetDefaultPrefix()));
+                ? DialogueDict.Get("REGISTRATION_EDIT")
+                : DialogueDict.Get("REGISTRATION_WELCOME", config.GetDefaultPrefix()));
 
             var components = new ComponentBuilder()
                     .WithButton("Sounds Gay I'm In", "YES", ButtonStyle.Success, ThumbsUpEmote)
@@ -168,11 +169,30 @@ namespace PrideBot.Registration
                 }
             }
 
+            // plushie bonus
+            if (!userHasRegistered)
+            {
+                var plushieEmbed = GetEmbed()
+                    .WithTitle("Here's Your Surprise! 🛎");
+                if (GameHelper.IsEventOccuring(config))
+                    plushieEmbed.Description = DialogueDict.Get("REGISTRATION_PLUSHIE", config.GetDefaultPrefix());
+                else
+                    plushieEmbed.Description = DialogueDict.Get("REGISTRATION_PLUSHIE_PREREG", config.GetDefaultPrefix());
+
+                var image =await new YellowTextGenerator(config).WriteYellowTextAsync(plushieEmbed.ThumbnailUrl, "Plushies !!");
+                plushieEmbed.WithAttachedThumbnailUrl(image);
+
+                var plushieComponents = new ComponentBuilder()
+                    .WithButton("Get A Free Plushie!", $"PLUSHIEREG.{user.Id}", ButtonStyle.Success, new Emoji("🧸"));
+                var msg = await channel.SendFileAsync(image.Stream, image.FileName, null, embed: plushieEmbed.Build(), components: plushieComponents.Build());
+                await msg.PinAsync();
+            }
+
         }
 
         async Task EditRegistrationAsync(SqlConnection connection, UserShipCollection dbUserShips)
         {
-            var descriptionPrefix = DialogueDict.Get("REGISTRATION_EDIT", user.Queen(client));
+            var descriptionPrefix = DialogueDict.Get("REGISTRATION_EDIT");
             EmbedBuilder embed = null;
             while(true)
             {
@@ -310,7 +330,7 @@ namespace PrideBot.Registration
             if (!response.InteractionResponse.Data.CustomId.Equals("SKIPSHIP"))
                 await SetUpHeartAsync(connection, selectedUserShip, GetEmbed(), 2);
 
-            return DialogueDict.Get("REGISTRATION_FINISH_SHIP", user.Queen(client));
+            return DialogueDict.Get("REGISTRATION_FINISH_SHIP");
         }
 
         async Task<Prompt> SetUpHeartAsync(SqlConnection connection, UserShip userShip, EmbedBuilder embed, int heart)
@@ -511,7 +531,7 @@ namespace PrideBot.Registration
                 bgImageFile = await GetShipsImageAsync(dbUser, dbUserShips);
                 embed = GetEmbed()
                     .WithTitle("Background Config")
-                    .WithDescription(DialogueDict.Get("REGISTRATION_BG_CHANGED", user.Queen(client)))
+                    .WithDescription(DialogueDict.Get("REGISTRATION_BG_CHANGED"))
                     .WithAttachedImageUrl(bgImageFile);
                 await channel.SendFileAsync(bgImageFile.Stream, bgImageFile.FileName, embed: embed.Build());
 

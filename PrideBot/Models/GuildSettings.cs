@@ -13,5 +13,6 @@ namespace PrideBot.Models
         public int LastSnakeDay { get; set; }
         public int SnakeMinutes { get; set; }
         public bool LeaderboardAvailable { get; set; }
+        public bool ShipAutobalance { get; set; }
     }
 }

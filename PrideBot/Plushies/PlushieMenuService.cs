@@ -56,13 +56,15 @@ namespace PrideBot.Plushies
             return $"PLUSHMENU.{(isButton ? "B" : "S")}:{userId},{selectedPlushieId},{(int)action},{imageState}";
         }
 
-        public async Task<IUserMessage> PostPlushieMenuAsync(SqlConnection connection, IGuildUser user, IMessageChannel channel)
+        public async Task<IUserMessage> PostPlushieMenuAsync(SqlConnection connection, IGuildUser user, IMessageChannel channel, bool viewingOther = false)
         {
             var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, user.Id.ToString());
             var inEffectPlushies = await repo.GetInEffectUserPlushiesForUserAsync(connection, user.Id.ToString(), DateTime.Now);
             var components = await GenerateComponentsAsync(connection, userPlushies, user.Id, 0, string.Join(".", userPlushies.Select(a => a.UserPlushieId)));
-            var embedData = await  GenerateEmbedAsync(user, userPlushies, inEffectPlushies);
+            var embedData = await  GenerateEmbedAsync(user, userPlushies, inEffectPlushies, viewingOther: viewingOther);
             var embed = embedData.Item1;
+            if (viewingOther)
+                components = null;
             var file = embedData.Item2;
             if (file != null)
                 return await channel.SendFileAsync(file.Stream, file.FileName, user.Mention, embed: embed.Build(), components: components?.Build());
@@ -70,21 +72,23 @@ namespace PrideBot.Plushies
                 return await channel.SendMessageAsync(user.Mention, embed: embed.Build(), components: components?.Build());
         }
 
-        public async Task<(EmbedBuilder, MemoryFile)> GenerateEmbedAsync(IGuildUser user, IEnumerable<UserPlushie> userPlushies, IEnumerable<UserPlushie> inEffectPlushies, string overrideImageUrl = null)
+        public async Task<(EmbedBuilder, MemoryFile)> GenerateEmbedAsync(IGuildUser user, IEnumerable<UserPlushie> userPlushies, IEnumerable<UserPlushie> inEffectPlushies, string overrideImageUrl = null, bool viewingOther = false)
         {
             var imageFile = userPlushies.Any() && overrideImageUrl == null
                 ? await imageService.WritePlushieCollectionImageAsync(userPlushies)
                 : null;
             var embed = EmbedHelper.GetEventEmbed(user, config)
                 .WithTitle("Plushies! 🧸")
-                .WithDescription(DialogueDict.Get(userPlushies.Any() ? "PLUSHIE_MENU_DESCRIPTION" : "PLUSHIE_MENU_DESCRIPTION_EMPTY"));
+                .WithDescription(!viewingOther
+                    ? DialogueDict.Get(userPlushies.Any() ? "PLUSHIE_MENU_DESCRIPTION" : "PLUSHIE_MENU_DESCRIPTION_EMPTY")
+                    : DialogueDict.Get(userPlushies.Any() ? "PLUSHIE_MENU_DESCRIPTION_OTHER" : "PLUSHIE_MENU_DESCRIPTION_OTHER_EMPTY", user.Mention));
             if (overrideImageUrl != null)
                 embed.WithImageUrl(overrideImageUrl);
             else
                 embed.WithAttachedImageUrl(imageFile);
             foreach (var plushie in userPlushies)
             {
-                embed.AddField($"{plushie.Name} ({plushie.CharacterName})", plushie.Description);
+                embed.AddField($"{plushie.Name} ({plushie.CharacterName})", plushie.DecriptionUponUse());
             }
             var inEfectString = "";
             foreach (var plushie in inEffectPlushies)
@@ -148,22 +152,30 @@ namespace PrideBot.Plushies
             {
                 // Use button
 
-                var canUse = selectedPlushie.Context.Equals("CARD_MENU");
+                var canUse = GameHelper.IsEventOccuring(config) && selectedPlushie.Context.Equals("CARD_MENU");
+                var label = GameHelper.IsEventOccuring(config)
+                    ? (selectedPlushie.Context.Equals("CARD_MENU")
+                        ? "Activate Now"
+                        : "Can't Activate Here")
+                    : "Activate (Locked)";
                 plushieOptionRowBuilder.AddComponent(new ButtonBuilder()
                 {
                     Style = ButtonStyle.Primary,
                     Emote = new Emoji("⚡"),
-                    Label = canUse ? "Activate Now" : "Can't Activate Here",
+                    Label = label,
                     CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Use, imageState),
                     IsDisabled = !canUse
                 }.Build());
+
+                canUse = GameHelper.IsEventOccuring(config);
                 // Sell button
                 plushieOptionRowBuilder.AddComponent(new ButtonBuilder()
                 {
                     Style = ButtonStyle.Primary,
                     Emote = new Emoji("💗"),
-                    Label = "Pawn",
-                    CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Pawn, imageState)
+                    Label = canUse ? "Pawn" : "Pawn (Locked)",
+                    CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Pawn, imageState),
+                    IsDisabled = !canUse
                 }.Build());
                 // Trade button
                 plushieOptionRowBuilder.AddComponent(new ButtonBuilder()
@@ -197,7 +209,7 @@ namespace PrideBot.Plushies
                     ? (!hasRoom
                         ? "Free Some Room To Get More Plushies!"
                         : "Get A New Plushie!")
-                    : "Get Another Plushie Tomorrow!",
+                    : (GameHelper.IsEventOccuring(config) ? "Get Another Plushie Tomorrow!" : "Get More In February!"),
                 CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Draw, imageState),
                 IsDisabled = !isCoolownOver || !hasRoom
             }.Build());

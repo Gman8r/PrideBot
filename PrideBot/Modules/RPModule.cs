@@ -18,6 +18,7 @@ using System.IO.Compression;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using PrideBot.Events;
+using PrideBot.Graphics;
 
 namespace PrideBot.Modules
 {
@@ -27,12 +28,10 @@ namespace PrideBot.Modules
     public class RPModule : PrideModuleBase
     {
         private readonly IConfigurationRoot config;
-        private readonly RpImageService imageService;
-
-        public RPModule(IConfigurationRoot config, RpImageService imageService)
+        
+        public RPModule(IConfigurationRoot config)
         {
             this.config = config;
-            this.imageService = imageService;
         }
 
 
@@ -69,13 +68,15 @@ namespace PrideBot.Modules
         [Command("text")]
         public async Task YellowText([Remainder]string phrase = null)
         {
-            var file = await imageService.WriteTestTextAsync(Context.Client.CurrentUser.GetAvatarUrl(size: 128), phrase);
+            var imageService = new YellowTextGenerator(config);
+            var file = await imageService.WriteYellowTextAsync(Context.Client.CurrentUser.GetAvatarUrl(size: 128), phrase);
             if (!string.IsNullOrWhiteSpace(phrase))
             {
                 var embed = EmbedHelper.GetEventEmbed(null, config)
                     .WithDescription("blablabla")
                     //.WithThumbnailUrl(Context.Client.CurrentUser.GetAvatarUrl())
-                    .WithAttachedImageUrl(file);
+                    .WithAttachedImageUrl(file)
+                    .WithAttachedThumbnailUrl(file);
                 await Context.Channel.SendFileAsync(file.Stream, file.FileName, embed: embed.Build());
             }
             else

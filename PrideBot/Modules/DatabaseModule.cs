@@ -297,7 +297,7 @@ namespace PrideBot.Modules
                         query += ", ";
                     query += fieldNames[i];
                 }
-                query += ") values (";
+                query += ")\nvalues (";
                 for (int i = 0; i < columnCount; i++)
                 {
                     if (i > 0)
@@ -305,7 +305,7 @@ namespace PrideBot.Modules
                     query += $"@PARAM{paramIndex}";
                     parameterDict[$"PARAM{paramIndex++}"] = (i < newRow.Count ? newRow[i] : null) ?? "";
                 }
-                query += ");";
+                query += ");\n";
             }
 
             // Report if none need changing

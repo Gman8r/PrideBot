@@ -15,5 +15,9 @@ namespace PrideBot.Models
         public string ClientId { get; set; }
         public string Content { get; set; }
         public string Attachment { get; set; }
+        public string Title { get; set; }
+        public string YellowText { get; set; }
+        public string ThumbnailImage { get; set; }
+        public string MessageText { get; set; }
     }
 }

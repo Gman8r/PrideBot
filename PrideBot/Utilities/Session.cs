@@ -29,6 +29,7 @@ namespace PrideBot
         protected readonly TimeSpan timeout;
 
         protected Prompt currentPrompt;
+        public IUserMessage GetCurrentPromptMessage() => currentPrompt?.BotMessage;
 
         public IUser GetUser() => user;
         public bool IsCancelled { get; private set; }
@@ -50,6 +51,7 @@ namespace PrideBot
             public IUserMessage BotMessage { get; }
             public bool AcceptsText { get; }
             public List<IEmote> EmoteChoices { get; }
+            public bool DisableAllComponentsAfter { get; }
 
             public bool AcceptsEmote => EmoteChoices.Any();
             public bool IsEntered { get; set; }
@@ -68,11 +70,12 @@ namespace PrideBot
                 EmoteResponse?.ToString().Equals(NoEmote.ToString()) ?? false
                 || (InteractionResponse?.Data?.CustomId ?? "").Equals("NO");
 
-            public Prompt(IUserMessage botMessage, bool acceptsText, List<IEmote> emoteChoies)
+            public Prompt(IUserMessage botMessage, bool acceptsText, List<IEmote> emoteChoies, bool disableAllComponentsAfter)
             {
                 BotMessage = botMessage;
                 AcceptsText = acceptsText;
                 EmoteChoices = emoteChoies;
+                DisableAllComponentsAfter = disableAllComponentsAfter;
             }
         }
 
@@ -141,9 +144,15 @@ namespace PrideBot
         {
             if (originMessage != null && originMessage.Channel.GetType() != typeof(SocketDMChannel))
                 originMessage.AddReactionAsync(new Emoji("✅")).GetAwaiter();
-            if (activeSessions.Any(a => a.user.Id == user.Id))
+            var existingSession = activeSessions.FirstOrDefault(a => a.user.Id == user.Id);
+            if (existingSession != null)
             {
-                var errorEmbed = EmbedHelper.GetEventErrorEmbed(user, DialogueDict.Get("SESSION_DUPE"), client, showUser: false);
+                var messageUrl = existingSession.currentPrompt?.BotMessage?.GetJumpUrl() ?? "";
+                var errorEmbed = EmbedHelper.GetEventErrorEmbed(user,
+                    !string.IsNullOrWhiteSpace(messageUrl)
+                    ? DialogueDict.Get("SESSION_DUPE_LINK", messageUrl)
+                    : DialogueDict.Get("SESSION_DUPE"),
+                client, showUser: false);
                 await channel.SendMessageAsync(embed: errorEmbed.Build());
                 return;
             }
@@ -193,17 +202,12 @@ namespace PrideBot
 
         protected async Task<Prompt> SendAndAwaitResponseAsync(string text = null, EmbedBuilder embed = null, ComponentBuilder components = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null, bool disableComponents = true)
         {
-            await SendResponseAsync(text, embed, components, emoteChoices, acceptsText, canSkip, canCancel, alwaysPopulateEmotes, file, interaction);
+            await SendResponseAsync(text, embed, components, emoteChoices, acceptsText, canSkip, canCancel, alwaysPopulateEmotes, file, interaction, disableComponents);
             var prompt = await AwaitCurrentResponseAsync();
-            if (disableComponents && (prompt.BotMessage.Components?.Any() ?? false))
-            {
-                var newComponents = prompt.BotMessage.Components.ToBuilder().WithAllDisabled(true);
-                prompt.BotMessage.ModifyAsync(a => a.Components = newComponents?.Build()).GetAwaiter();
-            }
             return prompt;
         }
 
-        protected async Task<Prompt> SendResponseAsync(string text = null, EmbedBuilder embed = null, ComponentBuilder components = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null)
+        protected async Task<Prompt> SendResponseAsync(string text = null, EmbedBuilder embed = null, ComponentBuilder components = null, List<IEmote> emoteChoices = null, bool acceptsText = true, bool canSkip = false, bool canCancel = false, bool alwaysPopulateEmotes = false, MemoryFile file = null, IDiscordInteraction interaction = null, bool disableComponents = true)
         {
             emoteChoices ??= new List<IEmote>();
             if (emoteChoices.Count >= 3)
@@ -245,7 +249,7 @@ namespace PrideBot
                 else
                     message = await channel.SendFileAsync(file.Stream, file.FileName, text, embed: embed?.Build(), components: components?.Build());
             }
-            currentPrompt = new Prompt(message, acceptsText, emoteChoices);
+            currentPrompt = new Prompt(message, acceptsText, emoteChoices, disableComponents);
             currentPrompt.AlwaysPopulateEmotes = alwaysPopulateEmotes;
             AddReactions(message, emoteChoices).GetAwaiter();
             return currentPrompt;
@@ -266,6 +270,11 @@ namespace PrideBot
                 {
                     throw new OperationCanceledException(cancellationMessage);
                 }
+            }
+            if (currentPrompt.DisableAllComponentsAfter && (currentPrompt.BotMessage.Components?.Any() ?? false))
+            {
+                var newComponents = currentPrompt.BotMessage.Components.ToBuilder().WithAllDisabled(true);
+                currentPrompt.BotMessage.ModifyAsync(a => a.Components = newComponents?.Build()).GetAwaiter();
             }
             return currentPrompt;
         }

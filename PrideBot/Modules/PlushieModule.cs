@@ -44,21 +44,23 @@ namespace PrideBot.Modules
         }
 
         [Command("plushies")]
-        [Summary("Make da menu")]
-        [ValidEventPeriods(EventPeriod.DuringEvent)]
-        //[RequireRegistration]
+        [Summary("Shows your plushies! 🧸")]
+        [ValidEventPeriods(EventPeriod.DuringEvent | EventPeriod.BeforeEvent)]
+        [RequireRegistration]
         [RequireSingleSession]
-        public async Task Plushie()
+        public async Task Plushie(SocketGuildUser user = null)
         {
+            user ??= Context.User as SocketGuildUser;
+            var viewingOther = user.Id != Context.User.Id;
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
-            await menuService.PostPlushieMenuAsync(connection, Context.User as IGuildUser, Context.Channel);
+            await menuService.PostPlushieMenuAsync(connection, user as IGuildUser, Context.Channel, viewingOther: viewingOther);
         }
 
         [Command("getplushie")]
-        [Summary("Get da plushie")]
+        [Summary("Get a new plushie! 🧸")]
         [RequireRegistration]
         [RequireSingleSession]
-        [ValidEventPeriods(EventPeriod.DuringEvent | EventPeriod.BeforeEvent)]
+        [ValidEventPeriods(EventPeriod.DuringEvent)]
         public async Task DrawPlushie()
         {
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();

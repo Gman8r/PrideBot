@@ -61,7 +61,8 @@ namespace PrideBot.Repository
             Unknown = 99
         }
 
-        public async Task<AddScoreResult> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, decimal pointsEarned, string approverId, DateTime timestamp, bool ignoreCooldown, DateTime eventStart, int eventDay, string postGuilId, string postChannelId, string postMessageId)
+        public async Task<AddScoreResult> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, decimal pointsEarned, string approverId, DateTime timestamp, bool ignoreCooldown, DateTime eventStart, int eventDay, string guildId,
+            string postGuildId, string postChannelId, string postMessageId)
         {
             var command = new SqlCommand("SP_ADD_SCORE", conn);
             command.CommandType = CommandType.StoredProcedure;
@@ -70,12 +71,14 @@ namespace PrideBot.Repository
             command.Parameters.Add(new SqlParameter("@TIMESTAMP", timestamp));
             command.Parameters.Add(new SqlParameter("@POINTS_EARNED", pointsEarned));
             command.Parameters.Add(new SqlParameter("@APPROVER", approverId));
-            command.Parameters.Add(new SqlParameter("@POST_GUILD_ID", postGuilId));
-            command.Parameters.Add(new SqlParameter("@POST_CHANNEL_ID", postChannelId));
-            command.Parameters.Add(new SqlParameter("@POST_MESSAGE_ID", postMessageId));
+            command.Parameters.Add(new SqlParameter("@GUILD_ID", guildId));
             command.Parameters.Add(new SqlParameter("@IGNORE_COOLDOWN", ignoreCooldown ? "Y" : "N"));
             command.Parameters.Add(new SqlParameter("@EVENT_START", eventStart));
             command.Parameters.Add(new SqlParameter("@EVENT_DAY", eventDay));
+
+            command.Parameters.Add(new SqlParameter("@POST_GUILD_ID", postGuildId));
+            command.Parameters.Add(new SqlParameter("@POST_CHANNEL_ID", postChannelId));
+            command.Parameters.Add(new SqlParameter("@POST_MESSAGE_ID", postMessageId));
 
             var scoreIdParam = new SqlParameter();
             scoreIdParam.ParameterName = "@SCORE_ID";

@@ -736,7 +736,6 @@
 
   <ItemGroup>
     <Folder Include="Assets\Hearts\" />
-    <Folder Include="Graphics\" />
   </ItemGroup>
 
   <ItemGroup>

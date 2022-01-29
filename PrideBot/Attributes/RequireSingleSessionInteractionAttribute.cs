@@ -15,8 +15,15 @@ namespace PrideBot
     {
         public override async Task<PreconditionResult> CheckRequirementsAsync(IInteractionContext context, ICommandInfo commandInfo, IServiceProvider services)
         {
-            if (Session.activeSessions.Any(a => a.GetUser().Id == context.User.Id))
-                return PreconditionResult.FromError("EPHEMERAL:" + DialogueDict.Get("SESSION_DUPE"));
+            var existingSession = Session.activeSessions.FirstOrDefault(a => a.GetUser().Id == context.User.Id);
+            if (existingSession != null)
+            {
+                var messageUrl = existingSession.GetCurrentPromptMessage().GetJumpUrl() ?? "";
+                var errorStr = !string.IsNullOrWhiteSpace(messageUrl)
+                    ? DialogueDict.Get("SESSION_DUPE_LINK", messageUrl)
+                    : DialogueDict.Get("SESSION_DUPE");
+                return PreconditionResult.FromError("EPHEMERAL:" + errorStr);
+            }
 
             return PreconditionResult.FromSuccess();
         }

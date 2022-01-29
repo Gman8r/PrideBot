@@ -18,12 +18,14 @@ namespace PrideBot.Plushies
         protected ModelRepository repo;
         private PlushieImageService imageService;
         private IDiscordInteraction interaction;
+        public bool IsRegistration;
 
-        public PlushieDrawSession(IMessageChannel channel, SocketUser user, IConfigurationRoot config, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, PlushieImageService imageService, IDiscordInteraction interaction) : base(channel, user, config, client, timeout, originmessage)
+        public PlushieDrawSession(IMessageChannel channel, SocketUser user, IConfigurationRoot config, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, PlushieImageService imageService, IDiscordInteraction interaction, bool isRegistration = false) : base(channel, user, config, client, timeout, originmessage)
         {
             this.repo = repo;
             this.imageService = imageService;
             this.interaction = interaction;
+            IsRegistration = isRegistration;
         }
 
         protected override async Task PerformSessionInternalAsync()
@@ -52,7 +54,7 @@ namespace PrideBot.Plushies
 
             foreach (var choice in choices)
             {
-                embed.AddField($"{choice.Name} ({choice.CharacterName})", choice.Description);
+                embed.AddField($"{choice.Name} ({choice.CharacterName})", choice.DecriptionUponUse());
             }
 
             //var choiceField = new EmbedFieldBuilder()
@@ -70,38 +72,65 @@ namespace PrideBot.Plushies
                 .Select(a => new SelectMenuOptionBuilder(a.CharacterName, a.UserPlushieChoiceId.ToString(), a.Name))
                 .ToList();
 
-            var components = new ComponentBuilder()
+            var selectionComponents = new ComponentBuilder()
                 .WithSelectMenu("DRAW_PLUSHIE", selectMenuOptions, "Which plushie would you like?")
                 .WithButton("Nevermind, not now", "NO");
 
-            var response = await SendAndAwaitNonTextResponseAsync(user.Mention, embed: embed, components: components, interaction: interaction, file: imageFile);
+            var response = await SendAndAwaitNonTextResponseAsync(user.Mention, embed: embed, components: selectionComponents, interaction: interaction, file: imageFile);
+            var selectionMessage = response.BotMessage;
 
-            if (response.IsNo)
+            while(true)
             {
-                embed = EmbedHelper.GetEventEmbed(user, config)
-                    .WithTitle("Nevermind?")
-                    .WithDescription(DialogueDict.Get("PLUSHIE_DRAW_CANCEL"));
-                await response.InteractionResponse.FollowupAsync();
-            }
-            else
-            {
-                var choiceId = int.Parse(response.InteractionResponse.Data.Values.FirstOrDefault());
-                var choice = choices.FirstOrDefault(a => a.UserPlushieChoiceId == choiceId);
-                var newDay = GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay() : 0; // in case user waits around forever idk
-                var result = await repo.AttemptAddUserPlushieAsync(connection, userId, null, userId, choice.PlushieId, choice.CharacterId, newDay, choice.Rotation, PlushieTransaction.Drawn, choiceId);
-
-                result.CheckErrors();
-
-                var resultFile = await imageService.WritePlushieImageAsync(choice);
-                var resultEmbed = EmbedHelper.GetEventEmbed(user, config)
-                    .WithTitle("BOOM! Plushie!")
-                    .WithDescription(DialogueDict.Get("PLUSHIE_DRAWN"))
-                    .WithAttachedThumbnailUrl(resultFile);
-                if (interaction == null)
-                    resultEmbed.Description += "\n\n" + DialogueDict.Get("GETPLUSHIE_PROMPT", config.GetDefaultPrefix());
+                if (response.IsNo)
+                {
+                    embed = EmbedHelper.GetEventEmbed(user, config)
+                        .WithTitle("Nevermind?")
+                        .WithDescription(DialogueDict.Get("PLUSHIE_DRAW_CANCEL"));
+                    await response.InteractionResponse.FollowupAsync(embed: embed.Build());
+                }
                 else
-                    resultEmbed.Description += "\n\n" + DialogueDict.Get("GETPLUSHIE_SCROLLUP");
-                await response.InteractionResponse.FollowupWithFileAsync(resultFile.Stream, resultFile.FileName, embed: resultEmbed.Build());
+                {
+                    var choiceId = int.Parse(response.InteractionResponse.Data.Values.FirstOrDefault());
+                    var choice = choices.FirstOrDefault(a => a.UserPlushieChoiceId == choiceId);
+
+                    embed = EmbedHelper.GetEventEmbed(user, config)
+                        .WithTitle("Use This Plushie?")
+                        .WithDescription(DialogueDict.Get("PLUSHIE_CONFIRM_DRAW", choice.CharacterName));
+                    var yesNoComponents = new ComponentBuilder()
+                        .WithButton("Yeah!", "YES", ButtonStyle.Success, new Emoji("👍"))
+                        .WithButton("Actually Hold On", "NO", ButtonStyle.Secondary, new Emoji("❌"));
+
+                    response = await SendAndAwaitNonTextResponseAsync(user.Mention, embed: embed, components: yesNoComponents, interaction: interaction);
+                    if (response.IsNo)
+                    {
+                        response.BotMessage.DeleteAsync().GetAwaiter();
+                        selectionMessage.ModifyAsync(a => a.Components = selectionComponents.Build()).GetAwaiter();
+                        currentPrompt = new Prompt(selectionMessage, false, null, true);
+                        response = await AwaitCurrentResponseAsync();
+                        continue;
+                    }
+
+                    var newDay = GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay() : 0; // in case user waits around forever idk
+                    var result = await repo.AttemptAddUserPlushieAsync(connection, userId, null, userId, choice.PlushieId, choice.CharacterId, newDay, choice.Rotation, PlushieTransaction.Drawn, choiceId);
+
+                    result.CheckErrors();
+
+                    var resultFile = await imageService.WritePlushieImageAsync(choice);
+                    var resultEmbed = EmbedHelper.GetEventEmbed(user, config)
+                        .WithTitle("BOOM! Plushie!")
+                        .WithDescription(DialogueDict.Get("PLUSHIE_DRAWN"))
+                        .WithAttachedThumbnailUrl(resultFile);
+                    if (IsRegistration && !GameHelper.IsEventOccuring(config))
+                        resultEmbed.Description += "\n\n" + DialogueDict.Get("GETPLUSHIE_PREREG", config.GetDefaultPrefix());
+                    else if (IsRegistration)
+                        resultEmbed.Description += "\n\n" + DialogueDict.Get("GETPLUSHIE_REG", config.GetDefaultPrefix());
+                    else if (interaction == null)
+                        resultEmbed.Description += "\n\n" + DialogueDict.Get("GETPLUSHIE_PROMPT", config.GetDefaultPrefix());
+                    else
+                        resultEmbed.Description += "\n\n" + DialogueDict.Get("GETPLUSHIE_SCROLLUP");
+                    await response.InteractionResponse.FollowupWithFileAsync(resultFile.Stream, resultFile.FileName, embed: resultEmbed.Build());
+                }
+                break;
             }
         }
     }

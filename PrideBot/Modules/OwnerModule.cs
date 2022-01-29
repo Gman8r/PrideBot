@@ -80,9 +80,9 @@ namespace PrideBot.Modules
         }
 
         [Command("runscene")]
-        public async Task RunScene(string sceneId)
+        public async Task RunScene(string sceneId, IMessageChannel channel)
         {
-            await sceneDialogueService.PerformCutscene(sceneId);
+            await sceneDialogueService.PerformCutscene(sceneId, channel);
         }
 
         [Command("tsuchiconnect")]

@@ -42,5 +42,25 @@ namespace PrideBot
             }
             return result.Trim();
         }
+
+        public static string EmptyCoalesce(params string[] values)
+        {
+            foreach (var value in values)
+            {
+                if (!string.IsNullOrEmpty(value))
+                    return value;
+            }
+            return null;
+        }
+
+        public static string WhitespaceCoalesce(params string[] values)
+        {
+            foreach (var value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    return value;
+            }
+            return null;
+        }
     }
 }

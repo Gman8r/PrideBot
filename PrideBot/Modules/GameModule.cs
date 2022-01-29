@@ -75,7 +75,7 @@ namespace PrideBot.Modules
                 else
                 {
                     var pronoun = user.Pronoun(Context.Client, Pronoun.Their);
-                    throw new CommandException($"{username} hasn't registered and configured {pronoun} pairings yet!");
+                    throw new CommandException($"{username} hasn't registered and configured {pronoun} pairings yet! 🕸");
                 }
             }
 
@@ -86,7 +86,7 @@ namespace PrideBot.Modules
                 .WithAttachedImageUrl(imageFile)
                 .WithThumbnailUrl(user.GetServerAvatarUrlOrDefault())
                 .WithTitle($"User Overview")
-                .WithDescription(isSelf ? "Here's who you're supporting!" : $"Here's who {user.Mention} is supporting!")
+                .WithDescription(isSelf ? "Here's who you're supporting! 💐" : $"Here's who {user.Mention} is supporting! 💐")
                 .WithFooter(new EmbedFooterBuilder()
                     .WithText(user.Id.ToString()));
 
@@ -525,7 +525,7 @@ namespace PrideBot.Modules
         [Alias("shipscores")]
         [RequireRegistration]
         [ValidEventPeriods(EventPeriod.DuringEvent | EventPeriod.AfterEvent)]
-        [Summary("Views the place and SP count of a particular pairing!")]
+        [Summary("Views the place and LP count of a particular pairing!")]
         public async Task ShipScore([Remainder] string shipName)
         {
             using var connection = repo.GetDatabaseConnection();

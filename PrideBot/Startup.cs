@@ -126,7 +126,6 @@ namespace PrideBot
             .AddSingleton<GDrive.GoogleCredentialService>()
             .AddSingleton<GDrive.GoogleDriveService>()
             .AddSingleton<Plushies.PlushieMenuService>()
-            .AddSingleton<RpImageService>()
             .AddSingleton<Plushies.PlushieService>()
             .AddSingleton<Plushies.PlushieImageService>()
             .AddSingleton(Configuration);             // Add the configuration to the collection

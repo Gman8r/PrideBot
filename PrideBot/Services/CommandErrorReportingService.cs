@@ -45,7 +45,7 @@ namespace PrideBot
                             errorMessage = (errorReason.Substring("COMMANDEXCEPTION:".Count()));
                         }
                         else
-                            errorMessage = errorReason.Substring(0, 4000);
+                            errorMessage = errorReason.Length <= 4000 ? errorMessage : errorReason.Substring(0, 4000);
                         //errorMessage = DialogueDict.Get("EXCEPTION");
                     }
                     if (errorMessage.StartsWith("EPHEMERAL:"))

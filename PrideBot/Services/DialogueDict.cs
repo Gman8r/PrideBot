@@ -92,6 +92,7 @@ namespace PrideBot
 
             var str = string.Format(instance.dict[chosenKey]
                 .Replace("{SP}", EmoteHelper.SPEmote.ToString())
+                .Replace("{LP}", EmoteHelper.SPEmote.ToString())
                 , args);
             return str;
         }

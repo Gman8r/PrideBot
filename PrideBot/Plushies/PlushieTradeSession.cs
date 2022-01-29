@@ -88,6 +88,11 @@ namespace PrideBot.Plushies
 
             // prompt user 2 for their plushie to trade
             var user2Plushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, user2Id);
+            if (!user2Plushies.Any())
+            {
+                MarkCancelled(DialogueDict.Get("PLUSHIE_TRADE_NONE", user2.Mention));
+                throw new OperationCanceledException();
+            }
             var plushie2 = await repo.GetUserPlushieAsync(connection, userPlushieId1);
             imageFile = await imageService.WritePlushieCollectionImageAsync(user2Plushies);
             embed = GetEmbed()

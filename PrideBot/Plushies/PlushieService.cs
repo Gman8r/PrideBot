@@ -54,9 +54,9 @@ namespace PrideBot.Plushies
         }
 
 
-        public async Task DrawPlushie(SqlConnection connection, IMessageChannel channel, SocketUser user, IDiscordInteraction interaction = null)
+        public async Task DrawPlushie(SqlConnection connection, IMessageChannel channel, SocketUser user, IDiscordInteraction interaction = null, bool isRegistration = false)
         {
-            var session = new PlushieDrawSession(channel, user, config, repo, client, TimeSpan.FromMinutes(10), null, imageService, interaction);
+            var session = new PlushieDrawSession(channel, user, config, repo, client, TimeSpan.FromMinutes(10), null, imageService, interaction, isRegistration);
             await session.PerformSessionAsync();
         }
 

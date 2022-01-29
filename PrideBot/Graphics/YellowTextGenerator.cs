@@ -16,20 +16,20 @@ using System.Net;
 using Microsoft.Data.SqlClient;
 using ImageMagick;
 
-namespace PrideBot.Events
+namespace PrideBot.Graphics
 {
-    public class RpImageService
+    public class YellowTextGenerator
     {
         private readonly IConfigurationRoot config;
 
         const double Mult128 = 1.0;
 
-        public RpImageService(IConfigurationRoot config)
+        public YellowTextGenerator(IConfigurationRoot config)
         {
             this.config = config;
         }
 
-        public async Task<MemoryFile> WriteTestTextAsync(string pfpUrl, string  phrase)
+        public async Task<MemoryFile> WriteYellowTextAsync(string pfpUrl, string  phrase)
         {
             using var image = await GetPfpWithYellowTextAsync(pfpUrl, phrase);
             return await image.WriteToMemoryFileAsync("texty");
@@ -44,7 +44,7 @@ namespace PrideBot.Events
             textImage.Rotate(-10);
             //textImage.Resize(new Percentage(85));
             image.Composite(textImage, Gravity.Northwest,
-                (int)(75 * Mult128) - (textImage.Width / 2), (int)(-5 * Mult128), CompositeOperator.Over);
+                (int)(75 * Mult128) - (textImage.Width / 2), (int)(-10 * Mult128), CompositeOperator.Over);
 
             return image;
         }
@@ -54,7 +54,7 @@ namespace PrideBot.Events
             var textWidth = (int)(130 * Mult128);
             var textColor = new MagickColor(255, 254, 65, 255);
             var outlineColor = MagickColors.Black;
-            var outlineWidth = 6.0 * Mult128;
+            var outlineWidth = 7.0 * Mult128;
             var fontSize = 19.0 * Mult128;
             var lineSpacing = -15.0 * Mult128;
             //var imageWidth = textWidth;

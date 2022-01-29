@@ -89,7 +89,7 @@ namespace PrideBot.Game
                 .OrderByDescending(a => a.quizStreak)
                 .ThenByDescending(a => a.pointTotal)
                 .Take(10);
-            embed.AddField("Most SP Earned From Quizzes:", string.Join("\n", topScoreUsers.Select(a => 
+            embed.AddField("Most LP Earned From Quizzes:", string.Join("\n", topScoreUsers.Select(a => 
                 (gyn.GetUser(ulong.Parse(a.userId))?.Mention ?? "Unknown User")
                      + $" - **{a.pointTotal}** {EmoteHelper.SPEmote}")), true);
             embed.AddField("Longest Quiz Streaks:", string.Join("\n", topStreakUsers.Select(a => 

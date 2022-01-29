@@ -99,6 +99,10 @@ namespace PrideBot.Plushies
                     case "FACTORY_RESET":
                         await RandomResetAsync(userPlushie);
                         break;
+                    case "UNDO":
+                    case "1_UP":
+                        await UndoCooldownsAsync(userPlushie);
+                        break;
                     default:
                         await ActivatePlushieDefaultAsync(userPlushie);
                         break;
@@ -123,6 +127,17 @@ namespace PrideBot.Plushies
                 await channel.SendMessageAsync(embed: embed.Build());
             else
                 await interaction.FollowupAsync(embed: embed.Build());
+        }
+
+        async Task UndoCooldownsAsync(UserPlushie userPlushie)
+        {
+            // TODO test all this shit
+            await repo.NullifyAchievementCoooldowns(connection, DateTime.Now.Date);
+            var embed = EmbedHelper.GetEventEmbed(user, config)
+                .WithTitle("Let's Rewind! 🔙")
+                .WithDescription(DialogueDict.Get("PLUSHIE_1_UP"));
+            await interaction.FollowupAsync(embed: embed.Build());
+            var msg = await channel.SendMessageAsync(embed: embed.Build());
         }
 
         async Task ClearanceSaleAsync(UserPlushie userPlushie)
