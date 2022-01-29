@@ -21,6 +21,7 @@ using PrideBot.Repository;
 using PrideBot.Events;
 using PrideBot.Game;
 using PrideBot.Quizzes;
+using PrideBot.Registration;
 
 namespace PrideBot.Modules
 {
@@ -35,8 +36,9 @@ namespace PrideBot.Modules
         readonly LeaderboardImageGenerator leaderboardImageGenerator;
         readonly SceneDialogueService sceneDialogueService;
         readonly SnakeGame snakeGame;
+        private ShipImageGenerator shipImageGenerator;
 
-        public OwnerModule(ModelRepository repo, AnnouncementService announcementService, LeaderboardService leaderboardService, IConfigurationRoot config, LeaderboardImageGenerator leaderboardImageGenerator, SceneDialogueService sceneDialogueService, SnakeGame snakeGame)
+        public OwnerModule(ModelRepository repo, AnnouncementService announcementService, LeaderboardService leaderboardService, IConfigurationRoot config, LeaderboardImageGenerator leaderboardImageGenerator, SceneDialogueService sceneDialogueService, SnakeGame snakeGame, ShipImageGenerator shipImageGenerator)
         {
             this.repo = repo;
             this.announcementService = announcementService;
@@ -45,6 +47,22 @@ namespace PrideBot.Modules
             this.leaderboardImageGenerator = leaderboardImageGenerator;
             this.sceneDialogueService = sceneDialogueService;
             this.snakeGame = snakeGame;
+            this.shipImageGenerator = shipImageGenerator;
+        }
+
+        [Command("gencard")]
+        public async Task GenCard()
+        {
+            using var conneciton = await repo.GetAndOpenDatabaseConnectionAsync();
+            var dbUser = await repo.GetUserAsync(conneciton, Context.User.Id.ToString());
+            var ships = await repo.GetUserShipsAsync(conneciton, Context.User.Id.ToString());
+            var shipCollection = new UserShipCollection(ships);
+
+            var image = await shipImageGenerator.WriteUserCardAsync(dbUser, shipCollection);
+            await Context.Channel.SendFileAsync(image.Stream, image.FileName);
+
+            image = await shipImageGenerator.WriteUserCardAsync(dbUser, shipCollection, scoreTexts: new int[] { 9, 99, 99);
+            await Context.Channel.SendFileAsync(image.Stream, image.FileName);
         }
 
         [Command("announceintro")]

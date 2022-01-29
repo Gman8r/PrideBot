@@ -39,6 +39,7 @@ namespace PrideBot.Modules
 
         [Command("rpstart")]
         [Alias("startrp")]
+        [RequireSage]
         public async Task Chat(SocketTextChannel channel)
         {
             var webhook = (await channel.GetWebhooksAsync()).FirstOrDefault(a => a.Creator.Id == Context.Client.CurrentUser.Id)
@@ -57,6 +58,7 @@ namespace PrideBot.Modules
 
         [Command("rpstop")]
         [Alias("stoprp", "rpend", "endrp")]
+        [RequireSage]
         public async Task StopChat()
         {
             await chatSessions[Context.User.Id].DisposeAsync();
@@ -64,28 +66,25 @@ namespace PrideBot.Modules
             await ReplyResultAsync("Chat session ended.");
         }
 
-
-        [Command("text")]
-        public async Task YellowText([Remainder]string phrase = null)
+        [Command("yellow")]
+        [Alias("yellowtext")]
+        [Priority(0)]
+        public async Task YellowText(SocketUser user, [Remainder]string phrase = null)
         {
             var imageService = new YellowTextGenerator(config);
-            var file = await imageService.WriteYellowTextAsync(Context.Client.CurrentUser.GetAvatarUrl(size: 128), phrase);
+            var file = await imageService.WriteYellowTextAsync(user.GetAvatarUrl(size: 128), phrase);
             if (!string.IsNullOrWhiteSpace(phrase))
             {
                 var embed = EmbedHelper.GetEventEmbed(null, config)
-                    .WithDescription("blablabla")
+                    //.WithDescription("blablabla")
                     //.WithThumbnailUrl(Context.Client.CurrentUser.GetAvatarUrl())
-                    .WithAttachedImageUrl(file)
-                    .WithAttachedThumbnailUrl(file);
+                    .WithAttachedImageUrl(file);
+                    //.WithAttachedThumbnailUrl(file);
                 await Context.Channel.SendFileAsync(file.Stream, file.FileName, embed: embed.Build());
             }
             else
             {
-                var embed = EmbedHelper.GetEventEmbed(null, config)
-                    .WithDescription("blablabla")
-                    .WithThumbnailUrl(Context.Client.CurrentUser.GetAvatarUrl());
-                    //.WithAttachedImageUrl(file);
-                await Context.Channel.SendMessageAsync(embed: embed.Build());
+                throw new CommandException("You need to put a url!");
             }
         }
 

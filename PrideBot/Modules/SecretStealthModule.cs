@@ -18,6 +18,7 @@ using System.IO.Compression;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using PrideBot.Events;
+using PrideBot.Registration;
 
 namespace PrideBot.Modules
 {
@@ -28,11 +29,13 @@ namespace PrideBot.Modules
     {
         private IConfigurationRoot config;
         private CommandHandler commandHandler;
+        private ShipImageGenerator shipImageGenerator;
 
-        public SecretStealthModule(IConfigurationRoot config, CommandHandler commandHandler)
+        public SecretStealthModule(IConfigurationRoot config, CommandHandler commandHandler, ShipImageGenerator shipImageGenerator)
         {
             this.config = config;
             this.commandHandler = commandHandler;
+            this.shipImageGenerator = shipImageGenerator;
         }
 
         [Command("lambda")]

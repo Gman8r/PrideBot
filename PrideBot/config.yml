@@ -1,54 +1,75 @@
 ﻿stealthmode: True
 prefixes:
-    - '!'
-status: 🏳‍🌈
+    - '❤️ '
+    - '<3 '
+status: 🧸
 eventstart: 2022-02-01
 eventend: 2022-02-14
 eventcolor: 0xB00B69 # not sure if used
-firstquizstreakday: 11
+firstquizstreakday: 8
 chatsessionmessages: 5
-chatsessionhours: 5
-voiechatminutes: 10
+chatsessionhours: 4
+voiechatminutes: 10 # sadly we shouldnt try and fix this typo
 paths:
     wwwhostpath: http://intile.ddns.net:88/pbotassetsdebug/
     wwwhostpathlocal: \\media\wwwroot\pbotassetsdebug\
 ids:
-    owner: 841046853814190090
+    owner: 199875078790316032
     
     #GYN
-    gyn: 584841110283747328
-    sage: 584851607318036501
-    ruleschannel: 846568676764549130
-    achievementschannel: 846569499729461289
-    quizchannel: 846569910230581248
-    quizdiscussionchannel: 846571836128100382
-    starboardchannel: 841866534799409193
-    pklogchannel: 813688614465568779
-    pluralkitid: 466378653216014359
-    registeredrole: 846570072628658237
-    quiztakenrole: 846569982058037288
-    modchat: 606104629306195988
-    youkai: 584850930416091146
-    announcementschannel: 584844280904810526
-    scorereportchannel: 846571306476634113
-    
-    #Testing Grounds
-    #gyn: 248446374679543810
-    #sage: 797225471942066206
-    #ruleschannel: 844354683829223424
-    #achievementschannel: 844354667977637900
-    #quizchannel: 844357532695789568
-    #quizdiscussionchannel: 844354707916980244
-    #starboardchannel: 808049479999553556
-    #pklogchannel: 808049429528444928
+    #gyn: 932055111583293500
+    #sage: 933177165586001920
+    #ruleschannel: 932055114078908541
+    #achievementschannel: 932055114078908543
+    #quizchannel: 932055114078908544
+    #quizdiscussionchannel: 932055114078908545
+    #starboardchannel: 933107398728646749
+    #pklogchannel: 932055112224997462
     #pluralkitid: 466378653216014359
-    #registeredrole: 844355731410386964
-    #quiztakenrole: 844355888876617749
-    #modchat: 808049429528444928
-    #youkai: 358435805779197955
-    #announcementschannel: 419187329706491905
-    #scorereportchannel: 809556555258396682
+    #registeredrole: 936803761173708883
+    #quiztakenrole: 932092134062981120
+    #modchat: 932055111847530545
+    #youkai: 932055111797182579
+    #announcementschannel: 936797654703288370
+    #scorereportchannel: 932055114078908546
+    #leaderboardchannel: 932055114078908542
 
+    #Testing Grounds
+    # gyn: 248446374679543810
+    # sage: 797225471942066206
+    # ruleschannel: 844354683829223424
+    # achievementschannel: 844354667977637900
+    # quizchannel: 846569910230581248
+    # quizdiscussionchannel: 844354707916980244
+    # starboardchannel: 808049479999553556
+    # pklogchannel: 808049429528444928
+    # pluralkitid: 466378653216014359
+    # registeredrole: 844355731410386964
+    # quiztakenrole: 844355888876617749
+    # modchat: 808049429528444928
+    # youkai: 358435805779197955
+    # announcementschannel: 419187329706491905
+    # scorereportchannel: 809556555258396682
+    # leaderboardchannel: 850696302022230026
+
+    #ULTIMATE TESTING EXPERIENCE
+    gyn: 932086074887508019
+    sage: 932091358477422612
+    ruleschannel: 932091516107759656
+    achievementschannel: 932091535992959077
+    quizchannel: 932091572772831302
+    quizdiscussionchannel: 932091590040752198
+    starboardchannel: 932091704851443735
+    pklogchannel: 932091736694591508
+    pluralkitid: 466378653216014359
+    registeredrole: 932092101494181888
+    quiztakenrole: 932092134062981120
+    modchat: 932092244842921984
+    youkai: 932092284177104946
+    announcementschannel: 932092347225894973
+    scorereportchannel: 932092394466316338
+    leaderboardchannel: 932092438061940776
+        
     #Testing 123
     #gyn: 796585563166736394
     #sage: 796589230968274944
@@ -59,7 +80,7 @@ ids:
     #registeredrole: 844890087346012170
     #quiztakenrole: 844890078521982987
     #starboardchannel: 845109425224155146
-    #modchat: 796585647242084372
+    #modchat: 808049429528444928
     #youkai: 796585753864830976
     #pklogchannel: 811106749683728445
     #pluralkitid: 466378653216014359

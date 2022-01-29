@@ -94,7 +94,7 @@ namespace PrideBot.Plushies
                     var choice = choices.FirstOrDefault(a => a.UserPlushieChoiceId == choiceId);
 
                     embed = EmbedHelper.GetEventEmbed(user, config)
-                        .WithTitle("Use This Plushie?")
+                        .WithTitle("Get This Plushie?")
                         .WithDescription(DialogueDict.Get("PLUSHIE_CONFIRM_DRAW", choice.CharacterName));
                     var yesNoComponents = new ComponentBuilder()
                         .WithButton("Yeah!", "YES", ButtonStyle.Success, new Emoji("👍"))
