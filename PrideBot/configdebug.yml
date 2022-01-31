@@ -2,13 +2,13 @@
 prefixes:
     - '~'
 status: 🧸
-eventstart: 2022-01-01
+eventstart: 2022-01-14
 eventend: 2022-02-14
 eventcolor: 0xB00B69 # not sure if used
 firstquizstreakday: 11
 chatsessionmessages: 5
 chatsessionhours: 4
-voiechatminutes: 10 # sadly we shouldnt try and fix this typo
+voiechatminutes: 1 # sadly we shouldnt try and fix this typo
 paths:
     wwwhostpath: http://intile.ddns.net:88/pbotassetsdebug/
     wwwhostpathlocal: \\media\wwwroot\pbotassetsdebug\

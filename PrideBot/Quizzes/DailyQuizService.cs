@@ -170,7 +170,7 @@ namespace PrideBot.Quizzes
             // TODO switch over
 
             var discussionThread = !Startup.DebugMode
-                ? await quizChannel.CreateThreadAsync($"Quiz Discussion: Day {day}", ThreadType.PrivateThread, invitable: false)
+                ? await quizChannel.CreateThreadAsync($"Quiz Discussion: Day {day}", ThreadType.PrivateThread, invitable: false, autoArchiveDuration: ThreadArchiveDuration.OneWeek)
                 : await quizChannel.CreateThreadAsync($"Quiz Discussion Day {day}", ThreadType.PublicThread);
 
             var quizzes = (await repo.GetQuizzesForDayAsync(connection, day.ToString())).ToList();

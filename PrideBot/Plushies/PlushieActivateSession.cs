@@ -17,30 +17,23 @@ namespace PrideBot.Plushies
 {
     public partial class PlushieEffectSession : Session
     {
-        readonly IConfigurationRoot config;
         readonly ModelRepository repo;
         readonly PlushieImageService imageService;
-        readonly DiscordSocketClient client;
         readonly ScoringService scoringService;
         readonly SqlConnection connection;
-        readonly IGuildUser user;
         readonly UserPlushie userPlushie;
-        readonly IMessageChannel channel;
-
+        readonly IServiceProvider provider;
         IDiscordInteraction interaction;
 
-        public PlushieEffectSession(IMessageChannel channel, SocketGuildUser user, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ModelRepository repo, PlushieImageService imageService, ScoringService scoringService, SqlConnection connection, UserPlushie userPlushie, IDiscordInteraction interaction = null) : base(channel, user, config, client, timeout, originmessage)
+        public PlushieEffectSession(IMessageChannel channel, SocketGuildUser user, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ModelRepository repo, PlushieImageService imageService, ScoringService scoringService, SqlConnection connection, UserPlushie userPlushie, IServiceProvider provider, IDiscordInteraction interaction = null) : base(channel, user, config, client, timeout, originmessage)
         {
-            this.config = config;
             this.repo = repo;
             this.imageService = imageService;
-            this.client = client;
             this.scoringService = scoringService;
             this.connection = connection;
-            this.user = user;
             this.userPlushie = userPlushie;
-            this.channel = channel;
             this.interaction = interaction;
+            this.provider = provider;
         }
 
         protected override async Task PerformSessionInternalAsync()
@@ -135,11 +128,14 @@ namespace PrideBot.Plushies
 
         async Task UndoCooldownsAsync(UserPlushie userPlushie)
         {
-            await repo.NullifyAchievementCoooldowns(connection, new DateTime(2020, 1, 1));
+            await repo.NullifyAchievementCoooldowns(connection, new DateTime(2020, 1, 1), false);
             var embed = EmbedHelper.GetEventEmbed(user, config)
                 .WithTitle("Let's Rewind! 🔙")
                 .WithDescription(DialogueDict.Get("PLUSHIE_1_UP"));
             var msg = await interaction.FollowupAsync(embed: embed.Build());
+
+            //provider.GetService<ChatScoringService>().ResetUserChatData(user.Id);
+            provider.GetService<VoiceScoringService>().ResetUserVoiceData(user.Id);
 
             // deplete plushie
             await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
@@ -191,10 +187,20 @@ namespace PrideBot.Plushies
         async Task MysteryMedicineAsync(UserPlushie userPlushie)
         {
             // get random value
-            var pointTotal = await repo.GetMysteryMedicineMultAsync(connection);
+            var rand = new Random();
+            var workStr = "";
+            var pointTotal = 0;
+            var times = ((rand.Next() % 3) + 3);
+            for (int i = 0; i < times; i++)
+            {
+                var x = ((rand.Next() % 4) + 1) * 5;
+                workStr += string.IsNullOrEmpty(workStr) ? $"**{x}**" : $" + **{x}**";
+                pointTotal += x;
+            }
+
             var embed = EmbedHelper.GetEventEmbed(user, config)
                 .WithTitle("What A Strange Taste! ⁉")
-                .WithDescription(DialogueDict.Get("PLUSHIE_MEDICINE_GET", pointTotal));
+                .WithDescription(workStr + "\n\n" + DialogueDict.Get("PLUSHIE_MEDICINE_GET", pointTotal));
             var msg = await channel.SendMessageAsync(embed: embed.Build());
 
             // grant score for achievement
@@ -288,7 +294,7 @@ namespace PrideBot.Plushies
             tutorial += $"**{tens}{ones}** {EmoteHelper.SPEmote}.";
 
             var digitsSum = ones + tens;
-            var pointMult = 5; // TODO db mult
+            var pointMult = 7; // TODO db mult
             var pointsTotal = digitsSum * pointMult;
             tutorial += $"\n\n{ones} + {tens} = **{digitsSum}**";
             tutorial += "\n\n UHHHHH i'll figure out the mult later, let's just say x5. Also i think she should have different reactions depending on how high you get and for the low ones she basically makes fun of you lowkey.";

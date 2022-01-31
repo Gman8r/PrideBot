@@ -16,12 +16,14 @@ namespace PrideBot.Quizzes
 {
     public class QuizSession : Session
     {
-        const int TimerSeconds = 60;
+        const int DefaultTimerSeconds = 60;
+        const int CutTimerSeconds = 15;
 
         readonly ModelRepository repo;
         readonly GuildSettings guildSettings;
         readonly ScoringService scoringService;
 
+        int timerStartSeconds;
         bool sessionComplete = false;
         string correctChoice;
         QuizLog quizLog;
@@ -38,6 +40,7 @@ namespace PrideBot.Quizzes
             this.quizLog = quizLog;
             this.guildSettings = guildSettings;
             QuizStarted = false;
+            timerStartSeconds = DefaultTimerSeconds;
             appliedPlushies = new List<UserPlushie>();
         }
 
@@ -48,6 +51,10 @@ namespace PrideBot.Quizzes
             var day = quizLog.Day;
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
+
+            var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, user.Id.ToString());
+            var activatedPlushies = await repo.GetInEffectUserPlushiesForUserAsync(connection, user.Id.ToString(), DateTime.Now);
+            var timerCutPlushie = activatedPlushies.FirstOrDefault(a => a.PlushieId.Equals("QUIZ_TIMER_CUT"));
 
             //quizLog = await repo.GetOrCreateQuizLogAsync(connection, user.Id.ToString(), day.ToString());
             //if (quizLog.Attempted)
@@ -64,7 +71,7 @@ namespace PrideBot.Quizzes
                 .WithDescription(DialogueDict.Get("QUIZ_BEGIN"));
             if (availableQuizzes.Count() > 1)
                 embed.Description += "\n\n" + DialogueDict.Get("QUIZ_MULTIPLE", availableQuizzes.Count());
-            embed.Description += "\n\n" + DialogueDict.Get("QUIZ_INSTRUCTIONS", TimerSeconds);
+            embed.Description += "\n\n" + DialogueDict.Get("QUIZ_INSTRUCTIONS", timerStartSeconds);
             embed.Description += "\n\n" + DialogueDict.Get(availableQuizzes.Count() > 1 ? "QUIZ_CONFIRM_MULTIPLE" : "QUIZ_CONFIRM");
 
             var categoryField = new EmbedFieldBuilder()
@@ -91,6 +98,10 @@ namespace PrideBot.Quizzes
             }
 
             var components = new ComponentBuilder();
+            if (timerCutPlushie != null)
+            {
+                components.WithButton($"Reminder: The timer will be reduced to {CutTimerSeconds} seconds", "CUTTIMEWARNING", ButtonStyle.Secondary, new Emoji("⚠"), disabled: true);
+            }
             if (availableQuizzes.Count == 1)
             {
                 components.WithButton("Ready!", "YES", ButtonStyle.Success, ThumbsUpEmote);
@@ -108,11 +119,6 @@ namespace PrideBot.Quizzes
             }
             var response = await SendAndAwaitNonTextResponseAsync(embed: embed, components: components);
 
-            // Quiz officially started
-            QuizStarted = true;
-            var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, user.Id.ToString());
-            var activatedPlushies = await repo.GetInEffectUserPlushiesForUserAsync(connection, user.Id.ToString(), DateTime.Now);
-
             chosenQuizIndex = 0;
             if (response.IsNo)
             {
@@ -125,7 +131,18 @@ namespace PrideBot.Quizzes
                 chosenQuizIndex = selection;
             }
 
+            // Quiz officially started
             var quiz = availableQuizzes[chosenQuizIndex];
+            QuizStarted = true;
+
+            if (timerCutPlushie != null)
+            {
+                await repo.DepleteUserPlushieAsync(connection, timerCutPlushie.UserPlushieId, DateTime.Now, false, PlushieEffectContext.Quiz, quiz.QuizId.ToString());
+                appliedPlushies.Add(timerCutPlushie);
+                timerStartSeconds = 15;
+            }
+
+
             quizLog.Attempted = true;
             quizLog.Correct = false;
             quizLog.QuizId = quiz.QuizId;
@@ -332,16 +349,16 @@ namespace PrideBot.Quizzes
 
         async Task RunTimer()
         {
-            var endTime = DateTime.Now.AddSeconds(TimerSeconds);
+            var endTime = DateTime.Now.AddSeconds(timerStartSeconds);
             while (DateTime.Now < endTime.AddSeconds(-30))
                 await Task.Delay(50);
-            if (!sessionComplete)
+            if (!sessionComplete && timerStartSeconds > 30)
                 await channel.SendMessageAsync(DialogueDict.Get("QUIZ_30_SECONDS"));
             while (DateTime.Now < endTime.AddSeconds(-15))
                 await Task.Delay(50);
-            if (!sessionComplete)
+            if (!sessionComplete && timerStartSeconds > 15)
                 await channel.SendMessageAsync(DialogueDict.Get("QUIZ_15_SECONDS"));
-            while (DateTime.Now < endTime.AddSeconds(-5))
+            while (!sessionComplete && DateTime.Now < endTime.AddSeconds(-5))
                 await Task.Delay(50);
             if (!sessionComplete)
                 await channel.SendMessageAsync(DialogueDict.Get("QUIZ_5_SECONDS"));

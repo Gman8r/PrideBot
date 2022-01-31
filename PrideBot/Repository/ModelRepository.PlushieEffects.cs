@@ -19,7 +19,8 @@ namespace PrideBot.Repository
         public async Task<int> GetClearanceSaleCardValueAsync(SqlConnection conn)
         => (int)(await new SqlCommand($"select dbo.fnPlGetClearanceSaleCardValue()", conn).ExecuteScalarAsync());
 
-        public async Task<int> NullifyAchievementCoooldowns(SqlConnection conn, DateTime since)
-        => (int)(await new SqlCommand($"update scores set COOLDOWN_NULLIFIED  = 'Y' where TIMESTAMP > '{since}'", conn).ExecuteNonQueryAsync());
+        public async Task<int> NullifyAchievementCoooldowns(SqlConnection conn, DateTime since, bool includeChatAchievement)
+        => (int)(await new SqlCommand($"update scores set COOLDOWN_NULLIFIED  = 'Y' where TIMESTAMP > '{since}'" +
+            (!includeChatAchievement ? "and ACHIEVEMENT_ID not in ('CHAT')"  : ""), conn).ExecuteNonQueryAsync());
     }
 }

@@ -35,6 +35,8 @@ namespace PrideBot.Game
         readonly LoggingService loggingService;
         readonly UserRegisteredCache userReg;
 
+        public void ResetUserChatData(ulong userId) => ChatData.Remove(userId);
+
         public Dictionary<ulong, UserChatData> ChatData { get; }
         public class UserChatData
         {
@@ -87,8 +89,8 @@ namespace PrideBot.Game
                     var achievement = await repo.GetAchievementAsync(connection, "CHAT");
                     // Check last score for potential cooldown
                     var lastScore = await repo.GetLastScoreFromUserAndAchievementAsync(connection, user.Id.ToString(), "CHAT");
-                    // If user hasn't scored within the cooldown time, just null the score
-                    if (lastScore != null && DateTime.Now > lastScore.Timestamp.AddHours(achievement.CooldownHours))
+                    // If user hasn't scored within the cooldown time, or the cooldown's been nullfieid, just null the score
+                    if (lastScore != null && (DateTime.Now > lastScore.Timestamp.AddHours(achievement.CooldownHours) || lastScore.CooldownNullified))
                         lastScore = null;
                     ChatData[user.Id] = new UserChatData()
                     {

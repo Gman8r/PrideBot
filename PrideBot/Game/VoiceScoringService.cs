@@ -47,6 +47,9 @@ namespace PrideBot.Quizzes
 
         int currentDay;
         Dictionary<ulong, UserVoiceData> voiceData;
+
+        public void ResetUserVoiceData(ulong userId) => voiceData.Remove(userId);
+
         public class UserVoiceData
         {
             public ulong Id;
@@ -98,9 +101,9 @@ namespace PrideBot.Quizzes
             var minMInutes = int.Parse(config["voiechatminutes"]);
 
             // If so, just give em the required minutes x2 so they defo dont get the achievement
-            if (lastVoiceScore != null && lastVoiceScore.Timestamp.Day == currentDay)
+            if (lastVoiceScore != null && !lastVoiceScore.CooldownNullified && lastVoiceScore.Timestamp.Day == currentDay)
                 voiceData[user.Id].voiceTime = TimeSpan.FromMinutes(minMInutes * 2);
-            if (lastStreamScore != null && lastStreamScore.Timestamp.Day == currentDay)
+            if (lastStreamScore != null && !lastStreamScore.CooldownNullified && lastStreamScore.Timestamp.Day == currentDay)
                 voiceData[user.Id].streamTime = TimeSpan.FromMinutes(minMInutes * 2);
         }
 
@@ -155,7 +158,7 @@ namespace PrideBot.Quizzes
                                 if (!(await userReg.GetOrDownloadAsync(user.Id.ToString())))
                                     continue;
 
-                                // Create user if necessary, maybe the bot started up mid-call
+                                // Create user if necessary
                                 if (!voiceData.ContainsKey(user.Id))
                                     await AddUserDataAsync(user, Optional<IVoiceState>.Unspecified);
 

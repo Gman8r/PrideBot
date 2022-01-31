@@ -84,22 +84,21 @@ namespace PrideBot.Modules
             var message = (Context.Interaction as SocketMessageComponent).Message;
             var repostAction = RepostAction.Edit;
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
-            var awaitTasks = new List<Task>();
             var sUser = client.GetGuild((Context.Channel as IGuildChannel).Guild.Id).GetUser(Context.User.Id);
             switch (action)
             {
                 case PlushieAction.Use:
-                    awaitTasks.Add(message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()));
+                    await message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build());
                     var userPlushie = await repo.GetUserPlushieAsync(connection, selectedPlushieId);
-                    await plushieService.ActivateUserPlushie(connection, sUser, userPlushie, Context.Channel, Context.Interaction);
+                    await plushieService.ActivateUserPlushie(connection, sUser, userPlushie, Context.Channel, provider, Context.Interaction);
                     selectedPlushieId = 0;
                     break;
                 case PlushieAction.Draw:
-                    awaitTasks.Add(message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()));
+                    await message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build());
                     await plushieService.DrawPlushie(connection, Context.Channel, Context.Interaction.User as SocketUser, Context.Interaction);
                     break;
                 case PlushieAction.Trade:
-                    awaitTasks.Add(message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build()));
+                    await message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build());
                     await plushieService.TradePlushieInSession(connection, Context.Channel, Context.Interaction.User as SocketUser, selectedPlushieId, provider, Context.Interaction);
                     selectedPlushieId = 0;
                     break;
@@ -129,7 +128,6 @@ namespace PrideBot.Modules
                 default:
                     break;
             }
-            await Task.WhenAll(awaitTasks);
 
             var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, Context.User.Id.ToString());
             var inEffectPlushies = await repo.GetInEffectUserPlushiesForUserAsync(connection, Context.User.Id.ToString(), DateTime.Now);

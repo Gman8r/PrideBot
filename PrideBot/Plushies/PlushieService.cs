@@ -87,10 +87,10 @@ namespace PrideBot.Plushies
             result.CheckErrors();
         }
 
-        public async Task ActivateUserPlushie(SqlConnection connection, SocketGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IDiscordInteraction interaction = null)
+        public async Task ActivateUserPlushie(SqlConnection connection, SocketGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IServiceProvider provider, IDiscordInteraction interaction = null)
         {
             var session = new PlushieEffectSession(channel, user, config, client, new TimeSpan(0, 10, 0), null, repo, imageService, scoringService, connection,
-                userPlushie, interaction);
+                userPlushie, provider, interaction);
             await session.PerformSessionAsync();
         }
 
