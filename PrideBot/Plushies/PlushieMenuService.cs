@@ -197,7 +197,7 @@ namespace PrideBot.Plushies
             // Draw and misc buttons
             var navigationRowBuilder = new ActionRowBuilder();
             // Draw
-            var isCoolownOver = await repo.CanUserDrawPlushieAsync(connection, userId.ToString(), GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay() : 0); ;
+            var isCoolownOver = await repo.CanUserDrawPlushieAsync(connection, userId.ToString(), GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay(config) : 0); ;
             var hasRoom = isCoolownOver
                ? await repo.CanUserReceivePlushieAsync(connection, userId.ToString())
                : false;

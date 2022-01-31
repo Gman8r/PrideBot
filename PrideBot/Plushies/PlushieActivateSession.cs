@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using PrideBot.Game;
 using PrideBot.Models;
+using PrideBot.Quizzes;
 using PrideBot.Repository;
 using System;
 using System.Collections.Generic;
@@ -96,6 +97,9 @@ namespace PrideBot.Plushies
                     case "CLEARANCE_SALE":
                         await ClearanceSaleAsync(userPlushie);
                         break;
+                    case "QUIZ_DOUBLE_DARE":
+                        await QuizDoubleDareAsync(userPlushie);
+                        break;
                     case "FACTORY_RESET":
                         await RandomResetAsync(userPlushie);
                         break;
@@ -131,13 +135,27 @@ namespace PrideBot.Plushies
 
         async Task UndoCooldownsAsync(UserPlushie userPlushie)
         {
-            // TODO test all this shit
-            await repo.NullifyAchievementCoooldowns(connection, DateTime.Now.Date);
+            await repo.NullifyAchievementCoooldowns(connection, new DateTime(2020, 1, 1));
             var embed = EmbedHelper.GetEventEmbed(user, config)
                 .WithTitle("Let's Rewind! 🔙")
                 .WithDescription(DialogueDict.Get("PLUSHIE_1_UP"));
-            await interaction.FollowupAsync(embed: embed.Build());
-            var msg = await channel.SendMessageAsync(embed: embed.Build());
+            var msg = await interaction.FollowupAsync(embed: embed.Build());
+
+            // deplete plushie
+            await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
+        }
+
+        async Task QuizDoubleDareAsync(UserPlushie userPlushie)
+        {
+            var activeSession = GetActiveSession(user.Id);
+            if (activeSession == null || !(activeSession is QuizSession qSession) || !qSession.QuizStarted)
+            {
+                await ActivatePlushieDefaultAsync(userPlushie);
+                return;
+            }
+
+            // user is already in a quiz
+            throw new CommandException("This should not be seen, so congratulations I guess!!");
         }
 
         async Task ClearanceSaleAsync(UserPlushie userPlushie)

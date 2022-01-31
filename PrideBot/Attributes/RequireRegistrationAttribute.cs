@@ -14,7 +14,7 @@ namespace PrideBot
     {
         public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            var connection = services.GetService<ModelRepository>().GetDatabaseConnection();
+            using var connection = services.GetService<ModelRepository>().GetDatabaseConnection();
             var cache = services.GetService<UserRegisteredCache>();
             if (await cache.GetOrDownloadAsync(context.User.Id.ToString()))
                 return PreconditionResult.FromSuccess();

@@ -26,9 +26,14 @@ namespace PrideBot
         public static EventPeriod GetEventPeriod(IConfigurationRoot config) => IsEventOccuring(config) ? EventPeriod.DuringEvent
             : (DateTime.Now >= DateTime.Parse(config["eventend"]) ? EventPeriod.AfterEvent : EventPeriod.BeforeEvent);
 
-        public static int GetEventDay(DateTime atTime) => atTime.Day;
+        public static int GetEventDay(IConfigurationRoot config, DateTime atTime)
+        {
+            var eventStart = DateTime.Parse(config["eventstart"]);
+            var day = atTime.Date;
+            return Math.Max((day - eventStart).Days + 1, 0);
+        } 
 
-        public static int GetEventDay() => GetEventDay(DateTime.Now);
+        public static int GetEventDay(IConfigurationRoot config) => GetEventDay( config, DateTime.Now);
 
         public static SocketGuild GetGyn(this DiscordSocketClient client, IConfigurationRoot config)
             => client.GetGuild(ulong.Parse(config["ids:gyn"]));

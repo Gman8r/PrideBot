@@ -36,7 +36,7 @@ namespace PrideBot
         {
             try
             {
-                var connection = repo.GetDatabaseConnection();
+                using var connection = repo.GetDatabaseConnection();
                 await connection.OpenAsync();
                 var results = await repo.GetAllDialogueAsync(connection);
                 dict = results.ToDictionary(t => t.DialogueId, t => t.Content);

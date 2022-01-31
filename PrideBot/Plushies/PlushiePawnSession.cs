@@ -28,7 +28,7 @@ namespace PrideBot.Plushies
 
         protected override async Task PerformSessionInternalAsync()
         {
-            var connection = await repo.GetAndOpenDatabaseConnectionAsync();
+            using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
             var dbCharacters = await repo.GetAllCharactersAsync(connection);
 
             // TODO

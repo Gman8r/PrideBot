@@ -34,8 +34,8 @@ namespace PrideBot.Repository
         => (await new SqlCommand($"select * from VI_USER_PLUSHIES where USER_ID = '{userId}' and FATE = {(int)PlushieTransaction.Using}" +
             $" and dbo.fnUserCardInEffect(USER_PLUSHIE_ID, '{timestamp}') = 'Y'", conn).ExecuteReaderAsync()).As<UserPlushie>();
 
-        public async Task<IEnumerable<UserPlushie>> GetActiveUserPlushiesForUserAsync(SqlConnection conn, string userId)
-        => (await new SqlCommand($"select * from VI_USER_PLUSHIES where USER_ID = '{userId}' and FATE = {(int)PlushieTransaction.Using}", conn).ExecuteReaderAsync()).As<UserPlushie>();
+        //public async Task<IEnumerable<UserPlushie>> GetActiveUserPlushiesForUserAsync(SqlConnection conn, string userId)
+        //=> (await new SqlCommand($"select * from VI_USER_PLUSHIES where USER_ID = '{userId}' and FATE = {(int)PlushieTransaction.Using}", conn).ExecuteReaderAsync()).As<UserPlushie>();
 
         public async Task<IEnumerable<Plushie>> GetAllPlushiesAsync(SqlConnection conn)
         => (await new SqlCommand($"select * from VI_PLUSHIES", conn).ExecuteReaderAsync()).As<Plushie>();
@@ -62,6 +62,18 @@ namespace PrideBot.Repository
         public async Task<int> AddPlushieEffectLog(SqlConnection conn, int userPlushieId, PlushieEffectContext contextType, string context, DateTime timestamp)
         => await new SqlCommand($"insert into PLUSHIE_EFFECT_LOG (USER_PLUSHIE_ID, CONTEXT_TYPE, CONTEXT, TIMESTAMP)" +
             $" values({userPlushieId}, {(int)contextType}, '{context}', '{timestamp}')", conn).ExecuteNonQueryAsync();
+
+        public async Task<int> ClearUserPlushiesAsync(SqlConnection conn, string userID)
+        {
+            var plushies = (await GetOwnedUserPlushiesForUserAsync(conn, userID))
+                .ToList();
+            plushies.AddRange(await GetInEffectUserPlushiesForUserAsync(conn, userID, DateTime.Now));
+            foreach (var plushie in plushies)
+            {
+                await AttemptRemoveUserPlushieAsync(conn, plushie.UserPlushieId, PlushieTransaction.Void, DateTime.Now);
+            }
+            return plushies.Count();
+        }
 
         public async Task UpdatePlushieChoicesForUserAsync(SqlConnection conn, string userId, int day, bool forceUpdate = false)
         {

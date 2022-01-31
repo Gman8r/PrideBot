@@ -341,9 +341,15 @@ namespace PrideBot
 
         private async Task OnCommandExecutedAsync(Optional<CommandInfo> command, ICommandContext context, IResult result)
         {
+            var errorType = CommandErrorReportingService.ErrorType.UserError;
+            if (result.Error.HasValue && result.Error.Value == CommandError.Exception)
+                errorType = CommandErrorReportingService.ErrorType.Exception;
+            else if (result.Error.HasValue && (result.Error.Value == CommandError.ParseFailed || result.Error.Value == CommandError.ObjectNotFound || result.Error.Value == CommandError.BadArgCount))
+                errorType = CommandErrorReportingService.ErrorType.ParsingOrArgError;
+                
             if (!string.IsNullOrEmpty(result?.ErrorReason) && result.Error != CommandError.UnknownCommand)
                 await errorReportingService.ReportErrorAsync(context.User, context.Channel, (command.IsSpecified && command.Value.Name != null) ? command.Value.Name : "",
-                    result.ErrorReason, result.Error == CommandError.Exception, null);
+                    result.ErrorReason, errorType, null);
             commandArgData.Remove(context.Message.Id);
         }
     }

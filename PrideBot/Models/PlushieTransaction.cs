@@ -11,6 +11,7 @@ namespace PrideBot.Models
         Traded = 2,
         Using = 3,
         Done = 4,
-        Plushie
+        Plushie = 5, // removed by some plushie effect
+        Void = 6 // removed through admin/debug methods
     }
 }

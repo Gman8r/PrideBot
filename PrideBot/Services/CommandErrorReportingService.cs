@@ -23,58 +23,67 @@ namespace PrideBot
             this.client = client;
         }
 
-        public async Task ReportErrorAsync(IUser user, IMessageChannel channel, string commandName, string errorReason, bool isException, IDiscordInteraction interaction)
+        public enum ErrorType
+        {
+            UserError,
+            ParsingOrArgError,
+            Exception
+        }
+
+        public async Task ReportErrorAsync(IUser user, IMessageChannel channel, string commandName, string errorReason, ErrorType errorType, IDiscordInteraction interaction)
         {
             try
             {
                 var guild = (channel as IGuildChannel)?.Guild;
                 string errorMessage = null;
-                var ephemeral = false;
+                var isEphemeral = false;
+                var isCommandException = false;
 
                 if (!string.IsNullOrEmpty(errorReason))
                 {
-                    var commandException = isException && errorReason.StartsWith("COMMANDEXCEPTION:");
-                    if (!isException)
+                    errorMessage = errorReason;
+                    if (errorType == ErrorType.Exception && errorMessage.StartsWith("COMMANDEXCEPTION:"))
                     {
-                        errorMessage = errorReason;
-                    }
-                    else
-                    {
-                        if (errorReason.StartsWith("COMMANDEXCEPTION:"))
-                        {
-                            errorMessage = (errorReason.Substring("COMMANDEXCEPTION:".Count()));
-                        }
-                        else
-                            errorMessage = errorReason.Length <= 4000 ? errorMessage : errorReason.Substring(0, 4000);
-                        //errorMessage = DialogueDict.Get("EXCEPTION");
+                        errorType = ErrorType.UserError;
+                        isCommandException = true;
+                        errorMessage = errorMessage.Substring("COMMANDEXCEPTION:".Count());
                     }
                     if (errorMessage.StartsWith("EPHEMERAL:"))
                     {
-                        errorMessage = (errorMessage.Substring("EPHEMERAL:".Count()));
-                        ephemeral = true;
+                        errorMessage = errorMessage.Substring("EPHEMERAL:".Count());
+                        isEphemeral = true;
                     }
                 }
+
+                errorMessage ??= "";
+                errorMessage = errorMessage.Length <= 3000 ? errorMessage : errorMessage.Substring(0, 3000);
 
                 //if (result.Error == CommandError.ParseFailed || result.Error == CommandError.ObjectNotFound || result.Error == CommandError.BadArgCount)
                 //    errorMessage = DialogueDict.Get("ERROR_MESSAGE", errorMessage, config.GetDefaultPrefix(), commandName);
 
                 if (errorMessage != null)
                 {
+
+                    var finalMessage = errorType == ErrorType.UserError
+                        ? errorMessage
+                        : (errorType == ErrorType.Exception
+                                ? DialogueDict.Get("EXCEPTION", errorMessage)
+                                : DialogueDict.Get("ERROR_MESSAGE", errorMessage, config.GetDefaultPrefix(), commandName));
                     if (interaction != null)
                     {
                         if (interaction.HasResponded)
                             await interaction.FollowupAsync(embed:
-                                EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(errorMessage), client as DiscordSocketClient).Build(),
-                                ephemeral: ephemeral);
+                                EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(finalMessage), client as DiscordSocketClient).Build(),
+                                ephemeral: isEphemeral);
                         else
                             await interaction.RespondAsync(embed:
-                                EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(errorMessage), client as DiscordSocketClient).Build(),
-                                ephemeral: ephemeral);
+                                EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(finalMessage), client as DiscordSocketClient).Build(),
+                                ephemeral: isEphemeral);
                     }
                     else
                     {
                         await channel.SendMessageAsync(embed:
-                            EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(errorMessage), client as DiscordSocketClient).Build());
+                            EmbedHelper.GetEventErrorEmbed(user, DialogueDict.GenerateEmojiText(finalMessage), client as DiscordSocketClient).Build());
                     }
                 }
             }

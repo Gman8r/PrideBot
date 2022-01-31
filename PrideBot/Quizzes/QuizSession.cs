@@ -27,6 +27,9 @@ namespace PrideBot.Quizzes
         QuizLog quizLog;
         List<Quiz> availableQuizzes;
         int chosenQuizIndex;
+        List<UserPlushie> appliedPlushies;
+
+        public bool QuizStarted { get; private set; }
 
         public QuizSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ScoringService scoringService, QuizLog quizLog, GuildSettings guildSettings) : base(channel, user, config, client, timeout, originmessage)
         {
@@ -34,6 +37,8 @@ namespace PrideBot.Quizzes
             this.scoringService = scoringService;
             this.quizLog = quizLog;
             this.guildSettings = guildSettings;
+            QuizStarted = false;
+            appliedPlushies = new List<UserPlushie>();
         }
 
         public IDMChannel Channel { get; }
@@ -102,6 +107,12 @@ namespace PrideBot.Quizzes
                 components.WithButton("Nevermind, Not Yet", "NO", ButtonStyle.Secondary, NoEmote);
             }
             var response = await SendAndAwaitNonTextResponseAsync(embed: embed, components: components);
+
+            // Quiz officially started
+            QuizStarted = true;
+            var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, user.Id.ToString());
+            var activatedPlushies = await repo.GetInEffectUserPlushiesForUserAsync(connection, user.Id.ToString(), DateTime.Now);
+
             chosenQuizIndex = 0;
             if (response.IsNo)
             {
@@ -153,13 +164,11 @@ namespace PrideBot.Quizzes
                 var choice = choices[i];
                 choicesComponents.WithButton(" ", i.ToString(), ButtonStyle.Secondary, EmoteHelper.GetLetterEmote((char)('A' + i)));
             }
-
-            var userPlushies = await repo.GetOwnedUserPlushiesForUserAsync(connection, user.Id.ToString());
             var halfPlushie = userPlushies.FirstOrDefault(a => a.PlushieId.Equals("QUIZ_HALF"));
             if (halfPlushie != null)
                 choicesComponents.WithButton("Remove 2 Options (Use Plushie)", "QUIZ_HALF", ButtonStyle.Secondary, new Emoji("2️⃣"));
 
-            response = await SendResponseAsync(embed: embed, components: choicesComponents, acceptsText: false);
+            response = await SendResponseAsync(embed: embed, components: choicesComponents, acceptsText: false, disableComponents: false);
             var quizMessage = response.BotMessage;
             RunTimer().GetAwaiter();
             var attemptsLeft = 3;
@@ -205,6 +214,7 @@ namespace PrideBot.Quizzes
                             a.Components = choicesComponents.Build();
                         });
                         await repo.DepleteUserPlushieAsync(connection, halfPlushie.UserPlushieId, DateTime.Now, false, PlushieEffectContext.Quiz, quiz.QuizId.ToString());
+                        appliedPlushies.Add(halfPlushie);
                         await channel.SendMessageAsync(DialogueDict.Get($"QUIZ_PLUSHIE_HALF"));
                     }
                     else
@@ -285,20 +295,20 @@ namespace PrideBot.Quizzes
             var quizOpenedUrl = quizOpenedMessage?.GetJumpUrl();
 
             var overridePoints = 0m;
-            if (quizLog.Correct && user.IsGYNSage(config))
-            {
-                var pAchievement = await repo.GetAchievementAsync(connection, "QUIZ_PARTICIPATE");
-                overridePoints = pAchievement.DefaultScore;
-            }
+            //if (quizLog.Correct && user.IsGYNSage(config))
+            //{
+            //    var pAchievement = await repo.GetAchievementAsync(connection, "QUIZ_PARTICIPATE");
+            //    overridePoints = pAchievement.DefaultScore;
+            //}
 
-            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, DateTime.Now, quizMessage, titleUrl: quizOpenedUrl, overridePoints: overridePoints);
+            await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, DateTime.Now, quizMessage, titleUrl: quizOpenedUrl, overridePoints: overridePoints, appliedPlushies: appliedPlushies);
             var previousLog = await repo.GetLastQuizLogForUserAsync(connection, user.Id.ToString(), quizLog.Day.ToString());
             // Streak bonus
-            if (quizLog.Correct && !user.IsGYNSage(config) && quizLog.Guesses == 1 && quizLog.Day >= int.Parse(config["firstquizstreakday"]))
+            if (quizLog.Correct /* && !user.IsGYNSage(config)*/ && quizLog.Guesses == 1 && quizLog.Day >= int.Parse(config["firstquizstreakday"]))
             {
                 if (previousLog != null && previousLog.Correct && previousLog.Guesses == 1)
                 {
-                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "QUIZ_STREAK", client.CurrentUser, DateTime.Now, quizMessage, titleUrl: quizOpenedUrl);
+                    await scoringService.AddAndDisplayAchievementAsync(connection, user, "QUIZ_STREAK", client.CurrentUser, DateTime.Now, quizMessage, titleUrl: quizOpenedUrl, appliedPlushies: appliedPlushies);
                     var embed = GetEmbed()
                         .WithTitle("🔥 Streak!!")
                         .WithDescription(DialogueDict.Get("QUIZ_STREAK"));

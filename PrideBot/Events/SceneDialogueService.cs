@@ -66,7 +66,7 @@ namespace PrideBot.Events
         {
             IDisposable typingState = null;
 
-            var connection = repo.GetDatabaseConnection();
+            using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
             var dialogues = await repo.GetSceneDialogueForSceneAsync(connection, sceneId);
 

@@ -82,7 +82,7 @@ namespace PrideBot.Game
 
                 if (!ChatData.ContainsKey(user.Id) || DateTime.Now > ChatData[user.Id].expires)
                 {
-                    var connection = repo.GetDatabaseConnection();
+                    using var connection = repo.GetDatabaseConnection();
                     await connection.OpenAsync();
                     var achievement = await repo.GetAchievementAsync(connection, "CHAT");
                     // Check last score for potential cooldown
@@ -100,7 +100,7 @@ namespace PrideBot.Game
                 ChatData[user.Id].messageCount++;
                 if (ChatData[user.Id].messageCount == MinChatSessionMessages)
                 {
-                    var connection = repo.GetDatabaseConnection();
+                    using var connection = repo.GetDatabaseConnection();
                     await connection.OpenAsync();
                     await scoringService.AddAndDisplayAchievementAsync(connection, user, "CHAT", client.CurrentUser, DateTime.Now, message);
                 }

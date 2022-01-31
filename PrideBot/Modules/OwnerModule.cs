@@ -106,7 +106,7 @@ namespace PrideBot.Modules
         [Command("tsuchiconnect")]
         public async Task TsuchiConect()
         {
-            await snakeGame.SetLastSnakeDayAsync(GameHelper.GetEventDay() - 1);
+            await snakeGame.SetLastSnakeDayAsync(GameHelper.GetEventDay(config) - 1);
             snakeGame.SetNextSnakeTime(DateTime.Now);
             await ReplyResultAsync("Done!");
         }

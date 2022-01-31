@@ -47,7 +47,7 @@ namespace PrideBot.Modules
         [Summary("Shows your plushies! 🧸")]
         [ValidEventPeriods(EventPeriod.DuringEvent | EventPeriod.BeforeEvent)]
         [RequireRegistration]
-        [RequireSingleSession]
+        //[RequireSingleSession]
         public async Task Plushie(SocketGuildUser user = null)
         {
             user ??= Context.User as SocketGuildUser;
@@ -60,12 +60,20 @@ namespace PrideBot.Modules
         [Summary("Get a new plushie! 🧸")]
         [RequireRegistration]
         [RequireSingleSession]
+        [Priority(0)]
         [ValidEventPeriods(EventPeriod.DuringEvent)]
         public async Task DrawPlushie()
         {
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
             await plushieService.DrawPlushie(connection, Context.Channel, Context.User);
         }
+
+        [Command("getplushie")]
+        [Summary("Admin command !!")]
+        [RequireSage]
+        [Priority(1)]
+        public Task GetPlushieAdmin(string characterId)
+            => GivePlushie(Context.User as SocketGuildUser, characterId);
 
         [Command("giveplushie")]
         [Summary("Admin command !!")]
@@ -77,12 +85,25 @@ namespace PrideBot.Modules
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
             try
             {
+                await plushieService.GiveUserPlushieCharacter(connection, Context.Channel, user, characterId);
+            }
+            catch
+            {
                 await plushieService.GiveUserPlushie(connection, Context.Channel, user, characterId);
             }
-            catch (Exception e)
-            {
-                var x = 0;
-            }
+            await ReplyResultAsync("Done!");
+        }
+
+        [Command("clearplushies")]
+        [Summary("Admin command !!")]
+        [RequireSage]
+        //[RequireSingleSession]
+        //[ValidEventPeriods(EventPeriod.DuringEvent)]
+        public async Task ClearPlushies (SocketGuildUser user = null)
+        {
+            user ??= Context.User as SocketGuildUser;
+            using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
+            await repo.ClearUserPlushiesAsync(connection, user.Id.ToString());
             await ReplyResultAsync("Done!");
         }
     }

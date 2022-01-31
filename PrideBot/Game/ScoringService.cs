@@ -64,7 +64,7 @@ namespace PrideBot.Game
 
             var dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
             var pointsEarnedBase = overridePoints == 0 ? achievement.DefaultScore : overridePoints;
-            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarnedBase, approver.Id.ToString(), timestamp, ignoreCooldown, DateTime.Parse(config["eventstart"]), GameHelper.GetEventDay(timestamp), client.GetGyn(config).Id.ToString(),
+            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarnedBase, approver.Id.ToString(), timestamp, ignoreCooldown, DateTime.Parse(config["eventstart"]), GameHelper.GetEventDay(config, timestamp), client.GetGyn(config).Id.ToString(),
                 ((message?.Channel ?? null) as IGuildChannel)?.Guild.Id.ToString() ?? "", message?.Channel.Id.ToString() ?? "", message?.Id.ToString() ?? "");
 
 
@@ -209,9 +209,9 @@ namespace PrideBot.Game
                 case (ModelRepository.AddScoreError.CooldownViolated):
                     if (achievement.CooldownDaysPerUnit > 0 && achievement.CooldownUsesPerUnit > 0)
                     {
-                        var daysLeft = GameHelper.GetEventDay(result.CooldownExpires) - GameHelper.GetEventDay(timestamp);
+                        var daysLeft = GameHelper.GetEventDay(config, result.CooldownExpires) - GameHelper.GetEventDay(config, timestamp);
                         embed.Description = DialogueDict.Get("COOLDOWN_VIOLATED_UNITS", achievement.CooldownUsesPerUnit, achievement.CooldownDaysPerUnit,
-                            daysLeft == 1 ? "tomorrow" : $"in {daysLeft} days");
+                            daysLeft == 1 ? "**tomorrow**" : $"in **{daysLeft} days**");
                     }
                     else
                     {

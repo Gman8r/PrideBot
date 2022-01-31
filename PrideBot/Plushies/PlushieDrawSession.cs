@@ -32,7 +32,7 @@ namespace PrideBot.Plushies
         {
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
             var userId = user.Id.ToString();
-            var day = GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay() : 0;
+            var day = GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay(config) : 0;
             if (!(await repo.CanUserDrawPlushieAsync(connection, userId, day)))
             {
                 var key = day == 0 ? "PLUSHIE_DRAWN_ALREADY_PREREG" : "PLUSHIE_DRAWN_ALREADY";
@@ -110,7 +110,7 @@ namespace PrideBot.Plushies
                         continue;
                     }
 
-                    var newDay = GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay() : 0; // in case user waits around forever idk
+                    var newDay = GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay(config) : 0; // in case user waits around forever idk
                     var result = await repo.AttemptAddUserPlushieAsync(connection, userId, null, userId, choice.PlushieId, choice.CharacterId, newDay, choice.Rotation, PlushieTransaction.Drawn, choiceId);
 
                     result.CheckErrors();

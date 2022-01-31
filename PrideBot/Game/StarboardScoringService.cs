@@ -90,10 +90,10 @@ namespace PrideBot.Quizzes
                 if (userMessage == null) return;
 
                 var guild = client.GetGuild((message.Channel as IGuildChannel)?.Guild.Id ?? 0);
-                var user = await pluralKitApiService.GetUserOrPkUserAsync(guild, message);
+                var user = await pluralKitApiService.GetUserOrPkUserAsync(guild, userMessage);
                 if (user == null) return;
 
-                var connection = repo.GetDatabaseConnection();
+                using var connection = repo.GetDatabaseConnection();
                 await connection.OpenAsync();
 
                 var starboardPost = await repo.GetStarboardPostAsync(connection, userMessage.Id.ToString());

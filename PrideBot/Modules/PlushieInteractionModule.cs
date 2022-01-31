@@ -139,7 +139,7 @@ namespace PrideBot.Modules
 
         // Handle select menu in plushie menu
         [ComponentInteraction("PLUSHMENU.S:*,*,*,*")]
-        [RequireSingleSessionInteraction]
+        //[RequireSingleSessionInteraction]
         public async Task PlushieMenuSelect(string userIdStr, string oldSelectedIdStr, string actionStr, string imageState, string[] selectedPlushieIds)
         {
             await DeferAsync();

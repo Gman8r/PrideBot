@@ -140,11 +140,13 @@ namespace PrideBot
             return Task.CompletedTask;
         }
 
+        public static Session GetActiveSession(ulong userId) => activeSessions.FirstOrDefault(a => a.user.Id == userId);
+
         public async Task PerformSessionAsync()
         {
             if (originMessage != null && originMessage.Channel.GetType() != typeof(SocketDMChannel))
                 originMessage.AddReactionAsync(new Emoji("✅")).GetAwaiter();
-            var existingSession = activeSessions.FirstOrDefault(a => a.user.Id == user.Id);
+            var existingSession = GetActiveSession(user.Id);
             if (existingSession != null)
             {
                 var messageUrl = existingSession.currentPrompt?.BotMessage?.GetJumpUrl() ?? "";

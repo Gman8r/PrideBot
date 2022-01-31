@@ -55,9 +55,20 @@ namespace PrideBot
         {
             Task.Run(async () =>
             {
+                var errorType = CommandErrorReportingService.ErrorType.UserError;
+                if (result.Error.HasValue && result.Error.Value == InteractionCommandError.Exception)
+                {
+                    errorType = CommandErrorReportingService.ErrorType.Exception;
+                }
+                else if (result.Error.HasValue &
+                    (result.Error.Value == InteractionCommandError.ParseFailed))
+                {
+                    errorType = CommandErrorReportingService.ErrorType.ParsingOrArgError;
+                }
+
                 if (!string.IsNullOrEmpty(result?.ErrorReason) && result.Error != InteractionCommandError.UnknownCommand)
                     await errorReportingService.ReportErrorAsync(context.User, context.Channel, command?.Name ?? "",
-                        result.ErrorReason, result.Error == InteractionCommandError.Exception, context.Interaction);
+                        result.ErrorReason, errorType, context.Interaction);
             });
             return Task.CompletedTask;
         }
