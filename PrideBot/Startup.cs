@@ -128,6 +128,7 @@ namespace PrideBot
             .AddSingleton<Plushies.PlushieMenuService>()
             .AddSingleton<Plushies.PlushieService>()
             .AddSingleton<Plushies.PlushieImageService>()
+            .AddSingleton<PluralKitApiService>()
             .AddSingleton(Configuration);             // Add the configuration to the collection
 
             Console.WriteLine();

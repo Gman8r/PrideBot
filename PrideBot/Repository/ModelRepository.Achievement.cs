@@ -22,5 +22,14 @@ namespace PrideBot.Repository
 
         public async Task<IEnumerable<Achievement>> GetAchievementsWithEmojiAsync(SqlConnection conn, string emojiStr)
         => (await new SqlCommand($"select * from VI_ACHIEVEMENTS where EMOJI = '{emojiStr}'", conn).ExecuteReaderAsync()).As<Achievement>();
+
+        public async Task<StarboardPost> GetStarboardPostAsync(SqlConnection conn, string messageId)
+        => (await new SqlCommand($"select * from VI_STARBOARD_POSTS where MESSAGE_ID = '{messageId}'", conn).ExecuteReaderAsync()).As<StarboardPost>().FirstOrDefault();
+
+        public async Task<IEnumerable<StarboardAchievement>> GetAllStarboardAchievementAsync(SqlConnection conn)
+        => (await new SqlCommand($"select * from VI_STARBOARD_ACHIEVEMENTS", conn).ExecuteReaderAsync()).As<StarboardAchievement>();
+
+        public async Task<StarboardAchievement> GetStarboardAchievementAsync(SqlConnection conn, int starCount)
+        => (await new SqlCommand($"select * from VI_STARBOARD_ACHIEVEMENTS where STAR_COUNT = {starCount}", conn).ExecuteReaderAsync()).As<StarboardAchievement>().FirstOrDefault();
     }
 }

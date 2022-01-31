@@ -22,20 +22,18 @@ using PrideBot.Registration;
 
 namespace PrideBot.Modules
 {
-    [RequireSage]
+    [RequireOwner]
     [DontAutoLoad]
     [Name("Secret (Stealth)")]
     public class SecretStealthModule : PrideModuleBase
     {
         private IConfigurationRoot config;
         private CommandHandler commandHandler;
-        private ShipImageGenerator shipImageGenerator;
 
-        public SecretStealthModule(IConfigurationRoot config, CommandHandler commandHandler, ShipImageGenerator shipImageGenerator)
+        public SecretStealthModule(IConfigurationRoot config, CommandHandler commandHandler)
         {
             this.config = config;
             this.commandHandler = commandHandler;
-            this.shipImageGenerator = shipImageGenerator;
         }
 
         [Command("lambda")]
@@ -49,11 +47,11 @@ namespace PrideBot.Modules
 
         [Command("applyroles")]
         [RequireContext(ContextType.Guild)]
-        public async Task Haha(params IGuildUser[] users)
+        public async Task Haha()
         {
             using var typing = Context.Channel.EnterTypingState();
-            await ReapplyRoles(Context.Guild, users);
-            await ReplyResultAsync("Donnnneeeeee!");
+            await ReapplyRoles(Context.Guild);
+            await ReplyAsync("Applying...");
         }
 
         [Command("applybans")]
@@ -61,7 +59,7 @@ namespace PrideBot.Modules
         public async Task bannn()
         {
             await ReapplyBans(Context.Guild);
-            await ReplyResultAsync("Donnnneeeeee!");
+            await ReplyAsync("Applying...");
         }
 
         [Command("applyemotes")]
@@ -69,7 +67,7 @@ namespace PrideBot.Modules
         public async Task emote()
         {
             await ReapplyEmotes(Context.Guild);
-            await ReplyResultAsync("Donnnneeeeee!");
+            await ReplyAsync("Applying...");
         }
 
         //[Command("postteaser")]
@@ -147,7 +145,7 @@ namespace PrideBot.Modules
 
 
 
-        async Task ReapplyRoles(SocketGuild guild, IEnumerable<IGuildUser> guildUsers)
+        async Task ReapplyRoles(SocketGuild guild)
         {
             var dataStr = await File.ReadAllTextAsync("guild.json");
             var data = JsonConvert.DeserializeObject<dynamic>(dataStr);
@@ -157,8 +155,8 @@ namespace PrideBot.Modules
             foreach (var user in data.users)
             {
                 ulong id = (ulong)user.id;
-                if (!guildUsers.Any(a => a.Id == id))
-                    continue;
+                //if (!guildUsers.Any(a => a.Id == id))
+                //    continue;
                 var guildUser = guild.GetUser(id);
                 if (guildUser == null || guildUser.IsBot)
                     continue;

@@ -21,8 +21,9 @@ namespace PrideBot.Game
         readonly IConfigurationRoot config;
         readonly LoggingService loggingService;
         readonly IServiceProvider provider;
+        readonly PluralKitApiService pluralKitApiService;
 
-        public ScoringService(ModelRepository repo, DiscordSocketClient client, ShipImageGenerator shipImageGenerator, IConfigurationRoot config, LoggingService loggingService, IServiceProvider provider)
+        public ScoringService(ModelRepository repo, DiscordSocketClient client, ShipImageGenerator shipImageGenerator, IConfigurationRoot config, LoggingService loggingService, IServiceProvider provider, PluralKitApiService pluralKitApiService)
         {
             this.repo = repo;
             this.client = client;
@@ -32,6 +33,7 @@ namespace PrideBot.Game
             this.shipImageGenerator = shipImageGenerator;
             this.config = config;
             this.provider = provider;
+            this.pluralKitApiService = pluralKitApiService;
         }
 
         string GetCooldownRemainingStr(DateTime cooldownExpires)
@@ -52,7 +54,7 @@ namespace PrideBot.Game
             if (overridePoints > 999)
                 throw new CommandException("Max score for an achievement is 999, WHY ARE YOU EVEN DOING THIS??");
             else if (overridePoints < 0)
-                throw new CommandException("I can't reverse the threads of love! Score must be positive or 0 for default.");
+                throw new CommandException("I can't reverse the threads of love! Score must be positive, or 0 for default.");
 
             var achievementChannel = client.GetGyn(config)
                 .GetChannelFromConfig(config, "achievementschannel") as ITextChannel;;
@@ -62,7 +64,6 @@ namespace PrideBot.Game
 
             var dbUser = await repo.GetOrCreateUserAsync(connection, user.Id.ToString());
             var pointsEarnedBase = overridePoints == 0 ? achievement.DefaultScore : overridePoints;
-
             var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarnedBase, approver.Id.ToString(), timestamp, ignoreCooldown, DateTime.Parse(config["eventstart"]), GameHelper.GetEventDay(timestamp), client.GetGyn(config).Id.ToString(),
                 ((message?.Channel ?? null) as IGuildChannel)?.Guild.Id.ToString() ?? "", message?.Channel.Id.ToString() ?? "", message?.Id.ToString() ?? "");
 
@@ -255,17 +256,8 @@ namespace PrideBot.Game
                 //    return;
 
                 // Determine user or PK user
-                IUser user;
-                if (message.Author.IsWebhook && await message.IsFromPkUserAsync(config))
-                {
-                    user = await message.GetPkUserAsync(config, provider);
-                }
-                else if (!message.Author.IsBot)
-                {
-                    user = message.Author;
-                }
-                else
-                    user = null;
+                var guild = client.GetGuild((message.Channel as IGuildChannel)?.Guild.Id ?? 0);
+                var user = await pluralKitApiService.GetUserOrPkUserAsync(guild, message);
                 if (user == null) return;
 
 

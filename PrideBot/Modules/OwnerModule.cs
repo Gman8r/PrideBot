@@ -61,7 +61,7 @@ namespace PrideBot.Modules
             var image = await shipImageGenerator.WriteUserCardAsync(dbUser, shipCollection);
             await Context.Channel.SendFileAsync(image.Stream, image.FileName);
 
-            image = await shipImageGenerator.WriteUserCardAsync(dbUser, shipCollection, scoreTexts: new int[] { 9, 99, 99);
+            image = await shipImageGenerator.WriteUserCardAsync(dbUser, shipCollection, scoreTexts: new string[] { "+99", "+99", "+99" });
             await Context.Channel.SendFileAsync(image.Stream, image.FileName);
         }
 

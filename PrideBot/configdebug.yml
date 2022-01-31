@@ -2,7 +2,7 @@
 prefixes:
     - '~'
 status: 🧸
-eventstart: 2022-02-01
+eventstart: 2022-01-01
 eventend: 2022-02-14
 eventcolor: 0xB00B69 # not sure if used
 firstquizstreakday: 11
@@ -57,7 +57,7 @@ ids:
     achievementschannel: 932091535992959077
     quizchannel: 932091572772831302
     quizdiscussionchannel: 932091590040752198
-    starboardchannel: 932091704851443735
+    starboardchannel: 937480548601954306
     pklogchannel: 932091736694591508
     pluralkitid: 466378653216014359
     registeredrole: 932092101494181888

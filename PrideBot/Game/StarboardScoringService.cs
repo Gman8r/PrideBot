@@ -45,8 +45,9 @@ namespace PrideBot.Quizzes
         readonly ScoringService scoringService;
         readonly LoggingService loggingService;
         readonly IServiceProvider provider;
+        readonly PluralKitApiService pluralKitApiService;
 
-        public StarboardScoringService(ModelRepository repo, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, LoggingService loggingService, IServiceProvider provider)
+        public StarboardScoringService(ModelRepository repo, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, LoggingService loggingService, IServiceProvider provider, PluralKitApiService pluralKitApiService)
         {
             this.repo = repo;
             this.config = config;
@@ -56,6 +57,8 @@ namespace PrideBot.Quizzes
             this.provider = provider;
 
             client.MessageReceived += MessageReceived;
+            client.ReactionAdded += ReactionCheck;
+            this.pluralKitApiService = pluralKitApiService;
         }
 
         private Task MessageReceived(SocketMessage msg)
@@ -86,23 +89,25 @@ namespace PrideBot.Quizzes
                 var userMessage = await (userChannel as SocketTextChannel).GetMessageAsync(userMessageId);
                 if (userMessage == null) return;
 
-                // Determine user or PK uer
-                IUser user;
-                if (userMessage.Author.IsWebhook && await userMessage.IsFromPkUserAsync(config))
-                {
-                    user = await userMessage.GetPkUserAsync(config, provider);
-                }
-                else if (!userMessage.Author.IsBot)
-                {
-                    user = userMessage.Author;
-                }
-                else
-                    user = null;
+                var guild = client.GetGuild((message.Channel as IGuildChannel)?.Guild.Id ?? 0);
+                var user = await pluralKitApiService.GetUserOrPkUserAsync(guild, message);
                 if (user == null) return;
 
                 var connection = repo.GetDatabaseConnection();
                 await connection.OpenAsync();
-                await scoringService.AddAndDisplayAchievementAsync(connection, user, "STARBOARD", client.CurrentUser, DateTime.Now, userMessage, titleUrl: message.GetJumpUrl());
+
+                var starboardPost = await repo.GetStarboardPostAsync(connection, userMessage.Id.ToString());
+                if (starboardPost != null) return;
+                starboardPost = new StarboardPost()
+                {
+                    MessageId = userMessage.Id.ToString(),
+                    UserId = user.Id.ToString(),
+                    StarCount = 0
+                };
+                await DatabaseHelper.GetInsertCommand(connection, starboardPost, "STARBOARD_POSTS").ExecuteNonQueryAsync();
+
+                await userMessage.Channel.SendMessageAsync("Base achievement");
+                await scoringService.AddAndDisplayAchievementAsync(connection, user, "STARBOARD", client.CurrentUser, userMessage.Timestamp.ToDateTime(), userMessage, titleUrl: message.GetJumpUrl());
             }
             catch (Exception e)
             {
@@ -113,6 +118,53 @@ namespace PrideBot.Quizzes
                 await modChannel.SendMessageAsync(embed: embed.Build());
                 throw e;
             }
+        }
+
+        private Task ReactionCheck(Cacheable<IUserMessage, ulong> msg, Cacheable<IMessageChannel, ulong> chnl, SocketReaction reaction)
+        {
+            Task.Run(async () =>
+            {
+                if (!GameHelper.IsEventOccuring(config)) return;
+                if (!reaction.Emote.ToString().Equals("⭐")) return;
+                var message = await msg.GetOrDownloadAsync();
+                if (!(message.Channel is IGuildChannel gChannel)) return;
+                if (gChannel.Guild.Id != client.GetGyn(config).Id) return;
+
+                using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
+                var sbPost = await repo.GetStarboardPostAsync(connection, message.Id.ToString());
+                if (sbPost == null) return;
+
+                var messageStarCount = (await message.GetReactionUsersAsync(reaction.Emote, 100).FlattenAsync())
+                    .Count(a => !a.IsBot);
+                if (messageStarCount <= sbPost.StarCount) return;
+
+                var scoreableAchievements = (await repo.GetAllStarboardAchievementAsync(connection))
+                    .Where(a => a.StarCount >= sbPost.StarCount)
+                    .ToList();
+
+                sbPost.StarCount = messageStarCount;
+                await DatabaseHelper.GetUpdateCommand(connection, sbPost, "STARBOARD_POSTS").ExecuteNonQueryAsync();
+
+                if (!scoreableAchievements.Any()) return;
+
+                var earnedAchievements = scoreableAchievements
+                    .Where(a => messageStarCount >= a.StarCount)
+                    .OrderBy(a => a.StarCount)
+                    .ToList();
+                if (!earnedAchievements.Any()) return;
+
+                var guild = client.GetGuild((message.Channel as IGuildChannel)?.Guild.Id ?? 0);
+                var user = await pluralKitApiService.GetUserOrPkUserAsync(guild, message);
+                if (user == null) return;
+
+                foreach (var achievement in earnedAchievements)
+                {
+                    await message.Channel.SendMessageAsync(achievement.AchievementId);
+                    await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement.AchievementId, client.CurrentUser, message.Timestamp.ToDateTime(), message, titleUrl: message.GetJumpUrl());
+                }
+
+            }).GetAwaiter();
+            return Task.CompletedTask;
         }
     }
 }

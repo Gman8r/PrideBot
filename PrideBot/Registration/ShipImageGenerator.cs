@@ -163,9 +163,26 @@ namespace PrideBot.Registration
 
         public async Task<MemoryFile> GenerateBackgroundChoicesAsync(User dbUser)
         {
-            var backgroundFiles = Directory.GetFiles("Assets/Backgrounds");
-            var rows = backgroundFiles.Length > 2 ? 2 : 1;
-            var columns = (int)Math.Ceiling((double)(backgroundFiles.Length) / rows);
+            var backgroundFiles = Directory.GetFiles("Assets/Backgrounds")
+                .OrderBy(a => int.Parse(Path.GetFileNameWithoutExtension(a).Substring(6)))
+                .ToArray();
+            //var rows = backgroundFiles.Length > 2 ? 2 : 1;
+            var columns = 1;
+            if (backgroundFiles.Length == 2)
+                columns = 2;
+            else if (backgroundFiles.Length > 2)
+            {
+                while (true)
+                {
+                    if (backgroundFiles.Length <= 2)
+                        break;
+                    if (backgroundFiles.Length > (columns * (columns - 1)))
+                        columns++;
+                    else
+                        break;
+                }
+            }
+            var rows = (int)Math.Ceiling((double)(backgroundFiles.Length) / columns);
             var backgroundImages = backgroundFiles
                 .Select(a => new MagickImage(a))
                 .ToList();
@@ -180,9 +197,9 @@ namespace PrideBot.Registration
                 {
                     if (i >= backgroundImages.Count)
                         break;
-                    using var numberImage = new MagickImage(await File.ReadAllBytesAsync($"Assets/NumberSprites/{i + 1}.png"));
-                    numberImage.InterpolativeResize(24, 36, PixelInterpolateMethod.Nearest);
-                    backgroundImages[i].Composite(numberImage, Gravity.Northwest, 8, 8, CompositeOperator.Over);
+                    using var numberImage = await GenerateScoreTextAsync((i + 1).ToString());
+                    numberImage.InterpolativeResize(numberImage.Width * 3, numberImage.Height * 3, PixelInterpolateMethod.Nearest);
+                    backgroundImages[i].Composite(numberImage, Gravity.Northwest, -67, -67, CompositeOperator.Over);
                     image.Composite(backgroundImages[i], Gravity.Northwest, column * bgWidth, row * bgHeight, CompositeOperator.Over);
                     i++;
                 }
