@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using PrideBot.Game;
 using PrideBot.Models;
 using PrideBot.Quizzes;
+using PrideBot.Registration;
 using PrideBot.Repository;
 using System;
 using System.Collections.Generic;
@@ -23,9 +24,11 @@ namespace PrideBot.Plushies
         readonly SqlConnection connection;
         readonly UserPlushie userPlushie;
         readonly IServiceProvider provider;
+        readonly UserRegisteredCache userReg;
+        readonly PlushieService plushieService;
         IDiscordInteraction interaction;
 
-        public PlushieEffectSession(IMessageChannel channel, SocketGuildUser user, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ModelRepository repo, PlushieImageService imageService, ScoringService scoringService, SqlConnection connection, UserPlushie userPlushie, IServiceProvider provider, IDiscordInteraction interaction = null) : base(channel, user, config, client, timeout, originmessage)
+        public PlushieEffectSession(IMessageChannel channel, SocketGuildUser user, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ModelRepository repo, PlushieImageService imageService, ScoringService scoringService, SqlConnection connection, UserPlushie userPlushie, IServiceProvider provider, PlushieService plushieService, IDiscordInteraction interaction = null) : base(channel, user, config, client, timeout, originmessage)
         {
             this.repo = repo;
             this.imageService = imageService;
@@ -34,6 +37,7 @@ namespace PrideBot.Plushies
             this.userPlushie = userPlushie;
             this.interaction = interaction;
             this.provider = provider;
+            this.plushieService = plushieService;
         }
 
         protected override async Task PerformSessionInternalAsync()
@@ -104,6 +108,8 @@ namespace PrideBot.Plushies
                         await ActivatePlushieDefaultAsync(userPlushie);
                         break;
                 }
+
+                await plushieService.HandleTraderAwardAsync(connection, userPlushie, channel);
             }
             catch (CommandException e)
             {

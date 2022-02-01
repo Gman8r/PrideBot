@@ -43,14 +43,16 @@ namespace PrideBot.Plushies
         readonly PlushieImageService imageService;
         readonly DiscordSocketClient client;
         readonly ScoringService scoringService;
+        readonly UserRegisteredCache userReg;
 
-        public PlushieService(IConfigurationRoot config, ModelRepository repo, PlushieImageService imageService, DiscordSocketClient client, ScoringService scoringService)
+        public PlushieService(IConfigurationRoot config, ModelRepository repo, PlushieImageService imageService, DiscordSocketClient client, ScoringService scoringService, UserRegisteredCache userReg)
         {
             this.config = config;
             this.repo = repo;
             this.imageService = imageService;
             this.client = client;
             this.scoringService = scoringService;
+            this.userReg = userReg;
         }
 
 
@@ -90,8 +92,28 @@ namespace PrideBot.Plushies
         public async Task ActivateUserPlushie(SqlConnection connection, SocketGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IServiceProvider provider, IDiscordInteraction interaction = null)
         {
             var session = new PlushieEffectSession(channel, user, config, client, new TimeSpan(0, 10, 0), null, repo, imageService, scoringService, connection,
-                userPlushie, provider, interaction);
+                userPlushie, provider, this, interaction);
             await session.PerformSessionAsync();
+        }
+
+        public async Task HandleTraderAwardAsync(SqlConnection connection, UserPlushie userPlushie, IMessageChannel channel)
+        {
+            if (string.IsNullOrWhiteSpace(userPlushie.OriginalUserId) || userPlushie.OriginalUserId.Equals(userPlushie.UserId))
+                return;
+            var gyn = client.GetGyn(config);
+            if (gyn == null)
+                return;
+            var owner = gyn.GetUser(ulong.Parse(userPlushie.OriginalUserId));
+            if (owner == null)
+                return;
+            if (!(await userReg.GetOrDownloadAsync(userPlushie.OriginalUserId)))
+                return;
+
+            var msgText = DialogueDict.Get("PLUSHIE_TRADER_BONUS", owner.Mention);
+            var msg = await channel.SendMessageAsync(msgText, allowedMentions: AllowedMentions.None);
+
+            await scoringService.AddAndDisplayAchievementAsync(connection, owner, "TRADER_BONUS", client.CurrentUser, DateTime.Now,
+                null, applyPlushies: false, titleUrl: msg.Channel is IGuildChannel ? msg.GetJumpUrl() : null);
         }
 
     }

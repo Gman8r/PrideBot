@@ -42,13 +42,15 @@ namespace PrideBot.Plushies
         readonly ShipImageGenerator shipImageGenerator;
         readonly PlushieImageService imageService;
         public ModelRepository repo;
+        public DiscordSocketClient client;
 
-        public PlushieMenuService(IConfigurationRoot config, ShipImageGenerator shipImageGenerator, PlushieImageService imageService, ModelRepository repo)
+        public PlushieMenuService(IConfigurationRoot config, ShipImageGenerator shipImageGenerator, PlushieImageService imageService, ModelRepository repo, DiscordSocketClient client)
         {
             this.config = config;
             this.shipImageGenerator = shipImageGenerator;
             this.imageService = imageService;
             this.repo = repo;
+            this.client = client;
         }
 
         string GetCustomId(bool isButton, ulong userId, int selectedPlushieId, PlushieAction action, string imageState)
@@ -82,26 +84,41 @@ namespace PrideBot.Plushies
                 .WithDescription(!viewingOther
                     ? DialogueDict.Get(userPlushies.Any() ? "PLUSHIE_MENU_DESCRIPTION" : "PLUSHIE_MENU_DESCRIPTION_EMPTY")
                     : DialogueDict.Get(userPlushies.Any() ? "PLUSHIE_MENU_DESCRIPTION_OTHER" : "PLUSHIE_MENU_DESCRIPTION_OTHER_EMPTY", user.Mention));
+
+            string GetTraderDisplayName(string idStr)
+            {
+                ulong id;
+                if (!ulong.TryParse(idStr, out id))
+                    return "`Unknown User`";
+                var user = client.GetGyn(config)?.GetUser(id);;
+                return user?.Nickname ?? user?.Username?? "`Missing User`";
+            }
+
             if (overrideImageUrl != null)
                 embed.WithImageUrl(overrideImageUrl);
             else
                 embed.WithAttachedImageUrl(imageFile);
             foreach (var plushie in userPlushies)
             {
-                embed.AddField($"{plushie.Name} ({plushie.CharacterName})", plushie.DecriptionUponUse());
+                var fieldTitle = $"🧸 {plushie.Name} ({plushie.CharacterName})";
+
+                if (!string.IsNullOrWhiteSpace(plushie.OriginalUserId) && !plushie.OriginalUserId.Equals(plushie.UserId))
+                    fieldTitle += $" ({GetTraderDisplayName(plushie.OriginalUserId)}'s plushie)";
+
+                embed.AddField(fieldTitle, plushie.DecriptionUponUse());
             }
             var inEfectString = "";
             foreach (var plushie in inEffectPlushies)
             {
-                inEfectString += $"\n**{plushie.Name}**";
+                inEfectString += $"\n⚡ **{plushie.Name}**";
                 if (plushie.DurationHours > 0)
                 {
                     var timeRemaining = plushie.ExpirationTimestamp - DateTime.Now;
                     inEfectString += $" - {(int)timeRemaining.TotalHours}h:{timeRemaining.Minutes}m Remaining";
                 }
-                if (plushie.Uses > 1)
+                else if (plushie.Uses > 1)
                 {
-                    inEfectString += $" - {plushie.RemainingUses} {(plushie.RemainingUses == 1 ? "Use" : "Uses")} Remaining";
+                    inEfectString += $" - {plushie.RemainingUses} {(plushie.RemainingUses == 1 ? "effect" : "effects")} Remaining";
                 }
                 else if (plushie.Uses == 1)
                 {
@@ -168,12 +185,13 @@ namespace PrideBot.Plushies
                 }.Build());
 
                 canUse = GameHelper.IsEventOccuring(config);
+                canUse = false; // debug
                 // Sell button
                 plushieOptionRowBuilder.AddComponent(new ButtonBuilder()
                 {
                     Style = ButtonStyle.Primary,
                     Emote = new Emoji("💗"),
-                    Label = canUse ? "Pawn" : "Pawn (Locked)",
+                    Label = canUse ? "Pawn" : "Pawn (Not Yet Finished)",
                     CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Pawn, imageState),
                     IsDisabled = !canUse
                 }.Build());

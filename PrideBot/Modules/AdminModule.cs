@@ -206,6 +206,14 @@ namespace PrideBot.Modules
             await UserReview(user.Id.ToString());
         }
 
+        [Command("updaterules")]
+        [Priority(1)]
+        [Summary("Updates da rules")]
+        public async Task UpdateRules()
+        {
+            await announcementService.UpdateRulesAsync(Context.Guild);
+        }
+
 
         [Command("closingannouncement")]
         [Summary("Displays the closing announcement in this channel.")]

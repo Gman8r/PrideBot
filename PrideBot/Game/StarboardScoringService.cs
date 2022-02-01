@@ -106,7 +106,7 @@ namespace PrideBot.Quizzes
                 };
                 await DatabaseHelper.GetInsertCommand(connection, starboardPost, "STARBOARD_POSTS").ExecuteNonQueryAsync();
 
-                await userMessage.Channel.SendMessageAsync("Base achievement");
+                //await userMessage.Channel.SendMessageAsync("Base achievement");
                 await scoringService.AddAndDisplayAchievementAsync(connection, user, "STARBOARD", client.CurrentUser, userMessage.Timestamp.ToDateTime(), userMessage, titleUrl: message.GetJumpUrl());
             }
             catch (Exception e)
@@ -159,7 +159,7 @@ namespace PrideBot.Quizzes
 
                 foreach (var achievement in earnedAchievements)
                 {
-                    await message.Channel.SendMessageAsync(achievement.AchievementId);
+                    //await message.Channel.SendMessageAsync(achievement.AchievementId);
                     await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement.AchievementId, client.CurrentUser, message.Timestamp.ToDateTime(), message, titleUrl: message.GetJumpUrl());
                 }
 

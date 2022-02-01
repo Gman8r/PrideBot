@@ -20,6 +20,7 @@ using PrideBot.Models;
 using PrideBot.Repository;
 using PrideBot.Quizzes;
 using PrideBot.Game;
+using PrideBot.Plushies;
 
 namespace PrideBot.Modules
 {
@@ -30,19 +31,22 @@ namespace PrideBot.Modules
         readonly IConfigurationRoot config;
         readonly DiscordSocketClient client;
         readonly ScoringService scoringService;
+        readonly PlushieService plushieService;
 
-        public QuizModule(ModelRepository modelRepository, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService)
+        public QuizModule(ModelRepository modelRepository, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, PlushieService plushieService)
         {
             this.repo = modelRepository;
             this.config = config;
             this.client = client;
             this.scoringService = scoringService;
+            this.plushieService = plushieService;
         }
 
         [Command("takequiz")]
         [Summary("Attempt today's daily quiz question!")]
         [RequireRegistration]
         [RequireSingleSession]
+        [DontInterruptCutsceneAtribute]
         [ValidEventPeriods(EventPeriod.DuringEvent)]
         public async Task TakeQuiz()
         {
@@ -63,7 +67,7 @@ namespace PrideBot.Modules
             }
             await connection.CloseAsync();
             await new QuizSession(await Context.User.CreateDMChannelAsync(), Context.User, config, repo, client,
-                new TimeSpan(0, 10, 0), Context.Message, scoringService, quizLog, guildSettings)
+                new TimeSpan(0, 10, 0), Context.Message, scoringService, quizLog, guildSettings, plushieService)
                 .PerformSessionAsync();
         }
 
@@ -80,7 +84,7 @@ namespace PrideBot.Modules
             var quizLog = await repo.GetOrCreateQuizLogAsync(connection, user.Id.ToString(), day.ToString());
             await connection.CloseAsync();
             await new QuizSession(await user.CreateDMChannelAsync(), user, config, repo, client,
-                new TimeSpan(0, 5, 0), Context.Message, scoringService, quizLog, guildSettings)
+                new TimeSpan(0, 5, 0), Context.Message, scoringService, quizLog, guildSettings, plushieService)
                 .PerformSessionAsync();
         }
     }

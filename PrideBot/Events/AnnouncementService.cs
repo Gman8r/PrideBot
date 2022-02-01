@@ -190,21 +190,21 @@ namespace PrideBot.Events
                 .OrderBy(a => a)
                 .ToArray();
 
-            await PostOrEditMessageAsync(messages, 0, DialogueDict.GetNoBrainRot("RULES_1", config.GetDefaultPrefix(), 
+            await PostOrEditMessageAsync(rulesChannel, messages, 0, DialogueDict.GetNoBrainRot("RULES_1", config.GetDefaultPrefix(), 
                 (guild.GetChannelFromConfig(config, "quizchannel") as ITextChannel).Mention));
-            await PostOrEditMessageAsync(messages, 1, DialogueDict.GetNoBrainRot("RULES_2"));
-            await PostOrEditMessageAsync(messages, 2, DialogueDict.GetNoBrainRot("RULES_3"));
-            await PostOrEditMessageAsync(messages, 3, DialogueDict.GetNoBrainRot("RULES_4", config.GetDefaultPrefix(),
+            await PostOrEditMessageAsync(rulesChannel, messages, 1, DialogueDict.GetNoBrainRot("RULES_2"));
+            await PostOrEditMessageAsync(rulesChannel, messages, 2, DialogueDict.GetNoBrainRot("RULES_3"));
+            await PostOrEditMessageAsync(rulesChannel, messages, 3, DialogueDict.GetNoBrainRot("RULES_4", config.GetDefaultPrefix(),
                 (guild.GetChannelFromConfig(config, "scorereportchannel") as ITextChannel).Mention));
 
         }
 
-        async Task PostOrEditMessageAsync(IUserMessage[] messages, int index, string content)
+        async Task PostOrEditMessageAsync(IMessageChannel channel, IUserMessage[] messages, int index, string content)
         {
             if (index < messages.Length)
                 await messages[index].ModifyAsync(a => a.Content = content);
             else
-                await messages.FirstOrDefault().Channel.SendMessageAsync(content);
+                await channel.SendMessageAsync(content);
         }
     }   
 }

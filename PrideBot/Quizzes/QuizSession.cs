@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using PrideBot.Game;
 using PrideBot.Models;
+using PrideBot.Plushies;
 using PrideBot.Repository;
 using System;
 using System.Collections.Generic;
@@ -30,10 +31,11 @@ namespace PrideBot.Quizzes
         List<Quiz> availableQuizzes;
         int chosenQuizIndex;
         List<UserPlushie> appliedPlushies;
+        PlushieService plushieService;
 
         public bool QuizStarted { get; private set; }
 
-        public QuizSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ScoringService scoringService, QuizLog quizLog, GuildSettings guildSettings) : base(channel, user, config, client, timeout, originmessage)
+        public QuizSession(IDMChannel channel, SocketUser user, IConfigurationRoot config, ModelRepository repo, DiscordSocketClient client, TimeSpan timeout, SocketMessage originmessage, ScoringService scoringService, QuizLog quizLog, GuildSettings guildSettings, PlushieService plushieService) : base(channel, user, config, client, timeout, originmessage)
         {
             this.repo = repo;
             this.scoringService = scoringService;
@@ -42,6 +44,7 @@ namespace PrideBot.Quizzes
             QuizStarted = false;
             timerStartSeconds = DefaultTimerSeconds;
             appliedPlushies = new List<UserPlushie>();
+            this.plushieService = plushieService;
         }
 
         public IDMChannel Channel { get; }
@@ -138,6 +141,7 @@ namespace PrideBot.Quizzes
             if (timerCutPlushie != null)
             {
                 await repo.DepleteUserPlushieAsync(connection, timerCutPlushie.UserPlushieId, DateTime.Now, false, PlushieEffectContext.Quiz, quiz.QuizId.ToString());
+                plushieService.HandleTraderAwardAsync(connection, timerCutPlushie, channel).GetAwaiter();
                 appliedPlushies.Add(timerCutPlushie);
                 timerStartSeconds = 15;
             }
@@ -231,6 +235,7 @@ namespace PrideBot.Quizzes
                             a.Components = choicesComponents.Build();
                         });
                         await repo.DepleteUserPlushieAsync(connection, halfPlushie.UserPlushieId, DateTime.Now, false, PlushieEffectContext.Quiz, quiz.QuizId.ToString());
+                        plushieService.HandleTraderAwardAsync(connection, halfPlushie, channel).GetAwaiter();
                         appliedPlushies.Add(halfPlushie);
                         await channel.SendMessageAsync(DialogueDict.Get($"QUIZ_PLUSHIE_HALF"));
                     }

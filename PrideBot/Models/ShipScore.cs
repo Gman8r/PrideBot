@@ -10,6 +10,6 @@ namespace PrideBot.Models
         public string ShipId { get; set; }
         public int Tier { get; set; }
         public decimal TierMult { get; set; }
-        public decimal BalanceBonus { get; set; }
+        public decimal BalanceMult { get; set; }
     }
 }

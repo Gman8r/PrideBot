@@ -70,124 +70,132 @@ namespace PrideBot.Registration
         async Task FirstTimeSetupAsync(SqlConnection connection, UserShipCollection dbUserShips)
         {
 
-            var embed = GetEmbed()
-                .WithTitle(userHasRegistered ? "Edit Your Registration!" : "Registration Time!")
-                .WithDescription(userHasRegistered
-                ? DialogueDict.Get("REGISTRATION_EDIT")
-                : DialogueDict.Get("REGISTRATION_WELCOME", config.GetDefaultPrefix()));
-
-            var components = new ComponentBuilder()
-                    .WithButton("Sounds Gay I'm In", "YES", ButtonStyle.Success, ThumbsUpEmote)
-                    .WithButton("Not Right Now Actually", "NO", ButtonStyle.Secondary, NoEmote);
-                    //.WithButton("Stop Doing That Emote Thing First (coming soon)", "YES", ButtonStyle.Secondary, new Emoji("😖"));
-
-            //embed.ImageUrl = config.GetRelativeHostPathWeb(await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser));
-
-            var firstResponse = await SendAndAwaitResponseAsync(embed: embed, components: components);
-            if (!firstResponse.IsYes)
+            try
             {
-                await channel.SendMessageAsync(embed: GetUserCancelledEmbed().Build());
-                return;
-            }
+                var embed = GetEmbed()
+                    .WithTitle(userHasRegistered ? "Edit Your Registration!" : "Registration Time!")
+                    .WithDescription(userHasRegistered
+                    ? DialogueDict.Get("REGISTRATION_EDIT")
+                    : DialogueDict.Get("REGISTRATION_WELCOME", config.GetDefaultPrefix()));
 
-            // Main loop for reg finalization
-            while (true)
-            {
-                embed = GetEmbed()
-                    .WithDescription("");
-                for (int i = 0; i < 3; i++)
-                {
-                    embed.Description = await SetUpShip(connection, (UserShipTier)i, embed);
-                }
+                var components = new ComponentBuilder()
+                        .WithButton("Sounds Gay I'm In", "YES", ButtonStyle.Success, ThumbsUpEmote)
+                        .WithButton("Not Right Now Actually", "NO", ButtonStyle.Secondary, NoEmote);
+                //.WithButton("Stop Doing That Emote Thing First (coming soon)", "YES", ButtonStyle.Secondary, new Emoji("😖"));
 
+                //embed.ImageUrl = config.GetRelativeHostPathWeb(await shipImageGenerator.GenerateBackgroundChoicesAsync(dbUser));
 
-                await SetUpBackgroundAsync(connection, embed.Description);
-
-                dbUserShips = await repo.GetUserShipsAsync(connection, dbUser);
-                var confirmImageFile = await GetShipsImageAsync(dbUser, dbUserShips);
-                embed = GetEmbed()
-                    .WithTitle("Confirm Please!")
-                    .WithDescription(DialogueDict.Get(dbUser.ShipsSelected ? "REGISTRATION_CONFIRM_EDIT" : "REGISTRATION_CONFIRM"))
-                    .WithAttachedImageUrl(confirmImageFile);
-
-                var confirmComponents = new ComponentBuilder()
-                    .WithButton("All Set!", "YES", ButtonStyle.Success, ThumbsUpEmote)
-                    .WithButton("Let Me Redo Some Stuff", "REDO", ButtonStyle.Secondary, new Emoji("↩"))
-                    .WithButton("Actually, Cancel For Now", "NO", ButtonStyle.Secondary, NoEmote);
-
-                var result = await SendAndAwaitNonTextResponseAsync(file: confirmImageFile, embed: embed, components: confirmComponents);
-
-                if (result.IsYes)
-                    break;
-                else if (result.IsNo)
+                var firstResponse = await SendAndAwaitResponseAsync(embed: embed, components: components);
+                if (!firstResponse.IsYes)
                 {
                     await channel.SendMessageAsync(embed: GetUserCancelledEmbed().Build());
                     return;
                 }
-            }
 
-            var key = "REGISTRATION_" + (userHasRegistered ? "EDITED" : "COMPLETE") + (GameHelper.IsEventOccuring(config) ? "" : "_PREREG");
-            embed = GetEmbed()
-                .WithTitle("Setup Complete!")
-                .WithDescription(DialogueDict.Get(key, config.GetDefaultPrefix()));
-            await channel.SendMessageAsync(embed: embed.Build());
-            if (!userHasRegistered)
-            {
-                dbUser = await repo.GetUserAsync(connection, dbUser.UserId);
-                dbUser.ShipsSelected = true;
-                await repo.UpdateUserAsync(connection, dbUser);
-                userRegs[user.Id.ToString()] = true;
-
-                var achievementId = GameHelper.IsEventOccuring(config) ? "REGISTER" : "PREREGISTER";
-                var achievement = await repo.GetAchievementAsync(connection, achievementId);
-                await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, DateTime.Now, null);
-
-                // Reward points from before user registered if needed
-                var storedPoints = await repo.GetUserNonRegPoints(connection, dbUser.UserId);
-                if (storedPoints > 0)
+                // Main loop for reg finalization
+                while (true)
                 {
-                    var pointsAchievement = await repo.GetAchievementAsync(connection, "STORED");
-                    await scoringService.AddAndDisplayAchievementAsync(connection, user, pointsAchievement, client.CurrentUser, DateTime.Now, null, overridePoints: storedPoints);
-                }
-
-                // Give registered role
-                var gyn = client.GetGyn(config);
-                var registeredRole = gyn.GetRoleFromConfig(config, "registeredrole");
-                var guildUser = gyn.GetUser(user.Id);
-                if (guildUser != null)
-                {
-                    try
+                    embed = GetEmbed()
+                        .WithDescription("");
+                    for (int i = 0; i < 3; i++)
                     {
-                        await guildUser.AddRoleAsync(registeredRole);
+                        embed.Description = await SetUpShip(connection, (UserShipTier)i, embed);
                     }
-                    catch (Exception e)
+
+
+                    await SetUpBackgroundAsync(connection, embed.Description);
+
+                    dbUserShips = await repo.GetUserShipsAsync(connection, dbUser);
+                    var confirmImageFile = await GetShipsImageAsync(dbUser, dbUserShips);
+                    embed = GetEmbed()
+                        .WithTitle("Confirm Please!")
+                        .WithDescription(DialogueDict.Get(dbUser.ShipsSelected ? "REGISTRATION_CONFIRM_EDIT" : "REGISTRATION_CONFIRM"))
+                        .WithAttachedImageUrl(confirmImageFile);
+
+                    var confirmComponents = new ComponentBuilder()
+                        .WithButton("All Set!", "YES", ButtonStyle.Success, ThumbsUpEmote)
+                        .WithButton("Let Me Redo Some Stuff", "REDO", ButtonStyle.Secondary, new Emoji("↩"))
+                        .WithButton("Actually, Cancel For Now", "NO", ButtonStyle.Secondary, NoEmote);
+
+                    var result = await SendAndAwaitNonTextResponseAsync(file: confirmImageFile, embed: embed, components: confirmComponents);
+
+                    if (result.IsYes)
+                        break;
+                    else if (result.IsNo)
                     {
-                        var modEmbed = EmbedHelper.GetEventErrorEmbed(null, $"OH NO! Sages I'm totes sorry to bug you all but I need my role to be higher so I can give people the registration role! And then give the {registeredRole.Mention} role to my bestie {guildUser.Mention}, pretty please?", client, showUser: false);
-                        var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
-                        await modChannel.SendMessageAsync(embed: modEmbed.Build());
+                        await channel.SendMessageAsync(embed: GetUserCancelledEmbed().Build());
+                        return;
                     }
                 }
-            }
 
-            // plushie bonus
-            if (!userHasRegistered)
+                var key = "REGISTRATION_" + (userHasRegistered ? "EDITED" : "COMPLETE") + (GameHelper.IsEventOccuring(config) ? "" : "_PREREG");
+                embed = GetEmbed()
+                    .WithTitle("Setup Complete!")
+                    .WithDescription(DialogueDict.Get(key, config.GetDefaultPrefix()));
+                await channel.SendMessageAsync(embed: embed.Build());
+                if (!userHasRegistered)
+                {
+                    dbUser = await repo.GetUserAsync(connection, dbUser.UserId);
+                    dbUser.ShipsSelected = true;
+                    await repo.UpdateUserAsync(connection, dbUser);
+                    userRegs[user.Id.ToString()] = true;
+
+                    var achievementId = GameHelper.IsEventOccuring(config) ? "REGISTER" : "PREREGISTER";
+                    var achievement = await repo.GetAchievementAsync(connection, achievementId);
+                    await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, DateTime.Now, null);
+
+                    // Reward points from before user registered if needed
+                    var storedPoints = await repo.GetUserNonRegPoints(connection, dbUser.UserId);
+                    if (storedPoints > 0)
+                    {
+                        var pointsAchievement = await repo.GetAchievementAsync(connection, "STORED");
+                        await scoringService.AddAndDisplayAchievementAsync(connection, user, pointsAchievement, client.CurrentUser, DateTime.Now, null, overridePoints: storedPoints);
+                    }
+
+                    // Give registered role
+                    var gyn = client.GetGyn(config);
+                    var registeredRole = gyn.GetRoleFromConfig(config, "registeredrole");
+                    var guildUser = gyn.GetUser(user.Id);
+                    if (guildUser != null)
+                    {
+                        try
+                        {
+                            await guildUser.AddRoleAsync(registeredRole);
+                        }
+                        catch (Exception e)
+                        {
+                            var modEmbed = EmbedHelper.GetEventErrorEmbed(null, $"OH NO! Sages I'm totes sorry to bug you all but I need my role to be higher so I can give people the registration role! And then give the {registeredRole.Mention} role to my bestie {guildUser.Mention}, pretty please?", client, showUser: false);
+                            var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
+                            await modChannel.SendMessageAsync(embed: modEmbed.Build());
+                        }
+                    }
+                }
+
+                // plushie bonus
+                if (!userHasRegistered)
+                {
+                    var plushieEmbed = GetEmbed()
+                        .WithTitle("Here's Your Surprise! 🛎");
+                    if (GameHelper.IsEventOccuring(config))
+                        plushieEmbed.Description = DialogueDict.Get("REGISTRATION_PLUSHIE", config.GetDefaultPrefix());
+                    else
+                        plushieEmbed.Description = DialogueDict.Get("REGISTRATION_PLUSHIE_PREREG", config.GetDefaultPrefix());
+
+                    var image = await new YellowTextGenerator(config).WriteYellowTextAsync(plushieEmbed.ThumbnailUrl, "Plushies !!");
+                    plushieEmbed.WithAttachedThumbnailUrl(image);
+
+                    var plushieComponents = new ComponentBuilder()
+                        .WithButton("Get A Free Plushie!", $"PLUSHIEREG.{user.Id}", ButtonStyle.Success, new Emoji("🧸"));
+                    var msg = await channel.SendFileAsync(image.Stream, image.FileName, null, embed: plushieEmbed.Build(), components: plushieComponents.Build());
+                    await msg.PinAsync();
+                }
+
+
+            }
+            catch (Exception e)
             {
-                var plushieEmbed = GetEmbed()
-                    .WithTitle("Here's Your Surprise! 🛎");
-                if (GameHelper.IsEventOccuring(config))
-                    plushieEmbed.Description = DialogueDict.Get("REGISTRATION_PLUSHIE", config.GetDefaultPrefix());
-                else
-                    plushieEmbed.Description = DialogueDict.Get("REGISTRATION_PLUSHIE_PREREG", config.GetDefaultPrefix());
 
-                var image =await new YellowTextGenerator(config).WriteYellowTextAsync(plushieEmbed.ThumbnailUrl, "Plushies !!");
-                plushieEmbed.WithAttachedThumbnailUrl(image);
-
-                var plushieComponents = new ComponentBuilder()
-                    .WithButton("Get A Free Plushie!", $"PLUSHIEREG.{user.Id}", ButtonStyle.Success, new Emoji("🧸"));
-                var msg = await channel.SendFileAsync(image.Stream, image.FileName, null, embed: plushieEmbed.Build(), components: plushieComponents.Build());
-                await msg.PinAsync();
             }
-
         }
 
         async Task EditRegistrationAsync(SqlConnection connection, UserShipCollection dbUserShips)

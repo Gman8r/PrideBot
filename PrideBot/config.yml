@@ -1,7 +1,7 @@
-﻿stealthmode: True
+﻿stealthmode: False
 prefixes:
-    - '❤️ '
     - '<3 '
+    - '♥ '
 status: 🧸
 eventstart: 2022-02-01
 eventend: 2022-02-14

@@ -36,7 +36,6 @@ namespace PrideBot.Quizzes
         readonly LoggingService loggingService;
 
         SocketTextChannel quizChannel;
-        SocketRole quizTakenRole;
         QuizSettings quizSettings;
 
         public DailyQuizService(ModelRepository repo, IConfigurationRoot config, DiscordSocketClient client, ScoringService scoringService, LoggingService loggingService)
@@ -69,7 +68,7 @@ namespace PrideBot.Quizzes
                 quizSettings = await GetQuizSettingsAsync();
                 var gyn = await client.AwaitGyn(config);
                 quizChannel = gyn.GetChannelFromConfig(config, "quizchannel") as SocketTextChannel;
-                quizTakenRole = gyn.GetRoleFromConfig(config, "quiztakenrole");
+                //quizTakenRole = gyn.GetRoleFromConfig(config, "quiztakenrole");
 
                 while (true)
                 {
@@ -155,10 +154,10 @@ namespace PrideBot.Quizzes
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
 
-            foreach (var member in quizTakenRole.Members)
-            {
-                await member.RemoveRoleAsync(quizTakenRole);
-            }
+            //foreach (var member in quizTakenRole.Members)
+            //{
+            //    await member.RemoveRoleAsync(quizTakenRole);
+            //}
 
             var oldPins = (await quizChannel.GetPinnedMessagesAsync()).Select(msg => (msg.Channel, msg));
             foreach (var pin in oldPins)

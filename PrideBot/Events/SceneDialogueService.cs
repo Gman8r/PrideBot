@@ -36,6 +36,9 @@ namespace PrideBot.Events
         private int readyClients;
         private bool AreClientsReady => readyClients < rpClients.Length;
 
+        public bool IsMidScene { get; private set; }
+        public IChannel ActiveSceneChannel { get; private set; }
+
         public SceneDialogueService(DiscordSocketClient client, IConfigurationRoot config, TokenConfig tokenConfig, ModelRepository repo)
         {
             this.client = client;
@@ -70,47 +73,56 @@ namespace PrideBot.Events
             await connection.OpenAsync();
             var dialogues = await repo.GetSceneDialogueForSceneAsync(connection, sceneId);
 
-            foreach (var dialogue in dialogues)
+            try
             {
-                var dClient = (string.IsNullOrEmpty(dialogue.ClientId) || dialogue.ClientId.Equals("0"))
-                    ? client
-                    : rpClients.FirstOrDefault(a => a.CurrentUser.Id.Equals(ulong.Parse(dialogue.ClientId)));
-                var channel = dClient.GetGyn(config).GetTextChannel(referenceChannel.Id);
-                if (dialogue.TypingTime > 0)
+                IsMidScene = true;
+                ActiveSceneChannel = referenceChannel;
+                foreach (var dialogue in dialogues)
                 {
-                    typingState = channel.EnterTypingState();
-                    await Task.Delay(dialogue.TypingTime);
-                }
-
-                try
-                {
-                    switch (dialogue.Action)
+                    var dClient = (string.IsNullOrEmpty(dialogue.ClientId) || dialogue.ClientId.Equals("0"))
+                        ? client
+                        : rpClients.FirstOrDefault(a => a.CurrentUser.Id.Equals(ulong.Parse(dialogue.ClientId)));
+                    var channel = dClient.GetGyn(config).GetTextChannel(referenceChannel.Id);
+                    if (dialogue.TypingTime > 0)
                     {
-                        case ("TALK"):
-                            await PostDialogueAsync(dClient, dialogue, channel);
-                            break;
-                        case ("AVATAR"):
-                            var urlData = await WebHelper.DownloadWebFileDataAsync(dialogue.Content);
-                            dClient.CurrentUser.ModifyAsync(a => a.Avatar = new Image(new MemoryStream(urlData))).GetAwaiter();
-                            break;
-                        case ("NAME"):
-                            dClient.CurrentUser.ModifyAsync(a => a.Username = dialogue.Content).GetAwaiter();
-                            break;
+                        typingState = channel.EnterTypingState();
+                        await Task.Delay(dialogue.TypingTime);
                     }
-                }
-                catch (Exception e)
-                {
-                    var embed = EmbedHelper.GetEventErrorEmbed(null, $"Failed action {dialogue.Action}" +
-                        $" {(dialogue.Content.Length > 100 ? dialogue.Content.Substring(100) + "..." : dialogue.Content)} for {dClient.CurrentUser.Mention}" +
-                        $"\n\nReason: {e.Message}", client, showUser: false);
-                    var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
-                    await modChannel.SendMessageAsync(embed: embed.Build());
-                }
+
+                    try
+                    {
+                        switch (dialogue.Action)
+                        {
+                            case ("TALK"):
+                                await PostDialogueAsync(dClient, dialogue, channel);
+                                break;
+                            case ("AVATAR"):
+                                var urlData = await WebHelper.DownloadWebFileDataAsync(dialogue.Content);
+                                dClient.CurrentUser.ModifyAsync(a => a.Avatar = new Image(new MemoryStream(urlData))).GetAwaiter();
+                                break;
+                            case ("NAME"):
+                                dClient.CurrentUser.ModifyAsync(a => a.Username = dialogue.Content).GetAwaiter();
+                                break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        var embed = EmbedHelper.GetEventErrorEmbed(null, $"Failed action {dialogue.Action}" +
+                            $" {(dialogue.Content.Length > 100 ? dialogue.Content.Substring(100) + "..." : dialogue.Content)} for {dClient.CurrentUser.Mention}" +
+                            $"\n\nReason: {e.Message}", client, showUser: false);
+                        var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
+                        await modChannel.SendMessageAsync(embed: embed.Build());
+                    }
 
 
-                if (typingState != null)
-                    typingState.Dispose();
-                await Task.Delay(dialogue.ReadTime);
+                    if (typingState != null)
+                        typingState.Dispose();
+                    await Task.Delay(dialogue.ReadTime);
+                }
+            }
+            finally
+            {
+                IsMidScene = false;
             }
         }
 

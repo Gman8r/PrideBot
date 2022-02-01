@@ -50,6 +50,7 @@ namespace PrideBot
 
             if (!config.ParseBoolField("stealthmode"))
             {
+                //await commands.AddModuleAsync<RegistrationModule>(provider);
                 await commands.AddModulesAsync(Assembly.GetEntryAssembly(), provider);
                 await interactions.AddModulesAsync(Assembly.GetEntryAssembly(), provider);
             }

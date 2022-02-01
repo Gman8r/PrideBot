@@ -44,8 +44,10 @@ namespace PrideBot.Modules
         }
 
         [Command("plushies")]
+        [Alias("fumorama")]
         [Summary("Shows your plushies! 🧸")]
         [ValidEventPeriods(EventPeriod.DuringEvent | EventPeriod.BeforeEvent)]
+        [DontInterruptCutsceneAtribute]
         [RequireRegistration]
         //[RequireSingleSession]
         public async Task Plushie(SocketGuildUser user = null)
@@ -57,6 +59,7 @@ namespace PrideBot.Modules
         }
 
         [Command("getplushie")]
+        [DontInterruptCutsceneAtribute]
         [Summary("Get a new plushie! 🧸")]
         [RequireRegistration]
         [RequireSingleSession]
@@ -68,7 +71,7 @@ namespace PrideBot.Modules
             await plushieService.DrawPlushie(connection, Context.Channel, Context.User);
         }
 
-        [Command("getplushie")]
+        [Command("getplushienow")]
         [Summary("Admin command !!")]
         [RequireSage]
         [Priority(1)]
