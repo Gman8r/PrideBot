@@ -42,14 +42,14 @@ namespace PrideBot.Game
             return $"{((int)ts.TotalHours).ToString("D2")}:{ts.Minutes.ToString("D2")}:{ts.Seconds.ToString("D2")}";
         }
 
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null, bool applyPlushies = true, UserPlushie appliedPlushie = null, List<UserPlushie> appliedPlushies = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, string achievementId, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null, string overrideShip = null, bool applyPlushies = true, UserPlushie appliedPlushie = null, List<UserPlushie> appliedPlushies = null)
         {
             var achievement = await repo.GetAchievementAsync(connection, achievementId);
-            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, timestamp, message, overridePoints, titleUrl, ignoreIfNotRegistered, ignoreCooldown, dontPing, reportChannel, applyPlushies, appliedPlushie, appliedPlushies);
+            return await AddAndDisplayAchievementAsync(connection, user, achievement, approver, timestamp, message, overridePoints, titleUrl, ignoreIfNotRegistered, ignoreCooldown, dontPing, reportChannel, overrideShip, applyPlushies, appliedPlushie, appliedPlushies);
         }
 
         // Returns True if score was applied in some way
-        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null, bool applyPlushies = true, UserPlushie appliedPlushie = null, List<UserPlushie> appliedPlushies = null)
+        public async Task<ModelRepository.AddScoreError> AddAndDisplayAchievementAsync(SqlConnection connection, IUser user, Achievement achievement, IUser approver, DateTime timestamp, IMessage message, decimal overridePoints = 0, string titleUrl = null, bool ignoreIfNotRegistered = false, bool ignoreCooldown = false, bool dontPing = false, IMessageChannel reportChannel = null, string overrideShip = null, bool applyPlushies = true, UserPlushie appliedPlushie = null, List<UserPlushie> appliedPlushies = null)
         {
             if (overridePoints > 999)
                 throw new CommandException("Max score for an achievement is 999, WHY ARE YOU EVEN DOING THIS??");
@@ -74,7 +74,7 @@ namespace PrideBot.Game
             //{
             //    var x = 0;
             //}
-            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarnedBase, approver.Id.ToString(), timestamp, ignoreCooldown, DateTime.Parse(config["eventstart"]), GameHelper.GetEventDay(config, timestamp), client.GetGyn(config).Id.ToString(), applyPlushies,
+            var dbResult = await repo.AttemptAddScoreAsync(connection, user.Id.ToString(), achievement.AchievementId, pointsEarnedBase, approver.Id.ToString(), timestamp, ignoreCooldown, DateTime.Parse(config["eventstart"]), GameHelper.GetEventDay(config, timestamp), client.GetGyn(config).Id.ToString(), applyPlushies, overrideShip,
                 ((message?.Channel ?? null) as IGuildChannel)?.Guild.Id.ToString() ?? "", message?.Channel.Id.ToString() ?? "", message?.Id.ToString() ?? "");
 
 
@@ -98,15 +98,54 @@ namespace PrideBot.Game
                 var dbScore = await repo.GetScoreAsync(connection, scoreId);
                 var dbShipScores = (await repo.GetShipScoresAsync(connection, scoreId)).ToArray();
 
+                //if (!string.IsNullOrWhiteSpace(overrideShip))
+                //{
+                //    dbShipScores = 
+                //}
+
                 // Add applied plushies as plushie effect logs so we fetch them alongside the ones the db applies
                 foreach (var plushie in appliedPlushies)
                 {
                     await repo.AddPlushieEffectLog(connection, plushie.UserPlushieId, PlushieEffectContext.Score, scoreId, DateTime.Now);
                 }
 
+                var dbShips = await repo.GetUserShipsAsync(connection, user.Id.ToString());
+
+
+               // messy-ass code to force a pair to be onscreen during pawning LOL
+                if (!string.IsNullOrWhiteSpace(overrideShip))
+                {
+                    var forcedUserShip = dbShips.Get(UserShipTier.Primary);
+                    var forcedShip = await repo.GetShipAsync(connection, overrideShip);
+
+                    // fuuuuuuuuuuck
+                    forcedUserShip.ShipId = forcedShip.ShipId;
+                    forcedUserShip.CharacterId1 = forcedShip.CharacterId1;
+                    forcedUserShip.CharacterId2 = forcedShip.CharacterId2;
+                    forcedUserShip.Character1First = forcedShip.Character1First;
+                    forcedUserShip.Character2First = forcedShip.Character2First;
+                    forcedUserShip.Character1Name = forcedShip.Character1Name;
+                    forcedUserShip.Character2Name = forcedShip.Character2Name;
+                    forcedUserShip.PointsEarned = forcedShip.PointsEarned;
+                    forcedUserShip.Supporters = forcedShip.Supporters;
+                    forcedUserShip.RandomSupporters = forcedShip.RandomSupporters;
+                    forcedUserShip.IsBlacklisted = forcedShip.IsBlacklisted;
+                    forcedUserShip.Place = forcedShip.Place;
+                    forcedUserShip.UnderdogPlace = forcedShip.UnderdogPlace;
+                    forcedUserShip.SoloPlace = forcedShip.SoloPlace;
+                    forcedUserShip.TopSupporter = forcedShip.TopSupporter;
+                    forcedUserShip.Heart1 = null;
+                    forcedUserShip.Heart1Right = null;
+                    forcedUserShip.Heart2 = null;
+                    forcedUserShip.Heart2Right = null;
+                    // i feel gross
+
+                    dbShips = new UserShipCollection(new List<UserShip>() { forcedUserShip });
+                }
+
                 var embed = await GenerateAchievementEmbedAsync(user, dbUser, achievement, scoreId, dbScore, dbShipScores,
                     await repo.GetPlushieEffectLogsForScoreAsync(connection, int.Parse(scoreId)),
-                    await repo.GetUserShipsAsync(connection, user.Id.ToString()), approver, timestamp, pointsEarnedBase,
+                    dbShips, approver, timestamp, pointsEarnedBase,
                     await repo.GetGuildSettings(connection, client.GetGyn(config).Id.ToString()),
                     titleUrl, dbResult);
                 var text = user.Mention + " Achievement! " + achievement.Emoji;// + " Achievement!";// + " " + achievement.Emoji;

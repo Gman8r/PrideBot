@@ -137,6 +137,8 @@ namespace PrideBot.Plushies
             cBuilder.ActionRows = new List<ActionRowBuilder>();
             var selectedPlushie = userPlushies
                 .FirstOrDefault(a => a.UserPlushieId == selectedPlushieId);
+            if (selectedPlushie == null)
+                selectedPlushieId = 0;
 
             // Dropdown
             var dropdownBuilder = new ActionRowBuilder();
@@ -185,7 +187,7 @@ namespace PrideBot.Plushies
                 }.Build());
 
                 canUse = GameHelper.IsEventOccuring(config);
-                canUse = false; // debug
+                canUse = true; // debug
                 // Sell button
                 plushieOptionRowBuilder.AddComponent(new ButtonBuilder()
                 {

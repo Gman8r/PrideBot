@@ -303,7 +303,7 @@ namespace PrideBot.Plushies
             var pointMult = 7; // TODO db mult
             var pointsTotal = digitsSum * pointMult;
             tutorial += $"\n\n{ones} + {tens} = **{digitsSum}**";
-            tutorial += "\n\n UHHHHH i'll figure out the mult later, let's just say x5. Also i think she should have different reactions depending on how high you get and for the low ones she basically makes fun of you lowkey.";
+            tutorial += $"\n\n {DialogueDict.Get("PLUSHIE_ADVANCED_MATHEMATICS")}";
 
             var embed = EmbedHelper.GetEventEmbed(user, config)
                 .WithTitle("Okay! Leeeeet's see!")

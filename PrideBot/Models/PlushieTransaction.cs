@@ -12,6 +12,8 @@ namespace PrideBot.Models
         Using = 3,
         Done = 4,
         Plushie = 5, // removed by some plushie effect
-        Void = 6 // removed through admin/debug methods
+        Void = 6, // removed through admin/debug methods
+        Standby = 7, // Used but can be used again more later
+        Pawn = 8
     }
 }

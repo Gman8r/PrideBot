@@ -61,7 +61,7 @@ namespace PrideBot.Repository
             Unknown = 99
         }
 
-        public async Task<AddScoreResult> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, decimal pointsEarned, string approverId, DateTime timestamp, bool ignoreCooldown, DateTime eventStart, int eventDay, string guildId, bool applyPlushies,
+        public async Task<AddScoreResult> AttemptAddScoreAsync(SqlConnection conn, string userId, string achievementId, decimal pointsEarned, string approverId, DateTime timestamp, bool ignoreCooldown, DateTime eventStart, int eventDay, string guildId, bool applyPlushies, string overrideShipId,
             string postGuildId, string postChannelId, string postMessageId)
         {
             var command = new SqlCommand("SP_ADD_SCORE", conn);
@@ -76,6 +76,7 @@ namespace PrideBot.Repository
             command.Parameters.Add(new SqlParameter("@EVENT_START", eventStart));
             command.Parameters.Add(new SqlParameter("@EVENT_DAY", eventDay));
             command.Parameters.Add(new SqlParameter("@APPLY_PLUSHIES", applyPlushies ? "Y" : "N"));
+            command.Parameters.Add(new SqlParameter("@OVERRIDE_SHIP_ID", overrideShipId ?? ""));
 
             command.Parameters.Add(new SqlParameter("@POST_GUILD_ID", postGuildId));
             command.Parameters.Add(new SqlParameter("@POST_CHANNEL_ID", postChannelId));

@@ -146,6 +146,17 @@ namespace PrideBot.Quizzes
             await UpdateQuizSettingsAsync(quizSettings);
 
             await quizChannel.SendMessageAsync(embed: embed.Build(), components: components.Build());
+
+            var tomorrowQuizzes = await repo.GetQuizzesForDayAsync(connection, (day + 1).ToString());
+            if (!tomorrowQuizzes.Any())
+            {
+                var modchat = quizChannel.Guild.GetChannelFromConfig(config, "modchat") as ITextChannel;
+                var sage = quizChannel.Guild.GetRoleFromConfig(config, "sage");
+                await modchat.SendMessageAsync($"{sage.Mention} I don't  have any quizzes scheduled for tomorrow! 😲 Before midnight, someone please:" +
+                    $"\n- visit this url: https://docs.google.com/spreadsheets/d/1XZI_oX-FN445AXRQtjhlHnh3tEjgxZMZEnZxLx4-wRo/edit#gid=1038326624  📝" +
+                    $"\n- choose **2 quizzes from different categories** that have **99** under the **Day** column, and change that value to {(day + 1).ToString()} for both  📑" +
+                    $"\n- use the command `<3 pushtable https://docs.google.com/spreadsheets/d/1XZI_oX-FN445AXRQtjhlHnh3tEjgxZMZEnZxLx4-wRo/edit#gid=1038326624`  🤗");
+            }
         }
 
 

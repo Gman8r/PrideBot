@@ -24,7 +24,7 @@ namespace PrideBot
 
         private Task MessageReceived(SocketMessage msg)
         {
-            if (!(msg is SocketMessage message))
+            if (!(msg is SocketUserMessage message))
                 return Task.CompletedTask;
 
             // react to hi-fives
@@ -34,6 +34,13 @@ namespace PrideBot
                 msg.AddReactionAsync(Emote.Parse(hifiveFlipped)).GetAwaiter();
             else if (message.Content.Equals(hifiveFlipped))
                 msg.AddReactionAsync(Emote.Parse(hiFive)).GetAwaiter();
+
+            else if (message.Content.ToLower().Equals("gay takequiz"))
+                message.ReplyAsync("Huh? ❓ What are you trying to say here? 😕 Are you taking the quiz or not? 📝").GetAwaiter();
+            else if (message.Content.ToLower().Equals("gay ships"))
+                message.ReplyAsync("Why are you looking at me while saying that? 🃏 Yeah they're gay, I guess, so what? 🎁").GetAwaiter();
+            else if (message.Content.ToLower().Equals("gay scores"))
+                message.ReplyAsync("?? Is this some part of human-world language that I'm missing? 📪 I mean I'm trying to get adapted here but I'm seeing weird cult phrases here all over the place. 🗺 Hello?? 📱").GetAwaiter();
 
             return Task.CompletedTask;
         }

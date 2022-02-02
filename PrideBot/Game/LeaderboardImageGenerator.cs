@@ -28,7 +28,7 @@ namespace PrideBot.Game
         public async Task<string> WriteLeaderboardImageAsync(List<Ship> topShips, List<Ship> topRareShips)
         {
             var image = await GenerateLeaderboardAsync(topShips, topRareShips);
-            image.Write("Leady.gif");
+            //image.Write("Leady.gif");
             var path = await image.WriteToWebFileAsync(config, "leaderboard", overrideName: DateTime.Now.ToString("MMddHHmmss"));
             return path;
         }
@@ -203,8 +203,8 @@ namespace PrideBot.Game
                     bgFrame.Composite(staticFrame, Gravity.Northwest, 0, 0, CompositeOperator.Plus);
                 }
 
-                bgFrame.Crop(new MagickGeometry(42, 0, 666, 500));
-                bgFrame.RePage();
+                //bgFrame.Crop(new MagickGeometry(42, 0, 666, 500));
+                //bgFrame.RePage();
 
 
                 //using var grayMask = new MagickImage(bgFrame);
@@ -217,29 +217,29 @@ namespace PrideBot.Game
 
 
 
-                //// Add ship images
-                //for (int j = 0; j < 5; j++)
-                //{
-                //    var x = 60;
-                //    var y = 100 + (j * 76);
-                //    if (j >= topShips.Count)
-                //        break;
-                //    using var shipImage = await shipImageGenerator.GenerateShipImageAsync(topShips[j]);
-                //    shipImage.InterpolativeResize(shipImage.Width * 2, shipImage.Height * 2, PixelInterpolateMethod.Nearest);
-                //    bgFrame.Composite(shipImage, Gravity.Northwest, x, y, CompositeOperator.Over);
-                //}
+                // Add ship images
+                for (int j = 0; j < 5; j++)
+                {
+                    var x = 60;
+                    var y = 100 + (j * 76);
+                    if (j >= topShips.Count)
+                        break;
+                    using var shipImage = await shipImageGenerator.GenerateShipImageAsync(topShips[j]);
+                    shipImage.InterpolativeResize(shipImage.Width * 2, shipImage.Height * 2, PixelInterpolateMethod.Nearest);
+                    bgFrame.Composite(shipImage, Gravity.Northwest, x, y, CompositeOperator.Over);
+                }
 
-                //// Add rare ship images
-                //for (int j = 0; j < 5; j++)
-                //{
-                //    var x = 560;
-                //    var y = 100 + (j * 76);
-                //    if (j >= topRareShips.Count)
-                //        break;
-                //    using var shipImage = await shipImageGenerator.GenerateShipImageAsync(topRareShips[j]);
-                //    shipImage.InterpolativeResize(shipImage.Width * 2, shipImage.Height * 2, PixelInterpolateMethod.Nearest);
-                //    bgFrame.Composite(shipImage, Gravity.Northwest, x, y, CompositeOperator.Over);
-                //}
+                // Add rare ship images
+                for (int j = 0; j < 5; j++)
+                {
+                    var x = 560;
+                    var y = 100 + (j * 76);
+                    if (5 + j >= topShips.Count)
+                        break;
+                    using var shipImage = await shipImageGenerator.GenerateShipImageAsync(topShips[5 + j]);
+                    shipImage.InterpolativeResize(shipImage.Width * 2, shipImage.Height * 2, PixelInterpolateMethod.Nearest);
+                    bgFrame.Composite(shipImage, Gravity.Northwest, x, y, CompositeOperator.Over);
+                }
 
             }
 

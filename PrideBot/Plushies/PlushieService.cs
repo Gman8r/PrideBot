@@ -44,8 +44,9 @@ namespace PrideBot.Plushies
         readonly DiscordSocketClient client;
         readonly ScoringService scoringService;
         readonly UserRegisteredCache userReg;
+        readonly ShipImageGenerator shipImageGenerator;
 
-        public PlushieService(IConfigurationRoot config, ModelRepository repo, PlushieImageService imageService, DiscordSocketClient client, ScoringService scoringService, UserRegisteredCache userReg)
+        public PlushieService(IConfigurationRoot config, ModelRepository repo, PlushieImageService imageService, DiscordSocketClient client, ScoringService scoringService, UserRegisteredCache userReg, ShipImageGenerator shipImageGenerator)
         {
             this.config = config;
             this.repo = repo;
@@ -53,6 +54,7 @@ namespace PrideBot.Plushies
             this.client = client;
             this.scoringService = scoringService;
             this.userReg = userReg;
+            this.shipImageGenerator = shipImageGenerator;
         }
 
 
@@ -114,6 +116,12 @@ namespace PrideBot.Plushies
 
             await scoringService.AddAndDisplayAchievementAsync(connection, owner, "TRADER_BONUS", client.CurrentUser, DateTime.Now,
                 null, applyPlushies: false, titleUrl: msg.Channel is IGuildChannel ? msg.GetJumpUrl() : null);
+        }
+        
+        public async Task PawnUserPlushie(IMessageChannel channel, SocketUser user, int userPlushieId, DiscordSocketClient client, TimeSpan timeout, IDiscordInteraction interaction = null, IMessage originMessage = null)
+        {
+            var session = new PlushiePawnSession(channel, user, userPlushieId, config, client, timeout, scoringService, repo, shipImageGenerator, interaction, originMessage);
+            await session.PerformSessionAsync();
         }
 
     }

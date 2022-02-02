@@ -19,6 +19,8 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using PrideBot.Events;
 using PrideBot.Registration;
+using PrideBot.Repository;
+using Microsoft.Data.SqlClient;
 
 namespace PrideBot.Modules
 {
@@ -29,11 +31,13 @@ namespace PrideBot.Modules
     {
         private IConfigurationRoot config;
         private CommandHandler commandHandler;
+        readonly ModelRepository repo;
 
-        public SecretStealthModule(IConfigurationRoot config, CommandHandler commandHandler)
+        public SecretStealthModule(IConfigurationRoot config, CommandHandler commandHandler, ModelRepository repo)
         {
             this.config = config;
             this.commandHandler = commandHandler;
+            this.repo = repo;
         }
 
         [Command("lambda")]
@@ -53,6 +57,37 @@ namespace PrideBot.Modules
             await ReapplyRoles(Context.Guild);
             await ReplyAsync("Applying...");
         }
+
+        //[Command("applymults")]
+        //public async Task ApplyMults()
+        //{
+        //    using var typing = Context.Channel.EnterTypingState();
+        //    using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
+        //    var allScores = await repo.GetAllShipScoresAsync(connection);
+        //    var count = allScores.Count();
+        //    var i = 0;
+        //    foreach (var shipScore in allScores)
+        //    {
+        //        i++;
+        //        if (shipScore.AchievementId.Contains("REGISTER")
+        //            || !MathHelper.Approximately(shipScore.BalanceMult, 1m, .01m))
+        //            continue;
+        //        var newBalanceMult = await repo.GetScoreBalanceMultForShip(connection, shipScore.ShipId, shipScore.Timestamp, shipScore.UserId);
+        //        if (MathHelper.Approximately(newBalanceMult, 1.0m, .01m))
+        //            continue;
+        //        shipScore.BalanceMult = newBalanceMult;
+        //        shipScore.PointsEarned *= newBalanceMult;
+
+
+        //        var query = $"update dbo.SHIP_SCORES set BALANCE_MULT = {shipScore.BalanceMult}, POINTS_EARNED = {shipScore.PointsEarned}" +
+        //            $" where SCORE_ID = {shipScore.ScoreId} and TIER = {shipScore.Tier}";
+        //        await new SqlCommand(query,connection).ExecuteNonQueryAsync();
+
+
+        //        Console.WriteLine(i + "/" + count);
+        //    }
+        //    await ReplyAsync("Done!");
+        //}
 
         [Command("applybans")]
         [RequireContext(ContextType.Guild)]

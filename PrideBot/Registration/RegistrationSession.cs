@@ -505,8 +505,9 @@ namespace PrideBot.Registration
                 + "\n\n" + DialogueDict.Get("REGISTRATION_CUSTOMIZE_BG" + (dbUser.ShipsSelected ? "_EDIT" : ""), config.GetDefaultPrefix())
                 + "\n\n" + DialogueDict.Get("REGISTRATION_CHOOSE_BG"));
 
+
             var emotes = Enumerable.Range(1, Directory.GetFiles("Assets/Backgrounds").Length)
-                .Select(a => new Emoji(EmoteHelper.NumberEmotes[a]) as IEmote)
+                .Select(a => EmoteHelper.GetNumberEmote(a))
                 .ToList();
 
             var bgImageFile = await GetShipsImageAsync(dbUser, dbUserShips);

@@ -140,9 +140,9 @@ namespace PrideBot.Quizzes
 
             if (timerCutPlushie != null)
             {
-                await repo.DepleteUserPlushieAsync(connection, timerCutPlushie.UserPlushieId, DateTime.Now, false, PlushieEffectContext.Quiz, quiz.QuizId.ToString());
-                plushieService.HandleTraderAwardAsync(connection, timerCutPlushie, channel).GetAwaiter();
-                appliedPlushies.Add(timerCutPlushie);
+                //await repo.DepleteUserPlushieAsync(connection, timerCutPlushie.UserPlushieId, DateTime.Now, false, PlushieEffectContext.Quiz, quiz.QuizId.ToString());
+                //plushieService.HandleTraderAwardAsync(connection, timerCutPlushie, channel).GetAwaiter();
+                //appliedPlushies.Add(timerCutPlushie);
                 timerStartSeconds = 15;
             }
 
@@ -299,10 +299,8 @@ namespace PrideBot.Quizzes
                 embed.Description = DialogueDict.Get($"QUIZ_INCORRECT", correctChoice, user.Queen(client), achievement.DefaultScore);
             embed.Description += "\n\n" + DialogueDict.Get("QUIZ_CLOSING");
 
-            components = new ComponentBuilder()
-                .WithButton("💬 Discuss Today's Quiz!", $"QUIZ.D:{day},{chosenQuizIndex}");
 
-            await channel.SendMessageAsync(embed: embed.Build(), components: components.Build());
+            await channel.SendMessageAsync(embed: embed.Build());
             await AddScoreAndFinish(connection, achievement, quizMessage);
         }
 
@@ -323,6 +321,8 @@ namespace PrideBot.Quizzes
             //    overridePoints = pAchievement.DefaultScore;
             //}
 
+            EmbedBuilder embed;
+
             await scoringService.AddAndDisplayAchievementAsync(connection, user, achievement, client.CurrentUser, DateTime.Now, quizMessage, titleUrl: quizOpenedUrl, overridePoints: overridePoints, appliedPlushies: appliedPlushies);
             var previousLog = await repo.GetLastQuizLogForUserAsync(connection, user.Id.ToString(), quizLog.Day.ToString());
             // Streak bonus
@@ -331,12 +331,21 @@ namespace PrideBot.Quizzes
                 if (previousLog != null && previousLog.Correct && previousLog.Guesses == 1)
                 {
                     await scoringService.AddAndDisplayAchievementAsync(connection, user, "QUIZ_STREAK", client.CurrentUser, DateTime.Now, quizMessage, titleUrl: quizOpenedUrl, appliedPlushies: appliedPlushies);
-                    var embed = GetEmbed()
+                    embed = GetEmbed()
                         .WithTitle("🔥 Streak!!")
                         .WithDescription(DialogueDict.Get("QUIZ_STREAK"));
                     await channel.SendMessageAsync(embed: embed.Build());
                 }
             }
+
+
+            // add quiz discussion  link
+            embed = EmbedHelper.GetEventEmbed(user, config)
+                .WithDescription("Click here to discuss!🐭");
+            var components = new ComponentBuilder()
+                .WithButton("💬 Discuss Today's Quiz!", $"QUIZ.D:{GameHelper.GetEventDay(config)},{chosenQuizIndex}");
+
+            await channel.SendMessageAsync(embed: embed.Build(), components: components.Build());
 
             //var guildUser = gyn.GetUser(user.Id);
             //if (guildUser != null && availableQuizzes != null && availableQuizzes.Any())

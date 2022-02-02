@@ -96,6 +96,8 @@ namespace PrideBot.Modules
                 case PlushieAction.Draw:
                     await message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build());
                     await plushieService.DrawPlushie(connection, Context.Channel, Context.Interaction.User as SocketUser, Context.Interaction);
+                    (Context.Interaction as SocketMessageComponent).Message.DeleteAsync().GetAwaiter();
+                    repostAction = RepostAction.Post;
                     break;
                 case PlushieAction.Trade:
                     await message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build());
@@ -103,19 +105,8 @@ namespace PrideBot.Modules
                     selectedPlushieId = 0;
                     break;
                 case PlushieAction.Pawn:
-                    // TODO
-                    //var session = new 
-                    //var dbCharacters = await repo.GetAllCharactersAsync(connection);
-                    //var shipResult = await RegistrationSession.ParseShipAsync(connection, repo, shipName, dbCharacters);
-                    //if (!shipResult.IsSuccess)
-                    //    throw new CommandException(shipResult.ErrorMessage);
-                    //var ship = shipResult.Value;
-                    //var validationResult = await RegistrationSession.ValidateShipAsync(connection, shipResult.Value, dbCharacters);
-                    //if (!validationResult.IsSuccess)
-                    //    throw new CommandException(DialogueDict.Get("SHIP_SCORES_INVALID"));
-
-                    //await Context.Interaction.FollowupAsync("bababa u used it");
-                    //selectedPlushieId = 0;
+                    await message.ModifyAsync(a => a.Components = message.Components.ToBuilder().WithAllDisabled(true).Build());
+                    await plushieService.PawnUserPlushie(message.Channel, sUser, selectedPlushieId, client, TimeSpan.FromMinutes(5), Context.Interaction);
                     break;
                 case PlushieAction.BringToBottom:
                 case PlushieAction.Close:
