@@ -117,6 +117,7 @@ namespace PrideBot.Game
                 {
                     var forcedUserShip = dbShips.Get(UserShipTier.Primary);
                     var forcedShip = await repo.GetShipAsync(connection, overrideShip);
+                    var existingUserShip = dbShips.FirstOrDefault(a => a.ShipId.Equals(forcedShip.ShipId));
 
                     // fuuuuuuuuuuck
                     forcedUserShip.ShipId = forcedShip.ShipId;
@@ -134,10 +135,20 @@ namespace PrideBot.Game
                     forcedUserShip.UnderdogPlace = forcedShip.UnderdogPlace;
                     forcedUserShip.SoloPlace = forcedShip.SoloPlace;
                     forcedUserShip.TopSupporter = forcedShip.TopSupporter;
-                    forcedUserShip.Heart1 = null;
-                    forcedUserShip.Heart1Right = null;
-                    forcedUserShip.Heart2 = null;
-                    forcedUserShip.Heart2Right = null;
+                    if (existingUserShip != null)
+                    {
+                        forcedUserShip.Heart1 = existingUserShip.Heart1;
+                        forcedUserShip.Heart1Right = existingUserShip.Heart1Right;
+                        forcedUserShip.Heart2 = existingUserShip.Heart2;
+                        forcedUserShip.Heart2Right = existingUserShip.Heart2Right;
+                    }
+                    else
+                    {
+                        forcedUserShip.Heart1 = null;
+                        forcedUserShip.Heart1Right = null;
+                        forcedUserShip.Heart2 = null;
+                        forcedUserShip.Heart2Right = null;
+                    }
                     // i feel gross
 
                     dbShips = new UserShipCollection(new List<UserShip>() { forcedUserShip });
@@ -183,7 +194,7 @@ namespace PrideBot.Game
             {
                 try
                 {
-                    await reportChannel.SendMessageAsync("Heyyy mod person! Just making sure you fill in the value on the 1CC table for that achievement!\n https://docs.google.com/spreadsheets/d/1vdAQ1QvBsuJViY8pftYxZXfEP8HWkCzzIf0IhSJCJcY/edit#gid=0");
+                    await reportChannel.SendMessageAsync("Heyyy mod person! Just making sure you fill in the value on the 1CC table for that achievement!\n <https://docs.google.com/spreadsheets/d/1vdAQ1QvBsuJViY8pftYxZXfEP8HWkCzzIf0IhSJCJcY/edit#gid=0>");
                 }
                 catch
                 {

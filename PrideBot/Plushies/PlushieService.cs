@@ -120,7 +120,7 @@ namespace PrideBot.Plushies
         
         public async Task PawnUserPlushie(IMessageChannel channel, SocketUser user, int userPlushieId, DiscordSocketClient client, TimeSpan timeout, IDiscordInteraction interaction = null, IMessage originMessage = null)
         {
-            var session = new PlushiePawnSession(channel, user, userPlushieId, config, client, timeout, scoringService, repo, shipImageGenerator, interaction, originMessage);
+            var session = new PlushiePawnSession(channel, user, userPlushieId, config, client, timeout, scoringService, repo, shipImageGenerator, this, interaction, originMessage);
             await session.PerformSessionAsync();
         }
 

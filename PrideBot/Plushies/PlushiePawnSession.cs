@@ -19,25 +19,27 @@ namespace PrideBot.Plushies
         private readonly ScoringService scoringService;
         private readonly int userPlushieId;
         private readonly ShipImageGenerator shipImageGenerator;
+        private readonly PlushieService plushieService;
 
-        public PlushiePawnSession(IMessageChannel channel, SocketUser user, int userPlushieId, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, ScoringService scoringService, ModelRepository repo, ShipImageGenerator shipImageGenerator, IDiscordInteraction interaction = null, IMessage originMessage = null) : base(channel, user, config, client, timeout)
+        public PlushiePawnSession(IMessageChannel channel, SocketUser user, int userPlushieId, IConfigurationRoot config, DiscordSocketClient client, TimeSpan timeout, ScoringService scoringService, ModelRepository repo, ShipImageGenerator shipImageGenerator, PlushieService plushieService, IDiscordInteraction interaction = null, IMessage originMessage = null) : base(channel, user, config, client, timeout)
         {
             this.repo = repo;
             this.interaction = interaction;
             this.scoringService = scoringService;
             this.userPlushieId = userPlushieId;
             this.shipImageGenerator = shipImageGenerator;
+            this.plushieService = plushieService;
         }
 
         protected override async Task PerformSessionInternalAsync()
         {
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
             var dbCharacters = await repo.GetAllCharactersAsync(connection);
-            var plushie = await repo.GetUserPlushieAsync(connection, userPlushieId);
+            var userPlushie = await repo.GetUserPlushieAsync(connection, userPlushieId);
 
             var embed = EmbedHelper.GetEventEmbed(user, config)
                 .WithTitle("Sell Your Goods")
-                .WithDescription(DialogueDict.Get("PAWN_PLUSHIE_SHIP", plushie.CharacterName));
+                .WithDescription(DialogueDict.Get("PAWN_PLUSHIE_SHIP", userPlushie.CharacterName));
 
             var components = new ComponentBuilder()
                 .WithButton("Enter The Pairing as Text [Character One X Character Two]",
@@ -65,8 +67,8 @@ namespace PrideBot.Plushies
             }
             var ship = shipResult.Value;
 
-            if (!ship.CharacterId1.Equals(plushie.CharacterId, StringComparison.OrdinalIgnoreCase)
-                && !ship.CharacterId2.Equals(plushie.CharacterId, StringComparison.OrdinalIgnoreCase))
+            if (!ship.CharacterId1.Equals(userPlushie.CharacterId, StringComparison.OrdinalIgnoreCase)
+                && !ship.CharacterId2.Equals(userPlushie.CharacterId, StringComparison.OrdinalIgnoreCase))
             {
                 // yell
                 MarkCancelled(DialogueDict.Get("PAWN_PLUSHIE_NO_CHAR"));
@@ -111,6 +113,8 @@ namespace PrideBot.Plushies
 
             // goodbye card u were nice
             await repo.AttemptRemoveUserPlushieAsync(connection, userPlushieId, PlushieTransaction.Pawn, DateTime.Now);
+
+            await plushieService.HandleTraderAwardAsync(connection, userPlushie, channel);
 
         }
     }
