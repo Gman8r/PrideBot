@@ -134,18 +134,18 @@ namespace PrideBot.Quizzes
         {
             using var connection = repo.GetDatabaseConnection();
             await connection.OpenAsync();
-            var quizzes = await repo.GetQuizzesForDayAsync(connection, day.ToString());
-            var embed = GetQuizReviewEmbed(quizzes.ToList())
-                .WithTitle("Daily Quiz Closed")
-                .WithDescription(DialogueDict.Get("DAILY_QUIZ_CLOSED", day));
+            //var quizzes = await repo.GetQuizzesForDayAsync(connection, day.ToString());
+            //var embed = GetQuizReviewEmbed(quizzes.ToList())
+            //    .WithTitle("Daily Quiz Closed")
+            //    .WithDescription(DialogueDict.Get("DAILY_QUIZ_CLOSED", day));
 
-            var components = new ComponentBuilder()
-                .WithButton("💬 Discuss It!", $"QUIZ.D:{day},{-1}");
+            //var components = new ComponentBuilder()
+            //    .WithButton("💬 Discuss It!", $"QUIZ.D:{day},{-1}");
 
-            quizSettings.open = false;
-            await UpdateQuizSettingsAsync(quizSettings);
+            //quizSettings.open = false;
+            //await UpdateQuizSettingsAsync(quizSettings);
 
-            await quizChannel.SendMessageAsync(embed: embed.Build(), components: components.Build());
+            //await quizChannel.SendMessageAsync(embed: embed.Build(), components: components.Build());
 
             var tomorrowQuizzes = await repo.GetQuizzesForDayAsync(connection, (day + 1).ToString());
             if (!tomorrowQuizzes.Any())

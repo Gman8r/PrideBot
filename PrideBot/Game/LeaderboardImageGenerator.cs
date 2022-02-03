@@ -25,9 +25,9 @@ namespace PrideBot.Game
             this.shipImageGenerator = shipImageGenerator;
         }
 
-        public async Task<string> WriteLeaderboardImageAsync(List<Ship> topShips, List<Ship> topRareShips)
+        public async Task<string> WriteLeaderboardImageAsync(List<Ship> topShips)
         {
-            var image = await GenerateLeaderboardAsync(topShips, topRareShips);
+            var image = await GenerateLeaderboardAsync(topShips);
             //image.Write("Leady.gif");
             var path = await image.WriteToWebFileAsync(config, "leaderboard", overrideName: DateTime.Now.ToString("MMddHHmmss"));
             return path;
@@ -63,7 +63,7 @@ namespace PrideBot.Game
                 return Math.Clamp(t, -1.0, 1.0);
         }
 
-        public async Task<MagickImageCollection> GenerateLeaderboardAsync(List<Ship> topShips, List<Ship> topRareShips)
+        public async Task<MagickImageCollection> GenerateLeaderboardAsync(List<Ship> topShips)
         {
             var rand = new Random();
             var bgCollection = await GenerateBackgroundGifAsync(rand);
@@ -241,8 +241,12 @@ namespace PrideBot.Game
                     bgFrame.Composite(shipImage, Gravity.Northwest, x, y, CompositeOperator.Over);
                 }
 
+                bgFrame.Resize(400, 267);
+
             }
 
+            //bgCollection.Optimize();
+            bgCollection.OptimizeTransparency();
             return bgCollection;
         }
 

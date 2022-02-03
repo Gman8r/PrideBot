@@ -119,18 +119,18 @@ namespace PrideBot.Game
                 .OrderByDescending(a => a.PointsEarned)
                 .ThenByDescending(a => a.Supporters)
                 .ToList();
-            var topRareShips = topShips
-                .Where(a => a.Supporters <= 5)
-                .ToList();
+            //var ships2 = topShips
+            //    .Where(a => a.Supporters <= 5)
+            //    .ToList();
 
-            var imagePath = await leaderboardImageGenerator.WriteLeaderboardImageAsync(topShips, topRareShips);
+            var imagePath = await leaderboardImageGenerator.WriteLeaderboardImageAsync(topShips);
             var embed = EmbedHelper.GetEventEmbed(null, config)
                 .WithDescription(DialogueDict.Get("LEADERBOARD_DESCRIPTION"))
                 .WithTitle("**The red string connects us all!**")
                 .WithImageUrl(config.GetRelativeHostPathWeba(imagePath));
             embed.Fields = new List<EmbedFieldBuilder>();
             embed.Fields.AddRange(GetEmbedFieldsForLeaderboard(topShips, "Champions of Love:"));
-            embed.Fields.AddRange(GetEmbedFieldsForLeaderboard(topRareShips, "Our Beloved Underdogs:"));
+            //embed.Fields.AddRange(GetEmbedFieldsForLeaderboard(ships2, "Our Beloved Underdogs:"));
 
             return embed;
         }
@@ -149,8 +149,8 @@ namespace PrideBot.Game
             var maxLength = 10;
             var lengths = new int[1];
             lengths[0] = Math.Min((int)Math.Ceiling((double)namesList.Count / 1.0), maxLength);
-            //lengths[1] = Math.Min((int)Math.Ceiling((double)namesList.Count / 3.0), maxLength);
-            //lengths[2] = Math.Min(namesList.Count - lengths[0] - lengths[1], maxLength);
+            lengths[1] = Math.Min((int)Math.Ceiling((double)namesList.Count / 3.0), maxLength);
+            lengths[2] = Math.Min(namesList.Count - lengths[0] - lengths[1], maxLength);
             var fields = new List<EmbedFieldBuilder>();
             for (int i = 0; i < lengths.Length; i++)
             {

@@ -554,7 +554,7 @@ namespace PrideBot.Modules
 
             var desc = (ship.Supporters > 0 || ship.PointsEarned > 0)
                 ? DialogueDict.Get("SHIP_SCORES_DESC", ship.GetDisplayName(),
-                    ((int)ship.Place).ToString() + MathHelper.GetPlacePrefix((int)ship.Place).ToString(), ship.PointsEarned, supporterLines.Count(), shiptRarityMult)
+                    ((int)ship.Place).ToString() + MathHelper.GetPlacePrefix((int)ship.Place).ToString(), (int)Math.Round(ship.PointsEarned), supporterLines.Count(), shiptRarityMult)
                 : DialogueDict.Get("SHIP_SCORES_NO_POINTS");
 
 
