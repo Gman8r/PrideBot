@@ -266,7 +266,7 @@ namespace PrideBot.Quizzes
                     if (GameHelper.IsEventOccuring(config))
                     {
                         var modChannel = mainClient.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
-                        await modChannel.SendMessageAsync("The module will be attempt to re-enable in 30 minutes.");
+                        await modChannel.SendMessageAsync($"The {this.GetType().Name} module will be attempt to re-enable in 30 minutes.");
                         await Task.Delay(30 * 60000);
                         DoGameLoop().GetAwaiter();
                     }

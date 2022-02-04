@@ -86,7 +86,7 @@ namespace PrideBot.Game
                     if (GameHelper.IsEventOccuring(config))
                     {
                         var modChannel = client.GetGyn(config).GetChannelFromConfig(config, "modchat") as SocketTextChannel;
-                        await modChannel.SendMessageAsync("The module will be attempt to re-enable in 30 minutes.");
+                        await modChannel.SendMessageAsync($"The {this.GetType().Name} module will be attempt to re-enable in 30 minutes.");
                         await Task.Delay(30 * 60000);
                         DoLeaderboardLoop().GetAwaiter();
                     }
@@ -147,19 +147,26 @@ namespace PrideBot.Game
             var namesList = ships.Select(a =>
                 GetShipPlacementString(a, ships.IndexOf(a) + 1, includeTopContributor) + "\n").ToList();
             var maxLength = 10;
-            var lengths = new int[1];
+            var lengths = new int[3];
             lengths[0] = Math.Min((int)Math.Ceiling((double)namesList.Count / 1.0), maxLength);
             lengths[1] = Math.Min((int)Math.Ceiling((double)namesList.Count / 3.0), maxLength);
             lengths[2] = Math.Min(namesList.Count - lengths[0] - lengths[1], maxLength);
             var fields = new List<EmbedFieldBuilder>();
             for (int i = 0; i < lengths.Length; i++)
             {
-                var field = new EmbedFieldBuilder()
-                    .WithName("\u200B")
-                    .WithValue(string.Join("\n", namesList.Take(lengths[i])))
-                    .WithIsInline(true);
-                namesList = namesList.Skip(lengths[i]).ToList();
-                fields.Add(field);
+                try
+                {
+                    var field = new EmbedFieldBuilder()
+                        .WithName("\u200B")
+                        .WithValue(namesList.Count() == 0 || lengths[i] == 0 ? "AAAASFJHAs" : string.Join("\n", namesList.Take(lengths[i])))
+                        .WithIsInline(true);
+                    namesList = namesList.Skip(lengths[i]).ToList();
+                    fields.Add(field);
+                }
+                catch(Exception e)
+                {
+
+                }
             }
             fields[0].Name = name;
             return fields;
