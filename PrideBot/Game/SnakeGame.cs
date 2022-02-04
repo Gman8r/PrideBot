@@ -91,7 +91,6 @@ namespace PrideBot.Quizzes
                         await TsuchiConnectRandomAsync(new Random());
                         return;
                     }
-                    tsuchiConnectedChannel = null;
                     await loggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "SnakeGame", $"Snake caught by {user.Username}"));
 
                     //var lastSnakeScore = await repo.GetLastScoreFromAchievementAsync(connection, "SNAKE");
@@ -115,6 +114,7 @@ namespace PrideBot.Quizzes
                         }
                         snakeCaughtToday = true;
                     }
+                    tsuchiConnectedChannel = null;
                 }
                 catch(Exception e)
                 {
@@ -247,7 +247,7 @@ namespace PrideBot.Quizzes
 
                         if (snakeCaughtToday)
                             await SetLastSnakeDayAsync(DateTime.Now.Day);
-                        nextSnakeTime = GetSnakeTime(DateTime.Now.Day + 1,
+                        nextSnakeTime = GetSnakeTime((await GetLastSnakeDayAsync()) == DateTime.Now.Day ? DateTime.Now.Day + 1 : DateTime.Now.Day,
                             await GetVoiceMinutesAsync(), rand);
 
                     }
