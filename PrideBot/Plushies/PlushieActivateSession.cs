@@ -229,13 +229,33 @@ namespace PrideBot.Plushies
             if (lastUsed == null)
                 throw new CommandException(DialogueDict.Get("PLUSHIE_COPYCAT_NONE"));
 
+
+            // confirm their choice
+            var plushieImageFile = await imageService.WritePlushieImageAsync(lastUsed);
             var embed = EmbedHelper.GetEventEmbed(user, config)
-                .WithTitle("Copying! 😽")
-                .WithDescription(DialogueDict.Get("PLUSHIE_COPYCAT", lastUsed.CharacterName));
-            var msg = await channel.SendMessageAsync(embed: embed.Build());
+                .WithTitle("Copy This Plushie?")
+                .WithDescription(DialogueDict.Get("PLUSHIE_COPYCAT_CONFIRM", lastUsed.CharacterName, lastUsed.Name))
+                .WithAttachedThumbnailUrl(plushieImageFile);
+            var yesNoComponents = new ComponentBuilder()
+                .WithButton("Yeah!", "YES", ButtonStyle.Success, new Emoji("👍"))
+                .WithButton("Nevermind, Not That One", "NO", ButtonStyle.Secondary, new Emoji("❌"));
+
+            var response = await SendAndAwaitNonTextResponseAsync(embed: embed, components: yesNoComponents, file: plushieImageFile);
+            if (response.IsNo)
+            {
+                MarkCancelled("We'll try again later then. 🔁");
+                throw new OperationCanceledException();
+            }
+
+            // Confirmed from here below
+
+            //embed = EmbedHelper.GetEventEmbed(user, config)
+            //    .WithTitle("Copying! 😽")
+            //    .WithDescription(DialogueDict.Get("PLUSHIE_COPYCAT", lastUsed.CharacterName));
+            //var msg = await channel.SendMessageAsync(embed: embed.Build());
 
             // deplete copy cat first
-            await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
+            await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, response.BotMessage.Id.ToString());
 
             // add a new user plushie from it
             var newUserPlushie = await repo.ForceAddPlushieAsync(connection, user.Id.ToString(), lastUsed.CharacterId, lastUsed.PlushieId, lastUsed.Rotation);
