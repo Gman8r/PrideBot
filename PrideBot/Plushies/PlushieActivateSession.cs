@@ -97,6 +97,9 @@ namespace PrideBot.Plushies
                     case "QUIZ_DOUBLE_DARE":
                         await QuizDoubleDareAsync(userPlushie);
                         break;
+                    case "CONTINUE":
+                        await ContinueAsync(userPlushie);
+                        break;
                     case "FACTORY_RESET":
                         await RandomResetAsync(userPlushie);
                         break;
@@ -157,7 +160,39 @@ namespace PrideBot.Plushies
             }
 
             // user is already in a quiz
-            throw new CommandException("This should not be seen, so congratulations I guess!!");
+            throw new CommandException("This message should not be seen, so congratulations I guess!! Anyway you can't use this in a quiz.");
+        }
+
+        async Task ContinueAsync(UserPlushie userPlushie)
+        {
+            var validPlushies = (await repo.GetInEffectUserPlushiesForUserAsync(connection, user.Id.ToString(), DateTime.Now))
+                .Where(a =>a.RemainingUses < a.Uses || a.DurationHours > 0);
+            if (!validPlushies.Any())
+            {
+                MarkCancelled(DialogueDict.Get("PLUSHIE_CONTINUE_NONE"));
+                throw new OperationCanceledException();
+            }
+
+            var result = await repo.ResetActiveUserPlushiesAsync(connection, user.Id.ToString(), DateTime.Now);
+            if (result != StandardTransactionError.None)
+            {
+                MarkCancelled(DialogueDict.Get("EXCEPTION"));
+                throw new OperationCanceledException();
+            }
+
+            // backup method
+            //foreach (var plushie in validPlushies)
+            //{
+            //    await repo.ActivateUserPlushieAsync(connection, plushie.UserPlushieId, DateTime.Now);
+            //}
+
+            var embed = EmbedHelper.GetEventEmbed(user, config)
+                .WithTitle("Back We Go 🕰")
+                .WithDescription(DialogueDict.Get("PLUSHIE_CONTINUE_COMPLETE"));
+            var msg = await channel.SendMessageAsync(embed: embed.Build());
+
+            // deplete plushie
+            await repo.DepleteUserPlushieAsync(connection, userPlushie.UserPlushieId, DateTime.Now, true, PlushieEffectContext.Message, msg.Id.ToString());
         }
 
         async Task ClearanceSaleAsync(UserPlushie userPlushie)
@@ -319,10 +354,12 @@ namespace PrideBot.Plushies
                 tutorial += hundredsPlus.ToString();
             tutorial += $"**{tens}{ones}** {EmoteHelper.SPEmote}.";
 
+
             var digitsSum = ones + tens;
             var pointMult = 7; // TODO db mult
             var pointsTotal = digitsSum * pointMult;
             tutorial += $"\n\n{ones} + {tens} = **{digitsSum}**";
+            tutorial += $"\n\n{digitsSum} x {pointMult} = **{pointsTotal}**";
             tutorial += $"\n\n {DialogueDict.Get("PLUSHIE_ADVANCED_MATHEMATICS")}";
 
             var embed = EmbedHelper.GetEventEmbed(user, config)

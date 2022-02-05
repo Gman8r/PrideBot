@@ -149,13 +149,22 @@ namespace PrideBot.Events
                 return await channel.SendFileAsync(embedData.Item2.Stream, embedData.Item2.FileName, dialogue.MessageText ?? "", embed: embedData.Item1.Build());
         }
 
-        private async Task<(EmbedBuilder, MemoryFile)> GenerateEmbedDataAsync(DiscordSocketClient client, SceneDialogue dialogue)
+        public async Task<(EmbedBuilder, MemoryFile)> GenerateEmbedDataAsync(DiscordSocketClient client, SceneDialogue dialogue)
         {
             MemoryFile file = null;
+            var gUser = client.GetGyn(config)
+                .GetUser(client.CurrentUser.Id);
+            var color = gUser.Roles
+                    .OrderByDescending(a => a.Position)
+                    .FirstOrDefault(a => a.Color != default)?
+                    .Color ?? default;
+
             var embed = EmbedHelper.GetEventEmbed(null, config)
+                .WithColor(color)
                 .WithTitle(StringHelper.WhitespaceCoalesce(dialogue.Title))
                 .WithThumbnailUrl(StringHelper.WhitespaceCoalesce(dialogue.ThumbnailImage, client.CurrentUser.GetAvatarUrl(size: 128)))
                 .WithImageUrl(StringHelper.WhitespaceCoalesce(dialogue.Attachment));
+
 
             //dialogue loop
             var lines = dialogue.Content.Split('\n', StringSplitOptions.None);

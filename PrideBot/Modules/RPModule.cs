@@ -19,6 +19,7 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using PrideBot.Events;
 using PrideBot.Graphics;
+using PrideBot.Repository;
 
 namespace PrideBot.Modules
 {
@@ -28,10 +29,14 @@ namespace PrideBot.Modules
     public class RPModule : PrideModuleBase
     {
         private readonly IConfigurationRoot config;
-        
-        public RPModule(IConfigurationRoot config)
+        private readonly RpControlMenuService rpControlMenuService;
+        private readonly ModelRepository repo;
+
+        public RPModule(IConfigurationRoot config, RpControlMenuService rpControlMenuService, ModelRepository repo)
         {
             this.config = config;
+            this.rpControlMenuService = rpControlMenuService;
+            this.repo = repo;
         }
 
 
@@ -86,6 +91,14 @@ namespace PrideBot.Modules
             {
                 throw new CommandException("You need to put a url!");
             }
+        }
+
+        [Command("rpcontrol")]
+        [RequireSage]
+        public async Task RpControl()
+        {
+            using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
+            await rpControlMenuService.PostRpMenuAsync(connection, Context.Channel as ITextChannel);
         }
 
     }

@@ -146,6 +146,7 @@ namespace PrideBot
                 .AddSingleton<VoiceScoringService>()
                 .AddSingleton<MiscMessageReactionService>()
                 .AddSingleton<SnakeGame>()
+                .AddSingleton<RpControlMenuService>()
                 .AddSingleton<LeaderboardImageGenerator>()
                 .AddSingleton<BullshitService>()
                 .AddSingleton<LeaderboardService>()
