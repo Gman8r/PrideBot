@@ -94,11 +94,12 @@ namespace PrideBot.Modules
             {
                 throw;
             }
-            catch (Exception e)
+            catch(Exception e)
             {
                 await plushieService.GiveUserPlushie(connection, Context.Channel, user, characterId);
             }
             await ReplyResultAsync("Done!");
+            await Plushie(user);
         }
 
         [Command("clearplushies")]
@@ -112,6 +113,7 @@ namespace PrideBot.Modules
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
             await repo.ClearUserPlushiesAsync(connection, user.Id.ToString());
             await ReplyResultAsync("Done!");
+            await Plushie();
         }
     }
 }
