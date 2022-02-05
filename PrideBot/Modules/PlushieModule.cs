@@ -90,7 +90,11 @@ namespace PrideBot.Modules
             {
                 await plushieService.GiveUserPlushieCharacter(connection, Context.Channel, user, characterId);
             }
-            catch
+            catch (CommandException e)
+            {
+                throw;
+            }
+            catch (Exception e)
             {
                 await plushieService.GiveUserPlushie(connection, Context.Channel, user, characterId);
             }

@@ -79,7 +79,9 @@ namespace PrideBot.Plushies
                 .FirstOrDefault(a => a.PlushieId?.ToUpper().Trim().Equals(plushieId.ToUpper().Trim()) ?? false);
             var result = await repo.AttemptAddUserPlushieAsync(connection, user.Id.ToString(), null, user.Id.ToString(), character.PlushieId, character.CharacterId,
                 GameHelper.GetEventDay(config), 0m, PlushieTransaction.Drawn);
-            result.CheckErrors();
+            var commandResult = result.CheckErrors();
+            if (!commandResult.IsSuccess)
+                throw new CommandException(commandResult.ErrorMessage);
         }
 
 
@@ -88,7 +90,9 @@ namespace PrideBot.Plushies
             var character = await repo.GetCharacterAsync(connection, characterId);
             var result = await repo.AttemptAddUserPlushieAsync(connection, user.Id.ToString(), null, user.Id.ToString(), character.PlushieId, characterId,
                 GameHelper.GetEventDay(config), 0m, PlushieTransaction.Drawn);
-            result.CheckErrors();
+            var commandResult = result.CheckErrors();
+            if (!commandResult.IsSuccess)
+                throw new CommandException(commandResult.ErrorMessage);
         }
 
         public async Task ActivateUserPlushie(SqlConnection connection, SocketGuildUser user, UserPlushie userPlushie, IMessageChannel channel, IServiceProvider provider, IDiscordInteraction interaction = null)
