@@ -105,6 +105,17 @@ namespace PrideBot.Modules
             await ReplyAsync("Applying...");
         }
 
+        [Command("event")]
+        [RequireContext(ContextType.Guild)]
+        public async Task PlushieEvent()
+        {
+            var guild = Context.Client.GetGyn(config);
+            await guild.CreateEventAsync("The Great Plushie Singularity",
+                new DateTime(2022, 2, 14), GuildScheduledEventType.External, GuildScheduledEventPrivacyLevel.Private,
+                "At the peak of love and destiny, life can begin anew. 💗",
+                new DateTime(2022, 2, 15), null, "All of GYN, all of Gensokyo");
+        }
+
         //[Command("postteaser")]
         //[Alias("postteaser")]
         //public async Task PostTeaser(ITextChannel channel, string username, string content)
