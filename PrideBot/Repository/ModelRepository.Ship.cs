@@ -47,6 +47,13 @@ namespace PrideBot.Repository
             return shipIdParam.Value.ToString();
         }
 
+        public async Task UpdateShipRecordsAsync(SqlConnection conn)
+        {
+            var command = new SqlCommand("SP_UPDATE_SHIP_RECORDS", conn);
+            command.CommandType = CommandType.StoredProcedure;
+            await command.ExecuteNonQueryAsync();
+        }
+
         public async Task<int> AddShipAsync(SqlConnection conn, Ship value)
             => await DatabaseHelper.GetInsertCommand(conn, value, "SHIPS").ExecuteNonQueryAsync();
 
@@ -56,13 +63,13 @@ namespace PrideBot.Repository
         public async Task<decimal> GetScoreRatioForShipTierAsync(SqlConnection conn, UserShipTier tier)
             => (decimal)(await new SqlCommand($"select dbo.fnGetScoreRatioForTier({(int)tier})", conn).ExecuteScalarAsync());
 
-        public async Task<decimal> GetActiveSypportersForShipTierAsync(SqlConnection conn, string shipId, DateTime since, string forceIncludeUserId)
+        public async Task<decimal> GetActiveSypportersForShipTierAsync(SqlConnection conn, string shipId, DateTime since, string forceIncludeUserId, int forceTier)
             => (decimal)(await new SqlCommand($"select dbo.fnGetActiveSupporterCount('{shipId}', '{since}'," +
-                $" {(forceIncludeUserId == null ? "null" : $"'{forceIncludeUserId}'")})", conn).ExecuteScalarAsync());
+                $" {(forceIncludeUserId == null ? "null" : $"'{forceIncludeUserId}'")}, {forceTier})", conn).ExecuteScalarAsync());
 
-        public async Task<decimal> GetScoreBalanceMultForShip(SqlConnection conn, string shipId, DateTime since, string forceIncludeUserId)
+        public async Task<decimal> GetScoreBalanceMultForShip(SqlConnection conn, string shipId, DateTime since, string forceIncludeUserId, int forceTier)
             => (decimal)(await new SqlCommand($"select dbo.fnGetBalanceMultForShip('{shipId}', '{since}'," +
-                $" {(forceIncludeUserId == null ? "null" : $"'{forceIncludeUserId}'")})", conn).ExecuteScalarAsync());
+                $" {(forceIncludeUserId == null ? "null" : $"'{forceIncludeUserId}'")}, {forceTier})", conn).ExecuteScalarAsync());
 
         public async Task SwapShipTiersAsync(SqlConnection conn, string userId, UserShipTier tier1, UserShipTier tier2)
         {

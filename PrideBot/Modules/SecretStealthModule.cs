@@ -21,6 +21,8 @@ using PrideBot.Events;
 using PrideBot.Registration;
 using PrideBot.Repository;
 using Microsoft.Data.SqlClient;
+using System.Text.RegularExpressions;
+using PrideBot.Models;
 
 namespace PrideBot.Modules
 {
@@ -38,6 +40,188 @@ namespace PrideBot.Modules
             this.config = config;
             this.commandHandler = commandHandler;
             this.repo = repo;
+        }
+
+        [Command("restore")]
+        async Task Restore()
+        {
+            // part 1
+            using var typing = Context.Channel.EnterTypingState();
+            ulong startMessageId = 939754618932584528;
+            var channel = Context.Client.GetGuild(932055111583293500).GetTextChannel(932055114078908543);
+
+            using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
+            var allShips = await repo.GetAllShipsAsync(connection);
+            var allScores = await repo.GetAllScoresAsync(connection);
+            //var allUsers = await repo.GetAllUsersAsync(connection);
+
+            var cachedMults = new Dictionary<string, decimal>();
+            try
+            {
+                foreach (var score in allScores.Where(a => a.ScoreId >= 16145 && a.AchievementId.Equals("CHAT")))
+                {
+                    var user = await repo.GetOrCreateUserAsync(connection, score.UserId);
+                    var userShips = await repo.GetUserShipsAsync(connection, user.UserId);
+                    foreach (var ship in userShips)
+                    {
+
+                        decimal pointsEarned = score.PointsEarned;
+                        decimal rarityMult;
+                        if (cachedMults.ContainsKey(ship.ShipId))
+                        {
+                            rarityMult = cachedMults[ship.ShipId];
+                        }
+                        else
+                        {
+                            rarityMult = await repo.GetScoreBalanceMultForShip(connection, ship.ShipId, score.Timestamp, score.UserId, -1);
+                            cachedMults[ship.ShipId] = rarityMult;
+                        }
+                        pointsEarned *= rarityMult;
+
+                        var shipScore = new ShipScore()
+                        {
+                            ScoreId = score.ScoreId,
+                            Tier = ship.Tier,
+                            ShipId = ship.ShipId,
+                            PointsEarned = pointsEarned,
+                            BonusMult = 1m,
+                            TierMult = ship.Tier == 0 ? 1m : (ship.Tier == 1 ? .4m : .2m),
+                            BalanceMult = rarityMult
+                        };
+                        var result = await DatabaseHelper.GetInsertCommand(connection,
+                            shipScore, "SHIP_SCORES").ExecuteNonQueryAsync();
+
+                        if (result < 1)
+                        {
+
+                        }
+                    }
+                }
+            }
+            catch(Exception e)
+            {
+
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+            return;
+            while (true)
+            {
+
+                var messages = (await channel.GetMessagesAsync(startMessageId - 1, Direction.After).FlattenAsync())
+                    .OrderBy(a => a.Timestamp);
+                if (startMessageId == messages.Last().Id)
+                    break;
+                startMessageId = messages.Last().Id;
+
+                foreach (var message in messages)
+                {
+                    try
+                    {
+                        if (!message.Author.IsBot || (message.Embeds?.First().Fields.Count() ?? 0) == 0)
+                            continue;
+                        var embed = message.Embeds.First();
+                        var scoreId = embed
+                            .Footer.Value.ToString().Split().First();
+                        var score = await repo.GetScoreAsync(connection, scoreId);
+                        if (score == null)
+                            continue;
+                        var timestamp = embed
+                            .Timestamp.Value.ToDateTime();
+
+                        var fieldText = embed.Fields.First().Value.ToString();
+                        var scoreLines = fieldText.Split('\n').Skip(1).ToList();
+                        foreach (var line in scoreLines)
+                        {
+                            string parseAsterisks(string str)
+                            {
+                                return new string(str
+                                .Skip(2)
+                                .SkipLast(2)
+                                .ToArray());
+                            }
+                            var words = (line.Split()).ToList();
+                            // parse **'s
+                            var pointsEarned =
+                                int.Parse(parseAsterisks(words[1]));
+                            var shipName = parseAsterisks(words[3]);
+
+                            //var chars = new List<string>() { shipName.Split('X')[0], shipName.Split('X')[1] };
+                            var ship = allShips
+                                .FirstOrDefault(a => a.GetDisplayName()
+                                .Equals(shipName));
+
+                            var tier = 0;
+                            if (line.Contains("Secondary"))
+                                tier = 1;
+                            else  if (line.Contains("Tertiary"))
+                                tier = 2;
+
+                            var replacedLine = line
+                                .Replace("Secondary", "Primary")
+                                .Replace("Tertiary", "Primary");
+                            decimal GetEffectMult(string effectName)
+                            {
+                                var regex = new Regex(@"\(x?([0-9]*.[0-9]*)x? "
+                                    + effectName + @"\)");
+                                var match = regex.Match(replacedLine);
+                                if (!match.Success)
+                                    return 1m;
+                                else
+                                    return decimal.Parse(match.Groups.Values
+                                        .Last().Value);
+
+                            }
+
+                            try
+                            {
+                                var tierMult = GetEffectMult("Primary");
+                                var plushieMult = GetEffectMult("Plushie Effects");
+                                var rarityMult = GetEffectMult("Rarity Mult");
+
+                                var shipScore = new ShipScore()
+                                {
+                                    ScoreId = int.Parse(scoreId),
+                                    Tier = tier,
+                                    ShipId = ship.ShipId,
+                                    PointsEarned = pointsEarned,
+                                    BonusMult = plushieMult,
+                                    TierMult = tierMult,
+                                    BalanceMult = rarityMult
+                                };
+                                var result = await DatabaseHelper.GetInsertCommand(connection,
+                                    shipScore, "SHIP_SCORES").ExecuteNonQueryAsync();
+
+                                if (result < 1)
+                                {
+
+                                }
+                            }
+                            catch (Exception e)
+                            {
+
+                            }
+                        }
+
+                    }
+                    catch (Exception e)
+                    {
+
+                    }
+                }
+            }
+            var x = 0;
         }
 
         [Command("lambda")]

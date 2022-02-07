@@ -65,26 +65,66 @@ namespace PrideBot.Events
 
             client.Ready += ClientReady;
             client.MessageReceived += MessageRecieved;
+            client.UserIsTyping += UserIsTying;
             this.services = services;
+        }
+
+        private Task UserIsTying(Cacheable<IUser, ulong> usr, Cacheable<IMessageChannel, ulong> chnl)
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var cachedDbPost = rpControlCache
+                        .FirstOrDefault(a => a.ChannelId.Equals(chnl.Id.ToString()));
+                    if (cachedDbPost == null)
+                        return;
+
+                    var user = await usr.GetOrDownloadAsync();
+                    if (user.IsBot)
+                        return;     // Ignore bots
+
+                    var channel = await chnl.GetOrDownloadAsync();
+                    var controlMessage = (await channel.GetMessageAsync(ulong.Parse(cachedDbPost.MessageId))) as IUserMessage;
+                    //using var connection = await repo.GetAndOpenAltDatabaseConnectionAsync();
+                    var dict = ParseEmbedDataString(controlMessage.Embeds.FirstOrDefault().Description);
+                    var action = (Action)Enum.Parse(typeof(Action), dict["enter"]);
+
+                    if (action != Action.Content)
+                        return;
+
+                    var talkClient = new DiscordSocketClient[] { client }
+                        .Concat(sceneDialogueService.rpClients)
+                        .FirstOrDefault(a => dict["user"].Contains(a.CurrentUser.Id.ToString()));
+                    var talkChannel = talkClient.GetGuild((channel as IGuildChannel).Guild.Id)
+                        .GetTextChannel(ExtractId(dict["channel"]));
+                    await talkChannel.TriggerTypingAsync();
+                }
+                catch (Exception e)
+                {
+
+                }
+            }).GetAwaiter();
+            return Task.CompletedTask;
         }
 
         private Task MessageRecieved(SocketMessage msg)
         {
             Task.Run(async () =>
             {
+                var message = msg as SocketUserMessage;     // Ensure the message is from a user/bot
+                if (message == null) return;
+                if (message.Author.IsBot) return;     // Ignore bots
+
+                var context = new SocketCommandContext(client, message);     // Create the command context
+
+                var cachedDbPost = rpControlCache
+                    .FirstOrDefault(a => a.ChannelId.Equals(msg.Channel.Id.ToString()));
+                if (cachedDbPost == null)
+                    return;
+
                 try
                 {
-                    var message = msg as SocketUserMessage;     // Ensure the message is from a user/bot
-                    if (message == null) return;
-                    if (message.Author.IsBot) return;     // Ignore bots
-
-                    var context = new SocketCommandContext(client, message);     // Create the command context
-
-                    var cachedDbPost = rpControlCache
-                        .FirstOrDefault(a => a.ChannelId.Equals(msg.Channel.Id.ToString()));
-                    if (cachedDbPost == null)
-                        return;
-
                     var controlMessage = (await message.Channel.GetMessageAsync(ulong.Parse(cachedDbPost.MessageId))) as IUserMessage;
 
                     using var connection = await repo.GetAndOpenAltDatabaseConnectionAsync();
@@ -101,7 +141,7 @@ namespace PrideBot.Events
                                 Action = "TALK",
                                 ClientId = talkClient == client ? "0" : talkClient.CurrentUser.Id.ToString(),
                                 Content = message.Content,
-                                ThumbnailImage = client.CurrentUser.GetAvatarUrlOrDefault(),
+                                ThumbnailImage = talkClient.CurrentUser.GetAvatarUrlOrDefault(),
                                 YellowText = dict["yellowtext"],
                                 Attachment = dict["attachment"]
                             };
@@ -152,18 +192,21 @@ namespace PrideBot.Events
                             await ModifyPostRpMenuAsync(connection, controlMessage, dict);
                             break;
                     }
-
-                    DeleteDelayed(message);
                 }
                 catch (Exception e)
                 {
+
+                }
+                finally
+                {
+                    DeleteDelayed(msg).GetAwaiter();
 
                 }
             }).GetAwaiter();
             return Task.CompletedTask;
         }
 
-        private async Task DeleteDelayed(IMessage message, int ms = 5000)
+        private async Task DeleteDelayed(IMessage message, int ms = 3000)
         {
             await Task.Delay(ms);
             await message.DeleteAsync();

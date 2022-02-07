@@ -69,6 +69,7 @@ namespace PrideBot.Modules
         {
             using var connection = await repo.GetAndOpenDatabaseConnectionAsync();
             await plushieService.DrawPlushie(connection, Context.Channel, Context.User);
+            await Plushie();
         }
 
         [Command("getplushienow")]

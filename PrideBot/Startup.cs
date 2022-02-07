@@ -66,6 +66,7 @@ namespace PrideBot
                 provider.GetRequiredService<StarboardScoringService>();
                 provider.GetRequiredService<UserRegisteredCache>();
                 provider.GetRequiredService<ChatScoringService>();
+                provider.GetRequiredService<DatabaseJobService>();
                 provider.GetRequiredService<VoiceScoringService>();
                 provider.GetRequiredService<AnnouncementService>();
                 provider.GetRequiredService<SnakeGame>();
@@ -151,6 +152,7 @@ namespace PrideBot
                 .AddSingleton<BullshitService>()
                 .AddSingleton<LeaderboardService>()
                 .AddSingleton<SceneDialogueService>()
+                .AddSingleton<DatabaseJobService>()
                 .AddSingleton<AnnouncementService>()
                 .AddSingleton<ScoreReviewService>();
                 //.AddSingleton<PlayStatusService>();
