@@ -68,10 +68,11 @@ namespace PrideBot.Plushies
             if (viewingOther)
                 components = null;
             var file = embedData.Item2;
+            var text = !viewingOther ? user.Mention : null;
             if (file != null)
-                return await channel.SendFileAsync(file.Stream, file.FileName, user.Mention, embed: embed.Build(), components: components?.Build());
+                return await channel.SendFileAsync(file.Stream, file.FileName, text, embed: embed.Build(), components: components?.Build());
             else
-                return await channel.SendMessageAsync(user.Mention, embed: embed.Build(), components: components?.Build());
+                return await channel.SendMessageAsync(text, embed: embed.Build(), components: components?.Build());
         }
 
         public async Task<(EmbedBuilder, MemoryFile)> GenerateEmbedAsync(IGuildUser user, IEnumerable<UserPlushie> userPlushies, IEnumerable<UserPlushie> inEffectPlushies, string overrideImageUrl = null, bool viewingOther = false)
@@ -217,21 +218,22 @@ namespace PrideBot.Plushies
             // Draw and misc buttons
             var navigationRowBuilder = new ActionRowBuilder();
             // Draw
-            var isCoolownOver = await repo.CanUserDrawPlushieAsync(connection, userId.ToString(), GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay(config) : 0); ;
-            var hasRoom = isCoolownOver
+            var isCooldownOver = await repo.CanUserDrawPlushieAsync(connection, userId.ToString(), GameHelper.IsEventOccuring(config) ? GameHelper.GetEventDay(config) : 0); ;
+            var hasRoom = isCooldownOver
                ? await repo.CanUserReceivePlushieAsync(connection, userId.ToString())
                : false;
             navigationRowBuilder.AddComponent(new ButtonBuilder()
             {
                 Style = ButtonStyle.Success,
                 Emote = new Emoji("🧸"),
-                Label = isCoolownOver
-                    ? (!hasRoom
-                        ? "Free Some Room To Get More Plushies!"
-                        : "Get A New Plushie!")
+                Label = isCooldownOver
+                    ? "Get A New Plushie!"
+                    //? (!hasRoom
+                    //    ? "Free Some Room To Get More Plushies!"
+                    //    : "Get A New Plushie!")
                     : (GameHelper.IsEventOccuring(config) ? "Get Another Plushie Tomorrow!" : "Get More In February!"),
                 CustomId = GetCustomId(true, userId, selectedPlushieId, PlushieAction.Draw, imageState),
-                IsDisabled = !isCoolownOver || !hasRoom
+                IsDisabled = !isCooldownOver// || !hasRoom
             }.Build());
             // Bring to bottom
             navigationRowBuilder.AddComponent(new ButtonBuilder()

@@ -300,22 +300,22 @@ namespace PrideBot.Modules
                 new DateTime(2022, 2, 15), null, "All of GYN, all of Gensokyo");
         }
 
-        //[Command("postteaser")]
-        //[Alias("postteaser")]
-        //public async Task PostTeaser(ITextChannel channel, string username, string content)
-        //{
-        //    var webhook = (await channel.GetWebhooksAsync())
-        //        .FirstOrDefault(a => a.Creator.Id == Context.Client.CurrentUser.Id);
-        //    if (webhook == null)
-        //    {
-        //        var imageStream = new MemoryStream(await File.ReadAllBytesAsync("black.png"));
-        //        imageStream.Seek(0, SeekOrigin.Begin);
-        //        webhook = await channel.CreateWebhookAsync("A Rift Has Opened", imageStream);
-        //    }
+        [Command("postteaser")]
+        [Alias("postteaser")]
+        public async Task PostTeaser(ITextChannel channel, string username, string content)
+        {
+            var webhook = (await channel.GetWebhooksAsync())
+                .FirstOrDefault(a => a.Creator.Id == Context.Client.CurrentUser.Id);
+            if (webhook == null)
+            {
+                var imageStream = new MemoryStream(await File.ReadAllBytesAsync("black.png"));
+                imageStream.Seek(0, SeekOrigin.Begin);
+                webhook = await channel.CreateWebhookAsync("The Rift", imageStream);
+            }
 
-        //    var client = new DiscordWebhookClient(webhook);
-        //    await client.SendMessageAsync(content, username: username);
-        //}
+            var client = new DiscordWebhookClient(webhook);
+            await client.SendMessageAsync(content, username: username);
+        }
 
         async Task ReapplyBans(SocketGuild guild)
         {

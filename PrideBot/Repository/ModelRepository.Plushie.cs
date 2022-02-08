@@ -104,13 +104,16 @@ namespace PrideBot.Repository
                 switch (Error)
                 {
                     case ModelRepository.AddPlushieError.CantReceivePlushies:
-                        errorMessage = DialogueDict.Get("PLUSHIE_DRAWN_ALREADY");
+                        errorMessage = DialogueDict.Get("PLUSHIE_CANT_RECEIVE");
                         break;
                     case ModelRepository.AddPlushieError.CantSelectPlushieChoice:
                         errorMessage = DialogueDict.Get("PLUSHIE_CANT_CHOOSE");
                         break;
                     case ModelRepository.AddPlushieError.UnknownError:
                         errorMessage = DialogueDict.Get("EXCEPTION");
+                        break;
+                    case ModelRepository.AddPlushieError.HasDrawnToday:
+                        errorMessage = DialogueDict.Get("PLUSHIE_DRAWN_ALREADY");
                         break;
                     default:
                         break;
@@ -133,6 +136,7 @@ namespace PrideBot.Repository
             None = 0,
             CantReceivePlushies = 1,
             CantSelectPlushieChoice = 2,
+            HasDrawnToday = 3,
             UnknownError = 99
         }
 

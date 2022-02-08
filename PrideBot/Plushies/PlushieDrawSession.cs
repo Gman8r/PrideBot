@@ -39,9 +39,9 @@ namespace PrideBot.Plushies
                 throw new CommandException(DialogueDict.Get(key));
             }
 
-            var canReceivePlushie = await repo.CanUserReceivePlushieAsync(connection, userId);
-            if (!canReceivePlushie)
-                throw new CommandException(DialogueDict.Get("PLUSHIE_CANT_RECEIVE"));
+            //var canReceivePlushie = await repo.CanUserReceivePlushieAsync(connection, userId);
+            //if (!canReceivePlushie)
+            //    throw new CommandException(DialogueDict.Get("PLUSHIE_CANT_RECEIVE"));
 
             await repo.UpdatePlushieChoicesForUserAsync(connection, userId, day);
             var choices = await repo.GetPlushieChoicesForuserAsync(connection, userId, day);

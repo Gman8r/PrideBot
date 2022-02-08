@@ -552,10 +552,22 @@ namespace PrideBot.Modules
             //$", **{a.PointsEarnedByUser} {EmoteHelper.SPEmote}** earned for them");
             var shiptRarityMult = await repo.GetScoreBalanceMultForShip(connection, ship.ShipId, DateTime.Now, null, -1);
 
-            var desc = (ship.Supporters > 0 || ship.PointsEarned > 0)
-                ? DialogueDict.Get("SHIP_SCORES_DESC", ship.GetDisplayName(),
-                    ((int)ship.Place).ToString() + MathHelper.GetPlacePrefix((int)ship.Place).ToString(), (int)Math.Round(ship.PointsEarned), supporterLines.Count(), shiptRarityMult)
-                : DialogueDict.Get("SHIP_SCORES_NO_POINTS");
+            // build description for ship score
+            string desc;
+            if (ship.Supporters > 0 || ship.PointsEarned > 0)
+            {
+                desc = DialogueDict.Get("SHIP_SCORES_DESC", ship.GetDisplayName(),
+                    ((int)ship.Place).ToString() + MathHelper.GetPlacePrefix((int)ship.Place).ToString(), (int)Math.Round(ship.PointsEarned), supporterLines.Count(), shiptRarityMult);
+                if (guildSettings.CatchupEnabled)
+                {
+                    var shipCatchupMult = await repo.GetScoreCatchupMultForShip(connection, ship.ShipId);
+                    if (!MathHelper.Approximately(shipCatchupMult, 1m, .01m))
+                        desc += "\n\n" + DialogueDict.Get("SHIP_SCORES_DESC_CATCHUP", shipCatchupMult);
+                }
+                desc += "\n\n" + DialogueDict.Get("SHIP_SCORES_DESC_RARITY_NOTE");
+            }
+            else
+                desc = DialogueDict.Get("SHIP_SCORES_NO_POINTS");
 
 
             var shipImageFile = await shipImageGenerator.WriteShipImageAsync(ship);

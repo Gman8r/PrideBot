@@ -242,6 +242,8 @@ namespace PrideBot.Game
                             scoreStr += $"  ({shipScore.BonusMult}x Plushie Effects)";
                         if (guildSettings.ShipAutobalance)
                             scoreStr += $"  (x{shipScore.BalanceMult} Rarity Mult)";
+                        if (guildSettings.CatchupEnabled)
+                            scoreStr += $"  (x{shipScore.CatchupMult} Catchup Mult)";
                     }
                     embed.AddField($"You feel empowered by your success...\nYou've earned {(int)Math.Round(pointsEarnedBase, 0)} {EmoteHelper.SPEmote} !", scoreStr.Trim());
 

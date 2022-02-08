@@ -110,5 +110,24 @@ namespace PrideBot.Modules
             snakeGame.SetNextSnakeTime(DateTime.Now);
             await ReplyResultAsync("Done!");
         }
-    }
+
+
+        [Command("listsessions")]
+        [Alias("sessions", "activesessions")]
+        [RequireContext(ContextType.Guild)]
+        public async Task ListSessions()
+        {
+            var sessions = Session.activeSessions;
+            if (!sessions.Any())
+            {
+                await ReplyResultAsync("No sessions are currently running.");
+                return;
+            }
+
+            var str = string.Join("\n", sessions
+                .Select(a => $"{a.GetUser().Mention} - {a.GetType().Name}"));
+            await ReplyAsync(str, allowedMentions: AllowedMentions.None);
+        }
+
+}
 }

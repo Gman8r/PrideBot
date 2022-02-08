@@ -53,6 +53,9 @@ namespace PrideBot.Modules
             var discussionThread = threads
                 .FirstOrDefault(a => a.Name.Equals($"Quiz Discussion Day {day}"));
 
+            if (discussionThread == null)
+                throw new CommandException(DialogueDict.Get("QUIZ_DISCUSS_CANT_FIND", day));
+
             var threadUrl = $"https://discord.com/channels/{gyn.Id}/{discussionThread.Id}";
             if (discussionThread == null)
                 throw new CommandException("I couldn't find a discussion thread for this quiz. Hmmmm, strange indeed.... Contact someone maybe!", ephemeral: true);

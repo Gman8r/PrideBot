@@ -47,6 +47,7 @@ namespace PrideBot.Modules
         [RequireRegistration]
         [RequireSingleSession]
         [DontInterruptCutsceneAtribute]
+        //[RequireGyn]
         [ValidEventPeriods(EventPeriod.DuringEvent)]
         public async Task TakeQuiz()
         {
