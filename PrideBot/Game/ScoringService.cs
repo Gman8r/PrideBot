@@ -236,7 +236,7 @@ namespace PrideBot.Game
                         var userShip = dbUserShips.Get((UserShipTier)shipScore.Tier);
                         scoreStr += $"\n{EmoteHelper.GetShipTierEmoji((UserShipTier)userShip.Tier)} **{(int)Math.Round(shipScore.PointsEarned, 0)}** for **{userShip.GetDisplayName()}**";
 
-                        // Mults
+                        // Mults!
                         scoreStr += $"  ({shipScore.TierMult}x {(UserShipTier)shipScore.Tier})";
                         if (!shipScore.BonusMult.Approximately(1.00m, .01m))
                             scoreStr += $"  ({shipScore.BonusMult}x Plushie Effects)";

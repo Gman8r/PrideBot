@@ -137,7 +137,7 @@ namespace PrideBot.Game
 
         public string GetShipPlacementString(Ship ship, int place, bool includeTopContributor = false)
             => $"__#{place}: **{ship.GetDisplayName()}**__"
-            + $"\n**{ship.PointsEarned} {EmoteHelper.SPEmote}**"
+            + $"\n**{(int)Math.Round(ship.PointsEarned)} {EmoteHelper.SPEmote}**"
             + ((includeTopContributor && !string.IsNullOrEmpty(ship.TopSupporter))
                 ? $" ({client.GetGyn(config).GetUser(ulong.Parse(ship.TopSupporter))?.Mention ?? "Unknown User"})"
             : "");
